@@ -1,0 +1,6 @@
+{
+  "short_name": "Alquiler",
+  "name": "Alquiler de Muebles",
+  "start_url": ".",
+  "display": "standalone"
+}
