@@ -23,9 +23,72 @@ export default function AdminPanel() {
   const [nuevaImagenUrl, setNuevaImagenUrl] = useState('');
   const [loadingForm, setLoadingForm] = useState(false);
 
+  // Estados para edición de reservas
+  const [reservaEditando, setReservaEditando] = useState(null);
+  const [editNombre, setEditNombre] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editTelefono, setEditTelefono] = useState('');
+  const [editDireccion, setEditDireccion] = useState('');
+  const [editNotas, setEditNotas] = useState('');
+  const [editFechaInicio, setEditFechaInicio] = useState('');
+  const [editFechaFin, setEditFechaFin] = useState('');
+  const [editTotal, setEditTotal] = useState('');
+  const [editEstado, setEditEstado] = useState('');
+  const [loadingEdit, setLoadingEdit] = useState(false);
+
+  const abrirEditarReserva = (r) => {
+    setReservaEditando(r);
+    setEditNombre(r.nombre_cliente || '');
+    setEditEmail(r.email_cliente || '');
+    setEditTelefono(r.telefono_cliente || '');
+    setEditDireccion(r.direccion_entrega || '');
+    setEditNotas(r.notas || '');
+    setEditFechaInicio(r.fecha_inicio ? new Date(r.fecha_inicio).toISOString().split('T')[0] : '');
+    setEditFechaFin(r.fecha_fin ? new Date(r.fecha_fin).toISOString().split('T')[0] : '');
+    setEditTotal(r.total || '');
+    setEditEstado(r.estado || 'pendiente');
+  };
+
+  const guardarEdicionReserva = async (e) => {
+    e.preventDefault();
+    if (!editNombre.trim()) return toast.error('El nombre es obligatorio');
+    if (!editEmail.trim()) return toast.error('El correo es obligatorio');
+    if (!editFechaInicio || !editFechaFin) return toast.error('Las fechas son obligatorias');
+
+    setLoadingEdit(true);
+    try {
+      const payload = {
+        nombre_cliente: editNombre.trim(),
+        email_cliente: editEmail.trim(),
+        telefono_cliente: editTelefono.trim(),
+        direccion_entrega: editDireccion.trim(),
+        notas: editNotas.trim(),
+        fecha_inicio: editFechaInicio,
+        fecha_fin: editFechaFin,
+        total: parseFloat(editTotal) || 0,
+        estado: editEstado
+      };
+
+      await api.put(`/reservas/${reservaEditando.id}`, payload);
+      toast.success('Reserva actualizada correctamente');
+      
+      // Actualizar estado local reactivamente
+      setReservas(prev => prev.map(r => r.id === reservaEditando.id ? { ...r, ...payload } : r));
+      setReservaEditando(null);
+      
+      // Refrescar estadísticas y muebles (por si cambió el stock físico)
+      api.get('/admin/stats').then(r => setStats(r.data));
+      api.get('/muebles').then(r => setMuebles(r.data));
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al actualizar la reserva');
+    } finally {
+      setLoadingEdit(false);
+    }
+  };
+
   useEffect(() => {
     api.get('/admin/stats').then(r => setStats(r.data));
-    api.get('/admin/reservas-recientes').then(r => setReservas(r.data));
+    api.get('/reservas').then(r => setReservas(r.data));
     api.get('/categorias')
       .then(r => setCategorias(r.data))
       .catch(err => console.error("Error cargando categorías:", err));
@@ -158,15 +221,23 @@ export default function AdminPanel() {
                     <span style={{ background: estadoColor[r.estado] + '22', color: estadoColor[r.estado], padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{r.estado}</span>
                   </td>
                   <td style={{ padding: '12px 16px' }}>
-                    <select
-                      value={r.estado}
-                      onChange={e => cambiarEstado(r.id, e.target.value)}
-                      style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #ddd', fontSize: 13, cursor: 'pointer' }}
-                    >
-                      {['pendiente', 'confirmada', 'activa', 'completada', 'cancelada'].map(e => (
-                        <option key={e} value={e}>{e}</option>
-                      ))}
-                    </select>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <select
+                        value={r.estado}
+                        onChange={e => cambiarEstado(r.id, e.target.value)}
+                        style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #ddd', fontSize: 13, cursor: 'pointer' }}
+                      >
+                        {['pendiente', 'confirmada', 'activa', 'completada', 'cancelada'].map(e => (
+                          <option key={e} value={e}>{e}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => abrirEditarReserva(r)}
+                        style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+                      >
+                        ✏️ Editar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -457,6 +528,201 @@ export default function AdminPanel() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para editar reserva */}
+      {reservaEditando && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(26, 26, 46, 0.7)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: 16,
+            width: '90%',
+            maxWidth: 650,
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '2rem',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+            position: 'relative',
+            boxSizing: 'border-box'
+          }}>
+            <button
+              onClick={() => setReservaEditando(null)}
+              style={{
+                position: 'absolute',
+                top: 20,
+                right: 20,
+                background: 'none',
+                border: 'none',
+                fontSize: 24,
+                cursor: 'pointer',
+                color: '#888'
+              }}
+            >
+              ×
+            </button>
+            <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.75rem' }}>
+              Editar Reserva #{reservaEditando.id.slice(0, 8).toUpperCase()}
+            </h3>
+
+            <form onSubmit={guardarEdicionReserva}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Nombre del Cliente *</label>
+                  <input
+                    type="text"
+                    value={editNombre}
+                    onChange={e => setEditNombre(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Correo Electrónico *</label>
+                  <input
+                    type="email"
+                    value={editEmail}
+                    onChange={e => setEditEmail(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Teléfono *</label>
+                  <input
+                    type="text"
+                    value={editTelefono}
+                    onChange={e => setEditTelefono(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Dirección de Entrega *</label>
+                  <input
+                    type="text"
+                    value={editDireccion}
+                    onChange={e => setEditDireccion(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Inicio *</label>
+                  <input
+                    type="date"
+                    value={editFechaInicio}
+                    onChange={e => setEditFechaInicio(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Fin *</label>
+                  <input
+                    type="date"
+                    value={editFechaFin}
+                    onChange={e => setEditFechaFin(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Monto Total ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editTotal}
+                    onChange={e => setEditTotal(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Estado de la Reserva</label>
+                  <select
+                    value={editEstado}
+                    onChange={e => setEditEstado(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff', boxSizing: 'border-box' }}
+                  >
+                    {['pendiente', 'confirmada', 'activa', 'completada', 'cancelada'].map(e => (
+                      <option key={e} value={e}>{e}</option>
+                    ))}
+                  </select>
+                </div>
+                {reservaEditando.items && (
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Mobiliarios Reservados</label>
+                    <div style={{ background: '#f8f9ff', padding: '8px 12px', borderRadius: 8, border: '1px solid #eef2ff', maxHeight: 80, overflowY: 'auto', fontSize: 12 }}>
+                      {reservaEditando.items.map((i, idx) => (
+                        <div key={idx} style={{ marginBottom: 4, color: '#555' }}>
+                          • {i.mueble} <strong style={{ color: '#4a6cf7' }}>x{i.cantidad}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Notas Adicionales</label>
+                <textarea
+                  rows="2"
+                  value={editNotas}
+                  onChange={e => setEditNotas(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setReservaEditando(null)}
+                  style={{ padding: '10px 20px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loadingEdit}
+                  style={{
+                    padding: '10px 20px',
+                    background: loadingEdit ? '#a5b4fc' : '#4a6cf7',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    cursor: loadingEdit ? 'not-allowed' : 'pointer',
+                    fontWeight: 600,
+                    fontSize: 14,
+                    boxShadow: '0 4px 10px rgba(74, 108, 247, 0.2)'
+                  }}
+                >
+                  {loadingEdit ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
