@@ -45,23 +45,41 @@ function AdminRoute({ children }) {
   return user?.rol === 'admin' ? children : <Navigate to="/" />;
 }
 
+function AppContent() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f8fc' }}>
+        <Login />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Navbar />
+      <div style={{ minHeight: 'calc(100vh - 60px)', background: '#f7f8fc' }}>
+        <Routes>
+          <Route path="/" element={<Catalogo />} />
+          <Route path="/carrito" element={<Carrito />} />
+          <Route path="/confirmacion/:id" element={<Confirmacion />} />
+          <Route path="/mis-reservas" element={<MisReservas />} />
+          <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+    </>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
           <Toaster position="top-right" />
-          <Navbar />
-          <div style={{ minHeight: '100vh', background: '#f7f8fc' }}>
-            <Routes>
-              <Route path="/" element={<Catalogo />} />
-              <Route path="/carrito" element={<Carrito />} />
-              <Route path="/confirmacion/:id" element={<Confirmacion />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/mis-reservas" element={<MisReservas />} />
-              <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-            </Routes>
-          </div>
+          <AppContent />
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>
