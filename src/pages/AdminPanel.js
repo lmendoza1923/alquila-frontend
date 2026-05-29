@@ -69,35 +69,54 @@ export default function AdminPanel() {
     const mueble = muebles.find(m => m.id === muebleSeleccionado);
     if (!mueble) return;
     const yaExiste = itemsEditando.find(i => i.mueble_id === muebleSeleccionado);
+    let nuevosItems;
     if (yaExiste) {
-      setItemsEditando(prev => prev.map(i =>
-        i.mueble_id === muebleSeleccionado
-          ? { ...i, cantidad: i.cantidad + cantidadAgregar }
-          : i
-      ));
+      nuevosItems = itemsEditando.map(i =>
+        i.mueble_id === muebleSeleccionado ? { ...i, cantidad: i.cantidad + cantidadAgregar } : i
+      );
     } else {
-      setItemsEditando(prev => [...prev, {
+      nuevosItems = [...itemsEditando, {
         mueble_id: mueble.id,
         nombre: mueble.nombre,
         cantidad: cantidadAgregar,
         subtotal: mueble.precio_dia * cantidadAgregar
-      }]);
+      }];
     }
+    setItemsEditando(nuevosItems);
+    recalcularTotal(nuevosItems);
     setMuebleSeleccionado('');
     setCantidadAgregar(1);
     toast.success(`${mueble.nombre} agregado`);
   };
 
   const eliminarMuebleDeReserva = (mueble_id) => {
-    setItemsEditando(prev => prev.filter(i => i.mueble_id !== mueble_id));
+    setItemsEditando(prev => {
+      const nuevos = prev.filter(i => i.mueble_id !== mueble_id);
+      recalcularTotal(nuevos);
+      return nuevos;
+    });
     toast.success('Mueble eliminado de la reserva');
   };
 
   const actualizarCantidadItem = (mueble_id, nuevaCantidad) => {
     if (nuevaCantidad <= 0) return eliminarMuebleDeReserva(mueble_id);
-    setItemsEditando(prev => prev.map(i =>
-      i.mueble_id === mueble_id ? { ...i, cantidad: nuevaCantidad } : i
-    ));
+    setItemsEditando(prev => {
+      const nuevos = prev.map(i => i.mueble_id === mueble_id ? { ...i, cantidad: nuevaCantidad } : i);
+      recalcularTotal(nuevos);
+      return nuevos;
+    });
+  };
+
+  const recalcularTotal = (items) => {
+    if (!editFechaInicio || !editFechaFin) return;
+    const dias = Math.ceil((new Date(editFechaFin) - new Date(editFechaInicio)) / 86400000) + 1;
+    if (dias <= 0) return;
+    const total = items.reduce((sum, item) => {
+      const mueble = muebles.find(m => m.id === item.mueble_id);
+      const precioDia = mueble ? parseFloat(mueble.precio_dia) : (item.subtotal / item.cantidad / dias || 0);
+      return sum + precioDia * item.cantidad * dias;
+    }, 0);
+    setEditTotal(total.toFixed(2));
   };
 
   const guardarEdicionReserva = async (e) => {
@@ -440,11 +459,11 @@ export default function AdminPanel() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Inicio *</label>
-                  <input type="date" value={editFechaInicio} onChange={e => setEditFechaInicio(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
+                  <input type="date" value={editFechaInicio} onChange={e => { setEditFechaInicio(e.target.value); recalcularTotal(itemsEditando); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Fin *</label>
-                  <input type="date" value={editFechaFin} onChange={e => setEditFechaFin(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
+                  <input type="date" value={editFechaFin} onChange={e => { setEditFechaFin(e.target.value); recalcularTotal(itemsEditando); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Estado</label>
