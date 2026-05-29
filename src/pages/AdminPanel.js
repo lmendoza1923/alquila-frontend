@@ -53,8 +53,8 @@ export default function AdminPanel() {
     setEditTotal(r.total || '');
     setEditEstado(r.estado || 'pendiente');
     // Cargar items actuales de la reserva
-    const items = (r.items || []).filter(i => i && i.mueble).map(i => ({
-      mueble_id: i.mueble_id || '',
+    const items = (r.items || []).filter(i => i && i.mueble).map((i, idx) => ({
+      mueble_id: i.mueble_id || `item_${idx}`,
       nombre: i.mueble,
       cantidad: i.cantidad,
       subtotal: i.subtotal
