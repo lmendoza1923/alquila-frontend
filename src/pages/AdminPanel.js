@@ -1,9 +1,151 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../api';
 import toast from 'react-hot-toast';
 
 const estadoColor = { pendiente: '#f59e0b', confirmada: '#3b82f6', activa: '#22c55e', completada: '#6b7280', cancelada: '#ef4444' };
 
+// ─── Generador de PDF (sin librerías externas) ───────────────────────────────
+function generarContratoPDF(reserva, items, pagos, terminos, abono) {
+  const totalPagado = pagos.reduce((s, p) => s + parseFloat(p.monto), 0);
+  const abonoExtra = parseFloat(abono) || 0;
+  const saldoPendiente = parseFloat(reserva.total) - totalPagado - abonoExtra;
+
+  const filasMuebles = items.map(i =>
+    `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;">${i.nombre || i.mueble || ''}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${i.cantidad}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
+    </tr>`
+  ).join('');
+
+  const filasPagos = pagos.length > 0 ? pagos.map(p =>
+    `<tr>
+      <td style="padding:6px 12px;border-bottom:1px solid #eee;">${new Date(p.creado_en).toLocaleDateString('es')}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #eee;text-transform:capitalize;">${p.metodo}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #eee;">${p.notas || '—'}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:600;color:#22c55e;">$${parseFloat(p.monto).toFixed(2)}</td>
+    </tr>`
+  ).join('') : `<tr><td colspan="4" style="padding:8px 12px;color:#888;">Sin pagos registrados aún.</td></tr>`;
+
+  const htmlContrato = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Contrato de Alquiler</title>
+<style>
+  body { font-family: Georgia, serif; color: #1a1a2e; margin: 0; padding: 0; background: #fff; }
+  .page { max-width: 800px; margin: 0 auto; padding: 48px 56px; }
+  .header { border-bottom: 3px solid #4a6cf7; padding-bottom: 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .logo { font-size: 26px; font-weight: 700; color: #4a6cf7; }
+  .logo span { color: #1a1a2e; }
+  .contract-id { text-align: right; font-size: 13px; color: #888; }
+  .contract-id strong { display: block; font-size: 18px; color: #1a1a2e; }
+  .section { margin-bottom: 28px; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #4a6cf7; margin-bottom: 12px; border-bottom: 1px solid #eef2ff; padding-bottom: 6px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field label { font-size: 11px; color: #888; display: block; margin-bottom: 3px; }
+  .field span { font-size: 14px; font-weight: 600; color: #1a1a2e; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead { background: #f8f9ff; }
+  th { padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #555; font-weight: 700; }
+  .totals { background: #f8f9ff; border-radius: 8px; padding: 16px 20px; margin-top: 16px; }
+  .total-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+  .total-row.final { font-size: 16px; font-weight: 700; color: #4a6cf7; border-top: 2px solid #4a6cf7; margin-top: 8px; padding-top: 10px; }
+  .total-row.saldo { font-size: 15px; font-weight: 700; color: #ef4444; }
+  .terms { background: #f8f9ff; border-radius: 8px; padding: 20px 24px; font-size: 12px; color: #555; line-height: 1.8; white-space: pre-wrap; }
+  .firma { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 48px; }
+  .firma-box { border-top: 1px solid #999; padding-top: 8px; text-align: center; font-size: 12px; color: #888; }
+  .badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="logo">🎉 Alquila<span> tu Party</span></div>
+      <div style="font-size:12px;color:#888;margin-top:4px;">Contrato de Alquiler de Mobiliario</div>
+    </div>
+    <div class="contract-id">
+      <strong>Contrato #${reserva.id.slice(0,8).toUpperCase()}</strong>
+      Fecha de emisión: ${new Date().toLocaleDateString('es', { year: 'numeric', month: 'long', day: 'numeric' })}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Datos del Cliente</div>
+    <div class="grid-2">
+      <div class="field"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
+      <div class="field"><label>Correo electrónico</label><span>${reserva.email_cliente || '—'}</span></div>
+      <div class="field"><label>Teléfono</label><span>${reserva.telefono_cliente || '—'}</span></div>
+      <div class="field"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Detalles de la Reserva</div>
+    <div class="grid-2" style="margin-bottom:12px;">
+      <div class="field"><label>Fecha de inicio</label><span>${new Date(reserva.fecha_inicio).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+      <div class="field"><label>Fecha de fin</label><span>${new Date(reserva.fecha_fin).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+      <div class="field"><label>Duración</label><span>${Math.ceil((new Date(reserva.fecha_fin) - new Date(reserva.fecha_inicio)) / 86400000) + 1} día(s)</span></div>
+      <div class="field"><label>Estado</label><span style="color:${estadoColor[reserva.estado]}">${(reserva.estado||'').toUpperCase()}</span></div>
+    </div>
+    ${reserva.notas ? `<div class="field"><label>Notas adicionales</label><span style="font-weight:400;font-style:italic;">${reserva.notas}</span></div>` : ''}
+  </div>
+
+  <div class="section">
+    <div class="section-title">Mobiliario Reservado</div>
+    <table>
+      <thead><tr><th>Artículo</th><th style="text-align:center;">Cant.</th><th style="text-align:right;">Subtotal</th></tr></thead>
+      <tbody>${filasMuebles}</tbody>
+    </table>
+    <div class="totals">
+      <div class="total-row final"><span>TOTAL A PAGAR</span><span>$${parseFloat(reserva.total).toFixed(2)}</span></div>
+      ${abonoExtra > 0 ? `<div class="total-row" style="color:#22c55e;"><span>Abono en este contrato</span><span>-$${abonoExtra.toFixed(2)}</span></div>` : ''}
+      ${totalPagado > 0 ? `<div class="total-row" style="color:#22c55e;"><span>Pagos registrados</span><span>-$${totalPagado.toFixed(2)}</span></div>` : ''}
+      <div class="total-row saldo"><span>SALDO PENDIENTE</span><span>$${Math.max(0, saldoPendiente).toFixed(2)}</span></div>
+    </div>
+  </div>
+
+  ${pagos.length > 0 ? `
+  <div class="section">
+    <div class="section-title">Historial de Pagos</div>
+    <table>
+      <thead><tr><th>Fecha</th><th>Método</th><th>Nota</th><th style="text-align:right;">Monto</th></tr></thead>
+      <tbody>${filasPagos}</tbody>
+    </table>
+  </div>` : ''}
+
+  <div class="section">
+    <div class="section-title">Términos y Condiciones</div>
+    <div class="terms">${terminos || 'Ver términos en el establecimiento.'}</div>
+  </div>
+
+  <div class="firma">
+    <div class="firma-box">
+      <div style="margin-bottom:40px;">&nbsp;</div>
+      Firma del Cliente<br>${reserva.nombre_cliente || ''}
+    </div>
+    <div class="firma-box">
+      <div style="margin-bottom:40px;">&nbsp;</div>
+      Firma Alquila tu Party<br>Representante Autorizado
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:40px;font-size:11px;color:#bbb;border-top:1px solid #eee;padding-top:16px;">
+    Contrato generado el ${new Date().toLocaleString('es')} · Alquila tu Party
+  </div>
+</div>
+</body>
+</html>`;
+
+  const ventana = window.open('', '_blank');
+  ventana.document.write(htmlContrato);
+  ventana.document.close();
+  setTimeout(() => ventana.print(), 600);
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
 export default function AdminPanel() {
   const [stats, setStats] = useState(null);
   const [reservas, setReservas] = useState([]);
@@ -11,7 +153,7 @@ export default function AdminPanel() {
   const [categorias, setCategorias] = useState([]);
   const [muebles, setMuebles] = useState([]);
 
-  // Estados del formulario de mobiliario
+  // Estados formulario mobiliario
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
@@ -23,7 +165,7 @@ export default function AdminPanel() {
   const [nuevaImagenUrl, setNuevaImagenUrl] = useState('');
   const [loadingForm, setLoadingForm] = useState(false);
 
-  // Estados para edición de reservas
+  // Estados edición de reservas
   const [reservaEditando, setReservaEditando] = useState(null);
   const [editNombre, setEditNombre] = useState('');
   const [editEmail, setEditEmail] = useState('');
@@ -35,12 +177,41 @@ export default function AdminPanel() {
   const [editTotal, setEditTotal] = useState('');
   const [editEstado, setEditEstado] = useState('');
   const [loadingEdit, setLoadingEdit] = useState(false);
-
-  // Estados para agregar muebles a la reserva
   const [itemsEditando, setItemsEditando] = useState([]);
   const [muebleSeleccionado, setMuebleSeleccionado] = useState('');
   const [cantidadAgregar, setCantidadAgregar] = useState(1);
 
+  // Estados pagos
+  const [modalPagos, setModalPagos] = useState(null); // reserva seleccionada
+  const [pagosReserva, setPagosReserva] = useState([]);
+  const [totalPagado, setTotalPagado] = useState(0);
+  const [saldoPendiente, setSaldoPendiente] = useState(0);
+  const [nuevoPagoMonto, setNuevoPagoMonto] = useState('');
+  const [nuevoPagoMetodo, setNuevoPagoMetodo] = useState('efectivo');
+  const [nuevoPagoNotas, setNuevoPagoNotas] = useState('');
+  const [loadingPago, setLoadingPago] = useState(false);
+
+  // Estados contrato PDF
+  const [modalContrato, setModalContrato] = useState(null);
+  const [contratoAbono, setContratoAbono] = useState('');
+  const [pagosParaContrato, setPagosParaContrato] = useState([]);
+  const [terminos, setTerminos] = useState('');
+
+  // Estado términos del contrato
+  const [modalTerminos, setModalTerminos] = useState(false);
+  const [terminosEdit, setTerminosEdit] = useState('');
+  const [loadingTerminos, setLoadingTerminos] = useState(false);
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    api.get('/admin/stats').then(r => setStats(r.data));
+    api.get('/reservas').then(r => setReservas(r.data));
+    api.get('/categorias').then(r => setCategorias(r.data)).catch(() => {});
+    api.get('/muebles').then(r => setMuebles(r.data)).catch(() => {});
+    api.get('/pagos/terminos').then(r => setTerminos(r.data.terminos)).catch(() => {});
+  }, []);
+
+  // ── Editar reserva ──────────────────────────────────────────────────────────
   const abrirEditarReserva = (r) => {
     setReservaEditando(r);
     setEditNombre(r.nombre_cliente || '');
@@ -52,7 +223,6 @@ export default function AdminPanel() {
     setEditFechaFin(r.fecha_fin ? new Date(r.fecha_fin).toISOString().split('T')[0] : '');
     setEditTotal(r.total || '');
     setEditEstado(r.estado || 'pendiente');
-    // Cargar items actuales de la reserva
     const items = (r.items || []).filter(i => i && i.mueble).map((i, idx) => ({
       mueble_id: i.mueble_id || `item_${idx}`,
       nombre: i.mueble,
@@ -113,8 +283,8 @@ export default function AdminPanel() {
     if (dias <= 0) return;
     const total = items.reduce((sum, item) => {
       const mueble = muebles.find(m => m.id === item.mueble_id);
-      const precioDia = mueble ? parseFloat(mueble.precio_dia) : (item.subtotal / item.cantidad / dias || 0);
-      return sum + precioDia * item.cantidad * dias;
+      const precio = mueble ? parseFloat(mueble.precio_dia) : (item.subtotal / item.cantidad / dias || 0);
+      return sum + precio * item.cantidad * dias;
     }, 0);
     setEditTotal(total.toFixed(2));
   };
@@ -125,7 +295,6 @@ export default function AdminPanel() {
     if (!editEmail.trim()) return toast.error('El correo es obligatorio');
     if (!editFechaInicio || !editFechaFin) return toast.error('Las fechas son obligatorias');
     if (itemsEditando.length === 0) return toast.error('La reserva debe tener al menos un mueble');
-
     setLoadingEdit(true);
     try {
       const payload = {
@@ -139,27 +308,18 @@ export default function AdminPanel() {
         total: parseFloat(editTotal) || 0,
         estado: editEstado
       };
-
       await api.put(`/reservas/${reservaEditando.id}`, payload);
-
-      // Actualizar items si hay endpoint disponible
       try {
         await api.put(`/reservas/${reservaEditando.id}/items`, {
           items: itemsEditando.map(i => ({ mueble_id: i.mueble_id, cantidad: i.cantidad }))
         });
-      } catch {
-        // Si el endpoint de items no existe aún, ignorar silenciosamente
-      }
-
+      } catch {}
       toast.success('Reserva actualizada correctamente');
-
       setReservas(prev => prev.map(r => r.id === reservaEditando.id ? {
-        ...r,
-        ...payload,
+        ...r, ...payload,
         items: itemsEditando.map(i => ({ mueble: i.nombre, cantidad: i.cantidad, subtotal: i.subtotal }))
       } : r));
       setReservaEditando(null);
-
       api.get('/admin/stats').then(r => setStats(r.data));
       api.get('/muebles').then(r => setMuebles(r.data));
     } catch (err) {
@@ -169,13 +329,99 @@ export default function AdminPanel() {
     }
   };
 
-  useEffect(() => {
-    api.get('/admin/stats').then(r => setStats(r.data));
-    api.get('/reservas').then(r => setReservas(r.data));
-    api.get('/categorias').then(r => setCategorias(r.data)).catch(err => console.error(err));
-    api.get('/muebles').then(r => setMuebles(r.data)).catch(err => console.error(err));
-  }, []);
+  // ── Eliminar reserva ────────────────────────────────────────────────────────
+  const eliminarReserva = async (r) => {
+    if (!window.confirm(`¿Eliminar definitivamente la reserva #${r.id.slice(0,8).toUpperCase()} de ${r.nombre_cliente}? Esta acción no se puede deshacer.`)) return;
+    try {
+      await api.delete(`/reservas/${r.id}`);
+      setReservas(prev => prev.filter(x => x.id !== r.id));
+      toast.success('Reserva eliminada');
+      api.get('/admin/stats').then(res => setStats(res.data));
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al eliminar');
+    }
+  };
 
+  // ── Pagos ───────────────────────────────────────────────────────────────────
+  const abrirPagos = async (r) => {
+    setModalPagos(r);
+    setNuevoPagoMonto('');
+    setNuevoPagoMetodo('efectivo');
+    setNuevoPagoNotas('');
+    try {
+      const res = await api.get(`/pagos/reserva/${r.id}`);
+      setPagosReserva(res.data.pagos);
+      setTotalPagado(res.data.total_pagado);
+      setSaldoPendiente(res.data.saldo_pendiente);
+    } catch { toast.error('Error al cargar pagos'); }
+  };
+
+  const registrarPago = async () => {
+    if (!nuevoPagoMonto || parseFloat(nuevoPagoMonto) <= 0) return toast.error('Ingresa un monto válido');
+    setLoadingPago(true);
+    try {
+      const res = await api.post('/pagos', {
+        reserva_id: modalPagos.id,
+        monto: parseFloat(nuevoPagoMonto),
+        metodo: nuevoPagoMetodo,
+        notas: nuevoPagoNotas
+      });
+      const nuevosPagos = [...pagosReserva, res.data];
+      setPagosReserva(nuevosPagos);
+      const nuevoTotal = nuevosPagos.reduce((s, p) => s + parseFloat(p.monto), 0);
+      setTotalPagado(nuevoTotal);
+      setSaldoPendiente(parseFloat(modalPagos.total) - nuevoTotal);
+      setNuevoPagoMonto('');
+      setNuevoPagoNotas('');
+      toast.success('Pago registrado');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al registrar pago');
+    } finally {
+      setLoadingPago(false);
+    }
+  };
+
+  const eliminarPago = async (pagoId) => {
+    if (!window.confirm('¿Eliminar este pago?')) return;
+    try {
+      await api.delete(`/pagos/${pagoId}`);
+      const nuevosPagos = pagosReserva.filter(p => p.id !== pagoId);
+      setPagosReserva(nuevosPagos);
+      const nuevoTotal = nuevosPagos.reduce((s, p) => s + parseFloat(p.monto), 0);
+      setTotalPagado(nuevoTotal);
+      setSaldoPendiente(parseFloat(modalPagos.total) - nuevoTotal);
+      toast.success('Pago eliminado');
+    } catch { toast.error('Error al eliminar pago'); }
+  };
+
+  // ── Contrato PDF ─────────────────────────────────────────────────────────────
+  const abrirContrato = async (r) => {
+    setModalContrato(r);
+    setContratoAbono('');
+    try {
+      const res = await api.get(`/pagos/reserva/${r.id}`);
+      setPagosParaContrato(res.data.pagos);
+    } catch { setPagosParaContrato([]); }
+  };
+
+  // ── Términos ─────────────────────────────────────────────────────────────────
+  const abrirTerminos = () => {
+    setTerminosEdit(terminos);
+    setModalTerminos(true);
+  };
+
+  const guardarTerminos = async () => {
+    setLoadingTerminos(true);
+    try {
+      await api.put('/pagos/terminos', { terminos: terminosEdit });
+      setTerminos(terminosEdit);
+      setModalTerminos(false);
+      toast.success('Términos guardados');
+    } catch { toast.error('Error al guardar términos'); }
+    finally { setLoadingTerminos(false); }
+  };
+
+  // ── Mobiliario ───────────────────────────────────────────────────────────────
   const cambiarEstado = async (id, estado) => {
     try {
       await api.patch(`/reservas/${id}/estado`, { estado });
@@ -188,8 +434,7 @@ export default function AdminPanel() {
     e.preventDefault();
     if (!nuevaImagenUrl.trim()) return;
     if (!nuevaImagenUrl.startsWith('http://') && !nuevaImagenUrl.startsWith('https://')) {
-      toast.error('La URL debe iniciar con http:// o https://');
-      return;
+      return toast.error('La URL debe iniciar con http:// o https://');
     }
     setImagenes(prev => [...prev, nuevaImagenUrl.trim()]);
     setNuevaImagenUrl('');
@@ -203,7 +448,6 @@ export default function AdminPanel() {
     if (!categoriaId) return toast.error('La categoría es obligatoria');
     if (!precioDia || parseFloat(precioDia) <= 0) return toast.error('El precio por día debe ser mayor a 0');
     if (!stock || parseInt(stock) < 0) return toast.error('El stock no puede ser negativo');
-
     setLoadingForm(true);
     try {
       const payload = {
@@ -231,9 +475,19 @@ export default function AdminPanel() {
 
   const tabs = ['dashboard', 'reservas', 'mobiliario'];
 
+  // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem' }}>
-      <h1>Panel de administración</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <h1 style={{ margin: 0 }}>Panel de administración</h1>
+        <button
+          onClick={abrirTerminos}
+          style={{ padding: '8px 16px', background: '#1a1a2e', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          📄 Editar términos del contrato
+        </button>
+      </div>
+
       <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
         {tabs.map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: tab === t ? '#4a6cf7' : '#e8eaf6', color: tab === t ? '#fff' : '#555', cursor: 'pointer', fontWeight: 600, textTransform: 'capitalize' }}>
@@ -242,6 +496,7 @@ export default function AdminPanel() {
         ))}
       </div>
 
+      {/* ── Dashboard ── */}
       {tab === 'dashboard' && stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
           {[
@@ -259,12 +514,13 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {/* ── Reservas ── */}
       {tab === 'reservas' && (
         <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', overflow: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f8f9ff' }}>
-                {['ID', 'Cliente', 'Fechas', 'Total', 'Estado', 'Acción'].map(h => (
+                {['ID', 'Cliente', 'Fechas', 'Total', 'Estado', 'Acciones'].map(h => (
                   <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
                 ))}
               </tr>
@@ -285,24 +541,29 @@ export default function AdminPanel() {
                     <span style={{ background: estadoColor[r.estado] + '22', color: estadoColor[r.estado], padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{r.estado}</span>
                   </td>
                   <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <select value={r.estado} onChange={e => cambiarEstado(r.id, e.target.value)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #ddd', fontSize: 13, cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <select value={r.estado} onChange={e => cambiarEstado(r.id, e.target.value)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #ddd', fontSize: 12, cursor: 'pointer' }}>
                         {['pendiente', 'confirmada', 'activa', 'completada', 'cancelada'].map(e => (
                           <option key={e} value={e}>{e}</option>
                         ))}
                       </select>
-                      <button onClick={() => abrirEditarReserva(r)} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-                        ✏️ Editar
-                      </button>
+                      <button onClick={() => abrirEditarReserva(r)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>✏️</button>
+                      <button onClick={() => abrirPagos(r)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳</button>
+                      <button onClick={() => abrirContrato(r)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄</button>
+                      <button onClick={() => eliminarReserva(r)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar">🗑️</button>
                     </div>
                   </td>
                 </tr>
               ))}
+              {reservas.length === 0 && (
+                <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay reservas aún.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
       )}
 
+      {/* ── Mobiliario ── */}
       {tab === 'mobiliario' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
@@ -424,119 +685,66 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Modal para editar reserva */}
+      {/* ══════════ MODAL EDITAR RESERVA ══════════ */}
       {reservaEditando && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26, 26, 46, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 700, maxHeight: '92vh', overflowY: 'auto', padding: '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
             <button onClick={() => setReservaEditando(null)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
             <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.75rem' }}>
               Editar Reserva #{reservaEditando.id.slice(0, 8).toUpperCase()}
             </h3>
-
             <form onSubmit={guardarEdicionReserva}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Nombre del Cliente *</label>
-                  <input type="text" value={editNombre} onChange={e => setEditNombre(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Correo Electrónico *</label>
-                  <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
-                </div>
+                <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Nombre del Cliente *</label>
+                  <input type="text" value={editNombre} onChange={e => setEditNombre(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required /></div>
+                <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Correo Electrónico *</label>
+                  <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required /></div>
               </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Teléfono</label>
-                  <input type="text" value={editTelefono} onChange={e => setEditTelefono(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Dirección de Entrega</label>
-                  <input type="text" value={editDireccion} onChange={e => setEditDireccion(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
-                </div>
+                <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Teléfono</label>
+                  <input type="text" value={editTelefono} onChange={e => setEditTelefono(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} /></div>
+                <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Dirección de Entrega</label>
+                  <input type="text" value={editDireccion} onChange={e => setEditDireccion(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} /></div>
               </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Inicio *</label>
-                  <input type="date" value={editFechaInicio} onChange={e => { setEditFechaInicio(e.target.value); recalcularTotal(itemsEditando); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Fin *</label>
-                  <input type="date" value={editFechaFin} onChange={e => { setEditFechaFin(e.target.value); recalcularTotal(itemsEditando); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Estado</label>
+                <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Inicio *</label>
+                  <input type="date" value={editFechaInicio} onChange={e => { setEditFechaInicio(e.target.value); recalcularTotal(itemsEditando); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required /></div>
+                <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Fin *</label>
+                  <input type="date" value={editFechaFin} onChange={e => { setEditFechaFin(e.target.value); recalcularTotal(itemsEditando); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required /></div>
+                <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Estado</label>
                   <select value={editEstado} onChange={e => setEditEstado(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff', boxSizing: 'border-box' }}>
-                    {['pendiente', 'confirmada', 'activa', 'completada', 'cancelada'].map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                </div>
+                    {['pendiente','confirmada','activa','completada','cancelada'].map(e => <option key={e} value={e}>{e}</option>)}
+                  </select></div>
               </div>
 
-              {/* SECCIÓN MUEBLES DE LA RESERVA */}
               <div style={{ background: '#f8f9ff', borderRadius: 10, padding: '1.25rem', marginBottom: '1.25rem', border: '1px solid #eef2ff' }}>
                 <h4 style={{ margin: '0 0 1rem 0', color: '#1a1a2e', fontSize: '1rem' }}>🪑 Mobiliario de la reserva</h4>
-
-                {/* Lista de items actuales */}
                 {itemsEditando.length > 0 ? (
                   <div style={{ marginBottom: '1rem' }}>
                     {itemsEditando.map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #e8eaf6' }}>
                         <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>{item.nombre}</span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.cantidad}
-                          onChange={e => actualizarCantidadItem(item.mueble_id, parseInt(e.target.value))}
-                          style={{ width: 60, padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }}
-                        />
+                        <input type="number" min="1" value={item.cantidad} onChange={e => actualizarCantidadItem(item.mueble_id, parseInt(e.target.value))} style={{ width: 60, padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }} />
                         <span style={{ fontSize: 12, color: '#888', minWidth: 40 }}>uds</span>
-                        <button
-                          type="button"
-                          onClick={() => eliminarMuebleDeReserva(item.mueble_id)}
-                          style={{ background: '#ef444422', color: '#ef4444', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
-                        >
-                          🗑️ Eliminar
-                        </button>
+                        <button type="button" onClick={() => eliminarMuebleDeReserva(item.mueble_id)} style={{ background: '#ef444422', color: '#ef4444', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>🗑️ Eliminar</button>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p style={{ color: '#888', fontSize: 13, margin: '0 0 1rem 0' }}>No hay muebles en esta reserva.</p>
-                )}
+                ) : <p style={{ color: '#888', fontSize: 13, margin: '0 0 1rem 0' }}>No hay muebles en esta reserva.</p>}
 
-                {/* Agregar nuevo mueble */}
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                   <div style={{ flex: 2, minWidth: 180 }}>
                     <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Agregar mueble</label>
-                    <select
-                      value={muebleSeleccionado}
-                      onChange={e => setMuebleSeleccionado(e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff' }}
-                    >
+                    <select value={muebleSeleccionado} onChange={e => setMuebleSeleccionado(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff' }}>
                       <option value="">Seleccionar mueble...</option>
-                      {muebles.filter(m => m.activo).map(m => (
-                        <option key={m.id} value={m.id}>{m.nombre} — ${m.precio_dia}/día</option>
-                      ))}
+                      {muebles.filter(m => m.activo).map(m => <option key={m.id} value={m.id}>{m.nombre} — ${m.precio_dia}/día</option>)}
                     </select>
                   </div>
                   <div style={{ width: 80 }}>
                     <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Cantidad</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={cantidadAgregar}
-                      onChange={e => setCantidadAgregar(parseInt(e.target.value) || 1)}
-                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }}
-                    />
+                    <input type="number" min="1" value={cantidadAgregar} onChange={e => setCantidadAgregar(parseInt(e.target.value) || 1)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} />
                   </div>
-                  <button
-                    type="button"
-                    onClick={agregarMuebleAReserva}
-                    style={{ padding: '8px 16px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }}
-                  >
-                    + Agregar
-                  </button>
+                  <button type="button" onClick={agregarMuebleAReserva} style={{ padding: '8px 16px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>+ Agregar</button>
                 </div>
               </div>
 
@@ -544,12 +752,10 @@ export default function AdminPanel() {
                 <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Monto Total ($)</label>
                 <input type="number" step="0.01" min="0" value={editTotal} onChange={e => setEditTotal(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
               </div>
-
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Notas Adicionales</label>
                 <textarea rows="2" value={editNotas} onChange={e => setEditNotas(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
               </div>
-
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setReservaEditando(null)} style={{ padding: '10px 20px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>Cancelar</button>
                 <button type="submit" disabled={loadingEdit} style={{ padding: '10px 20px', background: loadingEdit ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingEdit ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 14 }}>
@@ -557,6 +763,147 @@ export default function AdminPanel() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ MODAL PAGOS ══════════ */}
+      {modalPagos && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', padding: '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
+            <button onClick={() => setModalPagos(null)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
+            <h3 style={{ marginTop: 0, marginBottom: 4, color: '#1a1a2e' }}>💳 Pagos — #{modalPagos.id.slice(0,8).toUpperCase()}</h3>
+            <p style={{ color: '#888', fontSize: 13, margin: '0 0 1.5rem 0' }}>{modalPagos.nombre_cliente}</p>
+
+            {/* Resumen de saldo */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: '1.5rem' }}>
+              {[
+                { label: 'Total reserva', value: `$${parseFloat(modalPagos.total).toFixed(2)}`, color: '#1a1a2e' },
+                { label: 'Total pagado', value: `$${totalPagado.toFixed(2)}`, color: '#22c55e' },
+                { label: 'Saldo pendiente', value: `$${Math.max(0, saldoPendiente).toFixed(2)}`, color: saldoPendiente > 0 ? '#ef4444' : '#22c55e' },
+              ].map(s => (
+                <div key={s.label} style={{ background: '#f8f9ff', borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Historial de pagos */}
+            <h4 style={{ margin: '0 0 10px 0', fontSize: 14, color: '#555' }}>Historial</h4>
+            {pagosReserva.length > 0 ? (
+              <div style={{ marginBottom: '1.5rem' }}>
+                {pagosReserva.map(p => (
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: '#22c55e' }}>+${parseFloat(p.monto).toFixed(2)}</div>
+                      <div style={{ fontSize: 12, color: '#888', textTransform: 'capitalize' }}>{p.metodo} · {new Date(p.creado_en).toLocaleDateString('es')}</div>
+                      {p.notas && <div style={{ fontSize: 12, color: '#aaa', fontStyle: 'italic' }}>{p.notas}</div>}
+                    </div>
+                    <button onClick={() => eliminarPago(p.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 16 }} title="Eliminar pago">🗑️</button>
+                  </div>
+                ))}
+              </div>
+            ) : <p style={{ color: '#aaa', fontSize: 13, margin: '0 0 1.5rem 0' }}>Sin pagos registrados.</p>}
+
+            {/* Registrar nuevo pago */}
+            <div style={{ background: '#f8f9ff', borderRadius: 10, padding: '1rem', border: '1px solid #eef2ff' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: '#1a1a2e' }}>Registrar pago / abono</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Monto ($) *</label>
+                  <input type="number" step="0.01" min="0.01" value={nuevoPagoMonto} onChange={e => setNuevoPagoMonto(e.target.value)} placeholder="0.00" style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Método</label>
+                  <select value={nuevoPagoMetodo} onChange={e => setNuevoPagoMetodo(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, background: '#fff', cursor: 'pointer' }}>
+                    {['efectivo','transferencia','tarjeta','yappy','otro'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Nota (opcional)</label>
+                <input type="text" value={nuevoPagoNotas} onChange={e => setNuevoPagoNotas(e.target.value)} placeholder="Ej. Abono inicial, pago final..." style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+              <button onClick={registrarPago} disabled={loadingPago} style={{ width: '100%', padding: '10px', background: loadingPago ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingPago ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 14 }}>
+                {loadingPago ? 'Registrando...' : '✓ Registrar pago'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ MODAL CONTRATO PDF ══════════ */}
+      {modalContrato && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 480, padding: '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
+            <button onClick={() => setModalContrato(null)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
+            <h3 style={{ marginTop: 0, marginBottom: 4, color: '#1a1a2e' }}>📄 Generar Contrato</h3>
+            <p style={{ color: '#888', fontSize: 13, margin: '0 0 1.5rem 0' }}>Reserva #{modalContrato.id.slice(0,8).toUpperCase()} · {modalContrato.nombre_cliente}</p>
+
+            <div style={{ background: '#f8f9ff', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', fontSize: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ color: '#555' }}>Total reserva:</span>
+                <strong>${parseFloat(modalContrato.total).toFixed(2)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ color: '#555' }}>Pagos registrados:</span>
+                <strong style={{ color: '#22c55e' }}>-${pagosParaContrato.reduce((s, p) => s + parseFloat(p.monto), 0).toFixed(2)}</strong>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#444', display: 'block', marginBottom: 6 }}>
+                Abono adicional en este contrato ($) <span style={{ color: '#888', fontWeight: 400 }}>(opcional)</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={contratoAbono}
+                onChange={e => setContratoAbono(e.target.value)}
+                placeholder="0.00"
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+              />
+              <p style={{ fontSize: 12, color: '#888', margin: '6px 0 0 0' }}>Si el cliente va a pagar un abono hoy, ingrésalo aquí para que aparezca en el contrato.</p>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setModalContrato(null)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
+              <button
+                onClick={() => {
+                  generarContratoPDF(modalContrato, modalContrato.items || [], pagosParaContrato, terminos, contratoAbono);
+                  setModalContrato(null);
+                }}
+                style={{ flex: 2, padding: '10px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
+              >
+                🖨️ Generar e Imprimir PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ MODAL TÉRMINOS ══════════ */}
+      {modalTerminos && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 660, maxHeight: '90vh', overflowY: 'auto', padding: '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
+            <button onClick={() => setModalTerminos(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
+            <h3 style={{ marginTop: 0, marginBottom: 4, color: '#1a1a2e' }}>📋 Términos y Condiciones del Contrato</h3>
+            <p style={{ color: '#888', fontSize: 13, margin: '0 0 1.5rem 0' }}>Este texto aparecerá en todos los contratos generados en PDF.</p>
+            <textarea
+              value={terminosEdit}
+              onChange={e => setTerminosEdit(e.target.value)}
+              rows={16}
+              style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6 }}
+              placeholder="Escribe aquí los términos y condiciones..."
+            />
+            <div style={{ display: 'flex', gap: 10, marginTop: '1rem' }}>
+              <button onClick={() => setModalTerminos(false)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
+              <button onClick={guardarTerminos} disabled={loadingTerminos} style={{ flex: 2, padding: '10px', background: loadingTerminos ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingTerminos ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 14 }}>
+                {loadingTerminos ? 'Guardando...' : '✓ Guardar Términos'}
+              </button>
+            </div>
           </div>
         </div>
       )}
