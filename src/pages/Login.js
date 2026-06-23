@@ -22,10 +22,18 @@ export default function Login() {
   const submit = async (e) => {
     e.preventDefault();
     try {
-      if (modo === 'login') await login(form.email, form.password);
-      else await register(form.nombre, form.email, form.password, form.telefono);
+      let loggedUser;
+      if (modo === 'login') {
+        loggedUser = await login(form.email, form.password);
+      } else {
+        loggedUser = await register(form.nombre, form.email, form.password, form.telefono);
+      }
       toast.success('¡Bienvenido!');
-      navigate('/');
+      if (loggedUser && loggedUser.rol === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/catalogo');
+      }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error de autenticación');
     }

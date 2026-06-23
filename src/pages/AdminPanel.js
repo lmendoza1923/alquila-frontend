@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
 import toast from 'react-hot-toast';
 
@@ -152,6 +152,7 @@ export default function AdminPanel() {
   const [tab, setTab] = useState('dashboard');
   const [categorias, setCategorias] = useState([]);
   const [muebles, setMuebles] = useState([]);
+  const [combos, setCombos] = useState([]);
 
   // Estados formulario mobiliario
   const [nombre, setNombre] = useState('');
@@ -164,6 +165,18 @@ export default function AdminPanel() {
   const [imagenes, setImagenes] = useState([]);
   const [nuevaImagenUrl, setNuevaImagenUrl] = useState('');
   const [loadingForm, setLoadingForm] = useState(false);
+
+  // Estados formulario combos
+  const [comboNombre, setComboNombre] = useState('');
+  const [comboDescripcion, setComboDescripcion] = useState('');
+  const [comboPrecioDia, setComboPrecioDia] = useState('');
+  const [comboPrecioSemana, setComboPrecioSemana] = useState('');
+  const [comboPrecioMes, setComboPrecioMes] = useState('');
+  const [comboItems, setComboItems] = useState([]); // [{ mueble_id, nombre, cantidad }]
+  const [muebleParaComboSeleccionado, setMuebleParaComboSeleccionado] = useState('');
+  const [cantidadParaComboAgregar, setCantidadParaComboAgregar] = useState(1);
+  const [comboEditando, setComboEditando] = useState(null);
+  const [loadingComboForm, setLoadingComboForm] = useState(false);
 
   // Estados edición de reservas
   const [reservaEditando, setReservaEditando] = useState(null);
@@ -180,6 +193,7 @@ export default function AdminPanel() {
   const [itemsEditando, setItemsEditando] = useState([]);
   const [muebleSeleccionado, setMuebleSeleccionado] = useState('');
   const [cantidadAgregar, setCantidadAgregar] = useState(1);
+  const [tipoArticuloAgregar, setTipoArticuloAgregar] = useState('mueble'); // 'mueble' o 'combo'
 
   // Estados pagos
   const [modalPagos, setModalPagos] = useState(null); // reserva seleccionada
@@ -208,6 +222,7 @@ export default function AdminPanel() {
     api.get('/reservas').then(r => setReservas(r.data));
     api.get('/categorias').then(r => setCategorias(r.data)).catch(() => {});
     api.get('/muebles').then(r => setMuebles(r.data)).catch(() => {});
+    api.get('/combos').then(r => setCombos(r.data)).catch(() => {});
     api.get('/pagos/terminos').then(r => setTerminos(r.data.terminos)).catch(() => {});
   }, []);
 
@@ -218,60 +233,94 @@ export default function AdminPanel() {
     setEditEmail(r.email_cliente || '');
     setEditTelefono(r.telefono_cliente || '');
     setEditDireccion(r.direccion_entrega || '');
-    setEditNotas(r.notas || '');
+    setEditNotas(r.notes || r.notas || '');
     setEditFechaInicio(r.fecha_inicio ? new Date(r.fecha_inicio).toISOString().split('T')[0] : '');
     setEditFechaFin(r.fecha_fin ? new Date(r.fecha_fin).toISOString().split('T')[0] : '');
     setEditTotal(r.total || '');
     setEditEstado(r.estado || 'pendiente');
+    
     const items = (r.items || []).filter(i => i && i.mueble).map((i, idx) => ({
-      mueble_id: i.mueble_id || `item_${idx}`,
+      mueble_id: i.mueble_id || null,
+      combo_id: i.combo_id || null,
       nombre: i.mueble,
       cantidad: i.cantidad,
       subtotal: i.subtotal
     }));
+    
     setItemsEditando(items);
     setMuebleSeleccionado('');
     setCantidadAgregar(1);
+    setTipoArticuloAgregar('mueble');
   };
 
   const agregarMuebleAReserva = () => {
-    if (!muebleSeleccionado) return toast.error('Selecciona un mueble');
-    const mueble = muebles.find(m => m.id === muebleSeleccionado);
-    if (!mueble) return;
-    const yaExiste = itemsEditando.find(i => i.mueble_id === muebleSeleccionado);
-    let nuevosItems;
-    if (yaExiste) {
-      nuevosItems = itemsEditando.map(i =>
-        i.mueble_id === muebleSeleccionado ? { ...i, cantidad: i.cantidad + cantidadAgregar } : i
-      );
+    if (!muebleSeleccionado) return toast.error('Selecciona un artículo');
+
+    if (tipoArticuloAgregar === 'combo') {
+      const combo = combos.find(c => c.id === muebleSeleccionado);
+      if (!combo) return;
+      const yaExiste = itemsEditando.find(i => i.combo_id === muebleSeleccionado);
+      let nuevosItems;
+      if (yaExiste) {
+        nuevosItems = itemsEditando.map(i =>
+          i.combo_id === muebleSeleccionado ? { ...i, cantidad: i.cantidad + cantidadAgregar } : i
+        );
+      } else {
+        nuevosItems = [...itemsEditando, {
+          combo_id: combo.id,
+          mueble_id: null,
+          nombre: combo.nombre,
+          cantidad: cantidadAgregar,
+          subtotal: combo.precio_dia * cantidadAgregar
+        }];
+      }
+      setItemsEditando(nuevosItems);
+      recalcularTotal(nuevosItems);
+      setMuebleSeleccionado('');
+      setCantidadAgregar(1);
+      toast.success(`Combo "${combo.nombre}" agregado`);
     } else {
-      nuevosItems = [...itemsEditando, {
-        mueble_id: mueble.id,
-        nombre: mueble.nombre,
-        cantidad: cantidadAgregar,
-        subtotal: mueble.precio_dia * cantidadAgregar
-      }];
+      const mueble = muebles.find(m => m.id === muebleSeleccionado);
+      if (!mueble) return;
+      const yaExiste = itemsEditando.find(i => i.mueble_id === muebleSeleccionado);
+      let nuevosItems;
+      if (yaExiste) {
+        nuevosItems = itemsEditando.map(i =>
+          i.mueble_id === muebleSeleccionado ? { ...i, cantidad: i.cantidad + cantidadAgregar } : i
+        );
+      } else {
+        nuevosItems = [...itemsEditando, {
+          mueble_id: mueble.id,
+          combo_id: null,
+          nombre: mueble.nombre,
+          cantidad: cantidadAgregar,
+          subtotal: mueble.precio_dia * cantidadAgregar
+        }];
+      }
+      setItemsEditando(nuevosItems);
+      recalcularTotal(nuevosItems);
+      setMuebleSeleccionado('');
+      setCantidadAgregar(1);
+      toast.success(`${mueble.nombre} agregado`);
     }
-    setItemsEditando(nuevosItems);
-    recalcularTotal(nuevosItems);
-    setMuebleSeleccionado('');
-    setCantidadAgregar(1);
-    toast.success(`${mueble.nombre} agregado`);
   };
 
-  const eliminarMuebleDeReserva = (mueble_id) => {
+  const eliminarMuebleDeReserva = (id, esCombo = false) => {
     setItemsEditando(prev => {
-      const nuevos = prev.filter(i => i.mueble_id !== mueble_id);
+      const nuevos = prev.filter(i => esCombo ? i.combo_id !== id : i.mueble_id !== id);
       recalcularTotal(nuevos);
       return nuevos;
     });
-    toast.success('Mueble eliminado de la reserva');
+    toast.success('Artículo eliminado de la reserva');
   };
 
-  const actualizarCantidadItem = (mueble_id, nuevaCantidad) => {
-    if (nuevaCantidad <= 0) return eliminarMuebleDeReserva(mueble_id);
+  const actualizarCantidadItem = (id, nuevaCantidad, esCombo = false) => {
+    if (nuevaCantidad <= 0) return eliminarMuebleDeReserva(id, esCombo);
     setItemsEditando(prev => {
-      const nuevos = prev.map(i => i.mueble_id === mueble_id ? { ...i, cantidad: nuevaCantidad } : i);
+      const nuevos = prev.map(i => {
+        const match = esCombo ? (i.combo_id === id) : (i.mueble_id === id);
+        return match ? { ...i, cantidad: nuevaCantidad } : i;
+      });
       recalcularTotal(nuevos);
       return nuevos;
     });
@@ -282,9 +331,15 @@ export default function AdminPanel() {
     const dias = Math.ceil((new Date(editFechaFin) - new Date(editFechaInicio)) / 86400000) + 1;
     if (dias <= 0) return;
     const total = items.reduce((sum, item) => {
-      const mueble = muebles.find(m => m.id === item.mueble_id);
-      const precio = mueble ? parseFloat(mueble.precio_dia) : (item.subtotal / item.cantidad / dias || 0);
-      return sum + precio * item.cantidad * dias;
+      if (item.combo_id) {
+        const combo = combos.find(c => c.id === item.combo_id);
+        const precio = combo ? parseFloat(combo.precio_dia) : (item.subtotal / item.cantidad / dias || 0);
+        return sum + precio * item.cantidad * dias;
+      } else {
+        const mueble = muebles.find(m => m.id === item.mueble_id);
+        const precio = mueble ? parseFloat(mueble.precio_dia) : (item.subtotal / item.cantidad / dias || 0);
+        return sum + precio * item.cantidad * dias;
+      }
     }, 0);
     setEditTotal(total.toFixed(2));
   };
@@ -294,7 +349,7 @@ export default function AdminPanel() {
     if (!editNombre.trim()) return toast.error('El nombre es obligatorio');
     if (!editEmail.trim()) return toast.error('El correo es obligatorio');
     if (!editFechaInicio || !editFechaFin) return toast.error('Las fechas son obligatorias');
-    if (itemsEditando.length === 0) return toast.error('La reserva debe tener al menos un mueble');
+    if (itemsEditando.length === 0) return toast.error('La reserva debe tener al menos un artículo');
     setLoadingEdit(true);
     try {
       const payload = {
@@ -309,15 +364,23 @@ export default function AdminPanel() {
         estado: editEstado
       };
       await api.put(`/reservas/${reservaEditando.id}`, payload);
-      try {
-        await api.put(`/reservas/${reservaEditando.id}/items`, {
-          items: itemsEditando.map(i => ({ mueble_id: i.mueble_id, cantidad: i.cantidad }))
-        });
-      } catch {}
+      await api.put(`/reservas/${reservaEditando.id}/items`, {
+        items: itemsEditando.map(i => ({ 
+          mueble_id: i.mueble_id || null, 
+          combo_id: i.combo_id || null, 
+          cantidad: i.cantidad 
+        }))
+      });
       toast.success('Reserva actualizada correctamente');
       setReservas(prev => prev.map(r => r.id === reservaEditando.id ? {
         ...r, ...payload,
-        items: itemsEditando.map(i => ({ mueble: i.nombre, cantidad: i.cantidad, subtotal: i.subtotal }))
+        items: itemsEditando.map(i => ({ 
+          mueble_id: i.mueble_id, 
+          combo_id: i.combo_id, 
+          mueble: i.nombre, 
+          cantidad: i.cantidad, 
+          subtotal: i.subtotal 
+        }))
       } : r));
       setReservaEditando(null);
       api.get('/admin/stats').then(r => setStats(r.data));
@@ -473,7 +536,89 @@ export default function AdminPanel() {
     }
   };
 
-  const tabs = ['dashboard', 'reservas', 'mobiliario'];
+  // ── Combos y Paquetes CRUD ──────────────────────────────────────────────────
+  const agregarMuebleAlCombo = () => {
+    if (!muebleParaComboSeleccionado) return toast.error('Selecciona un mueble');
+    const mueble = muebles.find(m => m.id === muebleParaComboSeleccionado);
+    if (!mueble) return;
+    const yaExiste = comboItems.find(i => i.mueble_id === muebleParaComboSeleccionado);
+    if (yaExiste) {
+      setComboItems(prev => prev.map(i => i.mueble_id === muebleParaComboSeleccionado ? { ...i, cantidad: i.cantidad + cantidadParaComboAgregar } : i));
+    } else {
+      setComboItems(prev => [...prev, { mueble_id: mueble.id, nombre: mueble.nombre, cantidad: cantidadParaComboAgregar }]);
+    }
+    setMuebleParaComboSeleccionado('');
+    setCantidadParaComboAgregar(1);
+    toast.success(`${mueble.nombre} añadido al combo`);
+  };
+
+  const eliminarMuebleDelCombo = (mueble_id) => {
+    setComboItems(prev => prev.filter(i => i.mueble_id !== mueble_id));
+    toast.success('Mueble quitado del combo');
+  };
+
+  const iniciarEditarCombo = (c) => {
+    setComboEditando(c);
+    setComboNombre(c.nombre);
+    setComboDescripcion(c.descripcion || '');
+    setComboPrecioDia(c.precio_dia);
+    setComboPrecioSemana(c.precio_semana || '');
+    setComboPrecioMes(c.precio_mes || '');
+    setComboItems(c.items.map(i => ({ mueble_id: i.mueble_id, nombre: i.nombre, cantidad: i.cantidad })));
+  };
+
+  const handleSubmitCombo = async (e) => {
+    e.preventDefault();
+    if (!comboNombre.trim()) return toast.error('El nombre es obligatorio');
+    if (!comboPrecioDia || parseFloat(comboPrecioDia) <= 0) return toast.error('El precio por día debe ser mayor a 0');
+    if (comboItems.length === 0) return toast.error('El combo debe incluir al menos un mueble');
+    setLoadingComboForm(true);
+    try {
+      const payload = {
+        nombre: comboNombre.trim(),
+        descripcion: comboDescripcion.trim(),
+        precio_dia: parseFloat(comboPrecioDia),
+        precio_semana: comboPrecioSemana ? parseFloat(comboPrecioSemana) : null,
+        precio_mes: comboPrecioMes ? parseFloat(comboPrecioMes) : null,
+        items: comboItems
+      };
+      
+      if (comboEditando) {
+        const res = await api.put(`/combos/${comboEditando.id}`, payload);
+        toast.success(`Combo "${res.data.nombre}" actualizado con éxito`);
+      } else {
+        await api.post('/combos', payload);
+        toast.success(`Combo creado con éxito`);
+      }
+      
+      setComboNombre('');
+      setComboDescripcion('');
+      setComboPrecioDia('');
+      setComboPrecioSemana('');
+      setComboPrecioMes('');
+      setComboItems([]);
+      setComboEditando(null);
+      
+      api.get('/combos').then(r => setCombos(r.data));
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Error al guardar el combo');
+    } finally {
+      setLoadingComboForm(false);
+    }
+  };
+
+  const eliminarCombo = async (id) => {
+    if (!window.confirm('¿Eliminar este combo?')) return;
+    try {
+      await api.delete(`/combos/${id}`);
+      setCombos(prev => prev.filter(c => c.id !== id));
+      toast.success('Combo eliminado');
+    } catch {
+      toast.error('Error al eliminar combo');
+    }
+  };
+
+  const tabs = ['dashboard', 'reservas', 'mobiliario', 'combos'];
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
@@ -491,7 +636,7 @@ export default function AdminPanel() {
       <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
         {tabs.map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: tab === t ? '#4a6cf7' : '#e8eaf6', color: tab === t ? '#fff' : '#555', cursor: 'pointer', fontWeight: 600, textTransform: 'capitalize' }}>
-            {t === 'dashboard' ? 'Resumen' : t === 'reservas' ? 'Reservas' : 'Mobiliario'}
+            {t === 'dashboard' ? 'Resumen' : t === 'reservas' ? 'Reservas' : t === 'mobiliario' ? 'Mobiliario' : 'Combos y Paquetes'}
           </button>
         ))}
       </div>
@@ -685,6 +830,134 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {/* ── Combos y Paquetes ── */}
+      {tab === 'combos' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
+            <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+              <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.25rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.5rem' }}>
+                {comboEditando ? `Editar Combo: ${comboEditando.nombre}` : 'Crear nuevo combo / paquete'}
+              </h3>
+              <form onSubmit={handleSubmitCombo}>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Nombre del Combo *</label>
+                  <input type="text" placeholder="Ej. Combo Cumpleaños Básico" value={comboNombre} onChange={e => setComboNombre(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio / Día *</label>
+                    <input type="number" step="0.01" min="0.01" placeholder="0.00" value={comboPrecioDia} onChange={e => setComboPrecioDia(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio / Sem.</label>
+                    <input type="number" step="0.01" min="0" placeholder="0.00" value={comboPrecioSemana} onChange={e => setComboPrecioSemana(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio / Mes</label>
+                    <input type="number" step="0.01" min="0" placeholder="0.00" value={comboPrecioMes} onChange={e => setComboPrecioMes(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Descripción</label>
+                  <textarea rows="2" placeholder="Qué eventos cubre o detalles..." value={comboDescripcion} onChange={e => setComboDescripcion(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
+                </div>
+
+                {/* Relación con muebles */}
+                <div style={{ background: '#f8f9ff', padding: '1.25rem', borderRadius: 10, border: '1px solid #eef2ff', marginBottom: '1.5rem' }}>
+                  <h4 style={{ margin: '0 0 1rem 0', color: '#1a1a2e', fontSize: '13px' }}>🧩 Mobiliario Componente del Combo</h4>
+                  
+                  {comboItems.length > 0 ? (
+                    <div style={{ marginBottom: '1rem' }}>
+                      {comboItems.map((citem, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e8eaf6' }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>• {citem.nombre}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ fontSize: 13, color: '#666' }}>Cant: {citem.cantidad}</span>
+                            <button type="button" onClick={() => eliminarMuebleDelCombo(citem.mueble_id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p style={{ color: '#888', fontSize: 12, margin: '0 0 1rem 0' }}>El combo está vacío. Añade artículos abajo.</p>}
+
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                    <div style={{ flex: 2 }}>
+                      <select value={muebleParaComboSeleccionado} onChange={e => setMuebleParaComboSeleccionado(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, background: '#fff', cursor: 'pointer' }}>
+                        <option value="">Elegir mueble...</option>
+                        {muebles.filter(m => m.activo).map(m => <option key={m.id} value={m.id}>{m.nombre} (Stock: {m.stock})</option>)}
+                      </select>
+                    </div>
+                    <div style={{ width: 68 }}>
+                      <input type="number" min="1" value={cantidadParaComboAgregar} onChange={e => setCantidadParaComboAgregar(parseInt(e.target.value) || 1)} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, textAlign: 'center' }} />
+                    </div>
+                    <button type="button" onClick={agregarMuebleAlCombo} style={{ padding: '8px 12px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>+</button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  {comboEditando && (
+                    <button type="button" onClick={() => {
+                      setComboEditando(null);
+                      setComboNombre('');
+                      setComboDescripcion('');
+                      setComboPrecioDia('');
+                      setComboPrecioSemana('');
+                      setComboPrecioMes('');
+                      setComboItems([]);
+                    }} style={{ flex: 1, padding: '12px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
+                  )}
+                  <button type="submit" disabled={loadingComboForm} style={{ flex: 2, padding: '12px', background: loadingComboForm ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingComboForm ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 15 }}>
+                    {loadingComboForm ? 'Guardando combo...' : comboEditando ? 'Actualizar Combo' : 'Crear Combo'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+              <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.25rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.5rem' }}>Combos Registrados ({combos.length})</h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9ff', borderBottom: '1px solid #f0f0f0' }}>
+                      {['Nombre', 'Precio/Día', 'Componentes', 'Acciones'].map(h => (
+                        <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {combos.map(c => (
+                      <tr key={c.id} style={{ borderBottom: '1px solid #f8f8f8' }}>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 600, color: '#1a1a2e' }}>🎁 {c.nombre}</div>
+                          <div style={{ color: '#888', fontSize: 12 }}>{c.descripcion || 'Sin descripción'}</div>
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>${c.precio_dia}</td>
+                        <td style={{ padding: '12px 16px', fontSize: 12 }}>
+                          {c.items.map(ci => (
+                            <div key={ci.mueble_id} style={{ color: '#555' }}>
+                              • {ci.cantidad}x {ci.nombre}
+                            </div>
+                          ))}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button onClick={() => iniciarEditarCombo(c)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>✏️</button>
+                            <button onClick={() => eliminarCombo(c.id)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {combos.length === 0 && (
+                      <tr><td colSpan="4" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay combos registrados aún.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ══════════ MODAL EDITAR RESERVA ══════════ */}
       {reservaEditando && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -718,26 +991,42 @@ export default function AdminPanel() {
               </div>
 
               <div style={{ background: '#f8f9ff', borderRadius: 10, padding: '1.25rem', marginBottom: '1.25rem', border: '1px solid #eef2ff' }}>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#1a1a2e', fontSize: '1rem' }}>🪑 Mobiliario de la reserva</h4>
+                <h4 style={{ margin: '0 0 1rem 0', color: '#1a1a2e', fontSize: '1rem' }}>🪑 Artículos de la reserva</h4>
                 {itemsEditando.length > 0 ? (
                   <div style={{ marginBottom: '1rem' }}>
-                    {itemsEditando.map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #e8eaf6' }}>
-                        <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>{item.nombre}</span>
-                        <input type="number" min="1" value={item.cantidad} onChange={e => actualizarCantidadItem(item.mueble_id, parseInt(e.target.value))} style={{ width: 60, padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }} />
-                        <span style={{ fontSize: 12, color: '#888', minWidth: 40 }}>uds</span>
-                        <button type="button" onClick={() => eliminarMuebleDeReserva(item.mueble_id)} style={{ background: '#ef444422', color: '#ef4444', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>🗑️ Eliminar</button>
-                      </div>
-                    ))}
+                    {itemsEditando.map((item, idx) => {
+                      const id = item.combo_id || item.mueble_id;
+                      return (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #e8eaf6' }}>
+                          <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>
+                            {item.combo_id ? `🎁 Combo: ${item.nombre}` : item.nombre}
+                          </span>
+                          <input type="number" min="1" value={item.cantidad} onChange={e => actualizarCantidadItem(id, parseInt(e.target.value), !!item.combo_id)} style={{ width: 60, padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }} />
+                          <span style={{ fontSize: 12, color: '#888', minWidth: 40 }}>uds</span>
+                          <button type="button" onClick={() => eliminarMuebleDeReserva(id, !!item.combo_id)} style={{ background: '#ef444422', color: '#ef4444', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>🗑️ Eliminar</button>
+                        </div>
+                      );
+                    })}
                   </div>
-                ) : <p style={{ color: '#888', fontSize: 13, margin: '0 0 1rem 0' }}>No hay muebles en esta reserva.</p>}
+                ) : <p style={{ color: '#888', fontSize: 13, margin: '0 0 1rem 0' }}>No hay artículos en esta reserva.</p>}
 
+                {/* Agregar artículo */}
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div style={{ minWidth: 100 }}>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Tipo</label>
+                    <select value={tipoArticuloAgregar} onChange={e => { setTipoArticuloAgregar(e.target.value); setMuebleSeleccionado(''); }} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, background: '#fff', cursor: 'pointer' }}>
+                      <option value="mueble">Mueble</option>
+                      <option value="combo">Combo</option>
+                    </select>
+                  </div>
                   <div style={{ flex: 2, minWidth: 180 }}>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Agregar mueble</label>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Seleccionar artículo</label>
                     <select value={muebleSeleccionado} onChange={e => setMuebleSeleccionado(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff' }}>
-                      <option value="">Seleccionar mueble...</option>
-                      {muebles.filter(m => m.activo).map(m => <option key={m.id} value={m.id}>{m.nombre} — ${m.precio_dia}/día</option>)}
+                      <option value="">Seleccionar...</option>
+                      {tipoArticuloAgregar === 'combo' 
+                        ? combos.filter(c => c.activo).map(c => <option key={c.id} value={c.id}>🎁 {c.nombre} — ${c.precio_dia}/día</option>)
+                        : muebles.filter(m => m.activo).map(m => <option key={m.id} value={m.id}>🪑 {m.nombre} — ${m.precio_dia}/día</option>)
+                      }
                     </select>
                   </div>
                   <div style={{ width: 80 }}>

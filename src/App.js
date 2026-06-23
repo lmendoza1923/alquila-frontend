@@ -38,7 +38,7 @@ function Navbar() {
       {/* Menú desplegable */}
       {menuAbierto && (
         <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.75rem' }}>
-          <Link to="/" onClick={() => setMenuAbierto(false)} style={{ color: '#ccc', textDecoration: 'none', padding: '8px 12px', borderRadius: 8, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}
+          <Link to="/catalogo" onClick={() => setMenuAbierto(false)} style={{ color: '#ccc', textDecoration: 'none', padding: '8px 12px', borderRadius: 8, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}
             onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
             onMouseOut={e => e.currentTarget.style.background = 'transparent'}
           >
@@ -93,7 +93,23 @@ function Navbar() {
 
 function AdminRoute({ children }) {
   const { user } = useAuth();
-  return user?.rol === 'admin' ? children : <Navigate to="/" />;
+  return user?.rol === 'admin' ? children : <Navigate to="/" replace />;
+}
+
+function ProtectedRoute({ children }) {
+  const { user } = useAuth();
+  return user ? children : <Navigate to="/login" replace />;
+}
+
+function HomeRoute() {
+  const { user } = useAuth();
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (user.rol === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+  return <Navigate to="/catalogo" replace />;
 }
 
 export default function App() {
@@ -105,11 +121,12 @@ export default function App() {
           <Navbar />
           <div style={{ minHeight: '100vh', background: '#f7f8fc' }}>
             <Routes>
-              <Route path="/" element={<Catalogo />} />
-              <Route path="/carrito" element={<Carrito />} />
-              <Route path="/confirmacion/:id" element={<Confirmacion />} />
+              <Route path="/" element={<HomeRoute />} />
+              <Route path="/catalogo" element={<ProtectedRoute><Catalogo /></ProtectedRoute>} />
+              <Route path="/carrito" element={<ProtectedRoute><Carrito /></ProtectedRoute>} />
+              <Route path="/confirmacion/:id" element={<ProtectedRoute><Confirmacion /></ProtectedRoute>} />
               <Route path="/login" element={<Login />} />
-              <Route path="/mis-reservas" element={<MisReservas />} />
+              <Route path="/mis-reservas" element={<ProtectedRoute><MisReservas /></ProtectedRoute>} />
               <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
             </Routes>
           </div>

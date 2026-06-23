@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import api from '../api';
 import toast from 'react-hot-toast';
@@ -41,7 +41,11 @@ export default function Carrito() {
         telefono_cliente: form.telefono,
         direccion_entrega: form.direccion,
         notas: form.notas,
-        items: items.map(i => ({ mueble_id: i.mueble_id, cantidad: i.cantidad }))
+        items: items.map(i => ({ 
+          mueble_id: i.esCombo ? null : i.mueble_id, 
+          combo_id: i.esCombo ? i.combo_id : null, 
+          cantidad: i.cantidad 
+        }))
       });
       vaciar();
       navigate(`/confirmacion/${data.reserva.id}`);
@@ -56,7 +60,7 @@ export default function Carrito() {
     <div style={{ ...s.page, textAlign: 'center', padding: '4rem' }}>
       <div style={{ fontSize: 64 }}>🛒</div>
       <h2>Tu carrito está vacío</h2>
-      <a href="/" style={{ color: '#4a6cf7' }}>Ir al catálogo</a>
+      <Link to="/catalogo" style={{ color: '#4a6cf7', fontWeight: 600 }}>Ir al catálogo</Link>
     </div>
   );
 
@@ -66,24 +70,29 @@ export default function Carrito() {
       <div style={s.row}>
         <div style={s.left}>
           <div style={s.card}>
-            <h3 style={{ marginTop: 0 }}>Muebles seleccionados</h3>
-            {items.map(i => (
-              <div key={i.mueble_id} style={s.item}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600 }}>{i.nombre}</div>
-                  <div style={{ fontSize: 13, color: '#888' }}>${i.precio_dia}/día × {diasSeleccionados} días</div>
+            <h3 style={{ marginTop: 0 }}>Artículos seleccionados</h3>
+            {items.map(i => {
+              const id = i.esCombo ? i.combo_id : i.mueble_id;
+              return (
+                <div key={id} style={s.item}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600 }}>
+                      {i.esCombo ? `🎁 Combo: ${i.nombre}` : i.nombre}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#888' }}>${i.precio_dia}/día × {diasSeleccionados} días</div>
+                  </div>
+                  <input
+                    type="number" min="1" value={i.cantidad}
+                    onChange={e => actualizar(id, parseInt(e.target.value), i.esCombo)}
+                    style={{ width: 56, padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center' }}
+                  />
+                  <div style={{ fontWeight: 600, minWidth: 70, textAlign: 'right' }}>
+                    ${(parseFloat(i.precio_dia) * i.cantidad * diasSeleccionados).toFixed(2)}
+                  </div>
+                  <button onClick={() => quitar(id, i.esCombo)} style={{ background: 'none', border: 'none', color: '#e53e3e', cursor: 'pointer', fontSize: 18 }}>✕</button>
                 </div>
-                <input
-                  type="number" min="1" value={i.cantidad}
-                  onChange={e => actualizar(i.mueble_id, parseInt(e.target.value))}
-                  style={{ width: 56, padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center' }}
-                />
-                <div style={{ fontWeight: 600, minWidth: 70, textAlign: 'right' }}>
-                  ${(i.precio_dia * i.cantidad * diasSeleccionados).toFixed(2)}
-                </div>
-                <button onClick={() => quitar(i.mueble_id)} style={{ background: 'none', border: 'none', color: '#e53e3e', cursor: 'pointer', fontSize: 18 }}>✕</button>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div style={s.card}>
@@ -108,12 +117,15 @@ export default function Carrito() {
               📅 {fechas.inicio?.toLocaleDateString('es', { day: '2-digit', month: 'short' })} → {fechas.fin?.toLocaleDateString('es', { day: '2-digit', month: 'short' })}
             </div>
             <div style={{ fontSize: 14, color: '#666', marginBottom: '1rem' }}>Duración: {diasSeleccionados} días</div>
-            {items.map(i => (
-              <div key={i.mueble_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-                <span>{i.nombre} x{i.cantidad}</span>
-                <span>${(i.precio_dia * i.cantidad * diasSeleccionados).toFixed(2)}</span>
-              </div>
-            ))}
+            {items.map(i => {
+              const id = i.esCombo ? i.combo_id : i.mueble_id;
+              return (
+                <div key={id} style={{ display: 'flex', justifycontent: 'space-between', fontSize: 13, marginBottom: 4, gap: 10 }}>
+                  <span style={{ flex: 1 }}>{i.esCombo ? `🎁 ${i.nombre}` : i.nombre} x{i.cantidad}</span>
+                  <span style={{ fontWeight: 600 }}>${(parseFloat(i.precio_dia) * i.cantidad * diasSeleccionados).toFixed(2)}</span>
+                </div>
+              );
+            })}
             <div style={{ borderTop: '2px solid #f0f0f0', marginTop: '0.75rem', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.1rem' }}>
               <span>Total</span>
               <span style={{ color: '#4a6cf7' }}>${calcularTotal()}</span>
