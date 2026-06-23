@@ -22,23 +22,19 @@ const s = {
 export default function Catalogo() {
   const [muebles, setMuebles] = useState([]);
   const [combos, setCombos] = useState([]);
-  const [categorias, setCategorias] = useState([]);
   const [busqueda, setBusqueda] = useState('');
-  const [categoria, setCategoria] = useState('');
   const [vista, setVista] = useState('muebles'); // 'muebles' o 'combos'
   const [loading, setLoading] = useState(true);
   const { agregar, fechas, setFechas } = useCart();
 
   useEffect(() => {
-    api.get('/categorias').then(r => setCategorias(r.data));
     cargar();
   }, []);
 
-  const cargar = async (cat = '', bus = '') => {
+  const cargar = async (bus = '') => {
     setLoading(true);
     try {
       const params = {};
-      if (cat) params.categoria = cat;
       if (bus) params.busqueda = bus;
       
       const [mueblesRes, combosRes] = await Promise.all([
@@ -60,7 +56,7 @@ export default function Catalogo() {
 
   const filtrar = (e) => {
     e.preventDefault();
-    cargar(categoria, busqueda);
+    cargar(busqueda);
   };
 
   const calcularStockCombo = (combo) => {
@@ -119,24 +115,11 @@ export default function Catalogo() {
         <button style={s.tabBtn(vista === 'combos')} onClick={() => setVista('combos')}>🎁 Paquetes y Combos</button>
       </div>
 
-      {/* Buscador y Filtros */}
-      {vista === 'muebles' && (
-        <form onSubmit={filtrar} style={s.filtros}>
-          <input style={s.input} placeholder="Buscar mueble..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-          <select style={s.input} value={categoria} onChange={e => { setCategoria(e.target.value); cargar(e.target.value, busqueda); }}>
-            <option value="">Todas las categorías</option>
-            {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
-          <button type="submit" style={{ ...s.btn, width: 'auto', padding: '8px 20px', marginTop: 0 }}>Buscar</button>
-        </form>
-      )}
-
-      {vista === 'combos' && (
-        <form onSubmit={filtrar} style={s.filtros}>
-          <input style={s.input} placeholder="Buscar combo..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-          <button type="submit" style={{ ...s.btn, width: 'auto', padding: '8px 20px', marginTop: 0 }}>Buscar</button>
-        </form>
-      )}
+      {/* Buscador */}
+      <form onSubmit={filtrar} style={s.filtros}>
+        <input style={s.input} placeholder={vista === 'muebles' ? "Buscar mueble..." : "Buscar combo..."} value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+        <button type="submit" style={{ ...s.btn, width: 'auto', padding: '8px 20px', marginTop: 0 }}>Buscar</button>
+      </form>
 
       {loading ? (
         <p style={{ color: '#999', textAlign: 'center', padding: '3rem' }}>Cargando catálogo...</p>
@@ -147,17 +130,17 @@ export default function Catalogo() {
               {muebles.map(m => (
                 <div key={m.id} style={s.card}>
                   <div style={s.imgBox}>
-                    {m.imagenes?.[0] ? <img src={m.imagenes[0]} alt={m.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (iconos[m.categoria_nombre] || '🪑')}
+                    {m.imagenes?.[0] ? <img src={m.imagenes[0]} alt={m.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🪑'}
                   </div>
                   <div style={s.body}>
                     <div>
-                      <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>{m.categoria_nombre}</div>
                       <div style={s.nombre}>{m.nombre}</div>
                       <div style={{ fontSize: 13, color: '#666', marginBottom: 8, height: 36, overflow: 'hidden' }}>{m.descripcion}</div>
                     </div>
                     <div>
-                      <div style={s.precio}>${m.precio_dia}/día</div>
-                      {m.precio_semana && <div style={{ fontSize: 12, color: '#888' }}>${m.precio_semana}/semana · ${m.precio_mes}/mes</div>}
+                      <div style={s.precio}>
+                        {m.precio_dia && parseFloat(m.precio_dia) > 0 ? `$${parseFloat(m.precio_dia).toFixed(2)}` : 'Precio no especificado'}
+                      </div>
                       <div style={{ fontSize: 12, color: m.stock > 0 ? '#22c55e' : '#ef4444', marginTop: 4, fontWeight: 600 }}>Stock: {m.stock} unidades</div>
                       <button
                         style={{ ...s.btn, background: m.stock > 0 ? '#4a6cf7' : '#94a3b8', cursor: m.stock > 0 ? 'pointer' : 'not-allowed' }}
@@ -187,7 +170,6 @@ export default function Catalogo() {
                     </div>
                     <div style={s.body}>
                       <div>
-                        <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>Paquete Especial</div>
                         <div style={s.nombre}>{c.nombre}</div>
                         <div style={{ fontSize: 13, color: '#666', marginBottom: 8, height: 42, overflow: 'hidden' }}>{c.descripcion}</div>
                         
@@ -202,8 +184,9 @@ export default function Catalogo() {
                         </div>
                       </div>
                       <div>
-                        <div style={s.precio}>${c.precio_dia}/día</div>
-                        {c.precio_semana && <div style={{ fontSize: 12, color: '#888' }}>${c.precio_semana}/semana · ${c.precio_mes}/mes</div>}
+                        <div style={s.precio}>
+                          {c.precio_dia && parseFloat(c.precio_dia) > 0 ? `$${parseFloat(c.precio_dia).toFixed(2)}` : 'Precio no especificado'}
+                        </div>
                         <div style={{ fontSize: 12, color: stockCombo > 0 ? '#22c55e' : '#ef4444', marginTop: 4, fontWeight: 600 }}>Combos Disponibles: {stockCombo}</div>
                         <button
                           style={{ ...s.btn, background: stockCombo > 0 ? '#10b981' : '#94a3b8', cursor: stockCombo > 0 ? 'pointer' : 'not-allowed' }}

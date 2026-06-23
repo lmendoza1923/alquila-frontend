@@ -79,7 +79,9 @@ export default function Carrito() {
                     <div style={{ fontWeight: 600 }}>
                       {i.esCombo ? `🎁 Combo: ${i.nombre}` : i.nombre}
                     </div>
-                    <div style={{ fontSize: 13, color: '#888' }}>${i.precio_dia}/día × {diasSeleccionados} días</div>
+                    <div style={{ fontSize: 13, color: '#888' }}>
+                      {i.precio_dia && parseFloat(i.precio_dia) > 0 ? `$${parseFloat(i.precio_dia).toFixed(2)}` : 'Precio no especificado'} × {diasSeleccionados} {diasSeleccionados === 1 ? 'día' : 'días'}
+                    </div>
                   </div>
                   <input
                     type="number" min="1" value={i.cantidad}

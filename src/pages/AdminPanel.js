@@ -22,7 +22,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono) {
     `<tr>
       <td style="padding:6px 12px;border-bottom:1px solid #eee;">${new Date(p.creado_en).toLocaleDateString('es')}</td>
       <td style="padding:6px 12px;border-bottom:1px solid #eee;text-transform:capitalize;">${p.metodo}</td>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;">${p.notas || '—'}</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #eee;">${p.notes || p.notas || '—'}</td>
       <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:600;color:#22c55e;">$${parseFloat(p.monto).toFixed(2)}</td>
     </tr>`
   ).join('') : `<tr><td colspan="4" style="padding:8px 12px;color:#888;">Sin pagos registrados aún.</td></tr>`;
@@ -150,17 +150,13 @@ export default function AdminPanel() {
   const [stats, setStats] = useState(null);
   const [reservas, setReservas] = useState([]);
   const [tab, setTab] = useState('dashboard');
-  const [categorias, setCategorias] = useState([]);
   const [muebles, setMuebles] = useState([]);
   const [combos, setCombos] = useState([]);
 
   // Estados formulario mobiliario
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [categoriaId, setCategoriaId] = useState('');
   const [precioDia, setPrecioDia] = useState('');
-  const [precioSemana, setPrecioSemana] = useState('');
-  const [precioMes, setPrecioMes] = useState('');
   const [stock, setStock] = useState('1');
   const [imagenes, setImagenes] = useState([]);
   const [nuevaImagenUrl, setNuevaImagenUrl] = useState('');
@@ -170,8 +166,6 @@ export default function AdminPanel() {
   const [comboNombre, setComboNombre] = useState('');
   const [comboDescripcion, setComboDescripcion] = useState('');
   const [comboPrecioDia, setComboPrecioDia] = useState('');
-  const [comboPrecioSemana, setComboPrecioSemana] = useState('');
-  const [comboPrecioMes, setComboPrecioMes] = useState('');
   const [comboItems, setComboItems] = useState([]); // [{ mueble_id, nombre, cantidad }]
   const [muebleParaComboSeleccionado, setMuebleParaComboSeleccionado] = useState('');
   const [cantidadParaComboAgregar, setCantidadParaComboAgregar] = useState(1);
@@ -220,7 +214,6 @@ export default function AdminPanel() {
   useEffect(() => {
     api.get('/admin/stats').then(r => setStats(r.data));
     api.get('/reservas').then(r => setReservas(r.data));
-    api.get('/categorias').then(r => setCategorias(r.data)).catch(() => {});
     api.get('/muebles').then(r => setMuebles(r.data)).catch(() => {});
     api.get('/combos').then(r => setCombos(r.data)).catch(() => {});
     api.get('/pagos/terminos').then(r => setTerminos(r.data.terminos)).catch(() => {});
@@ -271,7 +264,7 @@ export default function AdminPanel() {
           mueble_id: null,
           nombre: combo.nombre,
           cantidad: cantidadAgregar,
-          subtotal: combo.precio_dia * cantidadAgregar
+          subtotal: parseFloat(combo.precio_dia || 0) * cantidadAgregar
         }];
       }
       setItemsEditando(nuevosItems);
@@ -294,7 +287,7 @@ export default function AdminPanel() {
           combo_id: null,
           nombre: mueble.nombre,
           cantidad: cantidadAgregar,
-          subtotal: mueble.precio_dia * cantidadAgregar
+          subtotal: parseFloat(mueble.precio_dia || 0) * cantidadAgregar
         }];
       }
       setItemsEditando(nuevosItems);
@@ -333,11 +326,11 @@ export default function AdminPanel() {
     const total = items.reduce((sum, item) => {
       if (item.combo_id) {
         const combo = combos.find(c => c.id === item.combo_id);
-        const precio = combo ? parseFloat(combo.precio_dia) : (item.subtotal / item.cantidad / dias || 0);
+        const precio = combo ? parseFloat(combo.precio_dia || 0) : (item.subtotal / item.cantidad / dias || 0);
         return sum + precio * item.cantidad * dias;
       } else {
         const mueble = muebles.find(m => m.id === item.mueble_id);
-        const precio = mueble ? parseFloat(mueble.precio_dia) : (item.subtotal / item.cantidad / dias || 0);
+        const precio = mueble ? parseFloat(mueble.precio_dia || 0) : (item.subtotal / item.cantidad / dias || 0);
         return sum + precio * item.cantidad * dias;
       }
     }, 0);
@@ -357,6 +350,7 @@ export default function AdminPanel() {
         email_cliente: editEmail.trim(),
         telefono_cliente: editTelefono.trim(),
         direccion_entrega: editDireccion.trim(),
+        notes: editNotas.trim(),
         notas: editNotas.trim(),
         fecha_inicio: editFechaInicio,
         fecha_fin: editFechaFin,
@@ -508,25 +502,23 @@ export default function AdminPanel() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!nombre.trim()) return toast.error('El nombre es obligatorio');
-    if (!categoriaId) return toast.error('La categoría es obligatoria');
-    if (!precioDia || parseFloat(precioDia) <= 0) return toast.error('El precio por día debe ser mayor a 0');
     if (!stock || parseInt(stock) < 0) return toast.error('El stock no puede ser negativo');
     setLoadingForm(true);
     try {
       const payload = {
         nombre: nombre.trim(),
         descripcion: descripcion.trim(),
-        categoria_id: parseInt(categoriaId),
-        precio_dia: parseFloat(precioDia),
-        precio_semana: precioSemana ? parseFloat(precioSemana) : null,
-        precio_mes: precioMes ? parseFloat(precioMes) : null,
+        categoria_id: null,
+        precio_dia: precioDia ? parseFloat(precioDia) : 0.00,
+        precio_semana: null,
+        precio_mes: null,
         stock: parseInt(stock),
         imagenes
       };
       const res = await api.post('/muebles', payload);
       toast.success(`Mueble "${res.data.nombre}" creado con éxito`);
-      setNombre(''); setDescripcion(''); setCategoriaId(''); setPrecioDia('');
-      setPrecioSemana(''); setPrecioMes(''); setStock('1'); setImagenes([]); setNuevaImagenUrl('');
+      setNombre(''); setDescripcion(''); setPrecioDia('');
+      setStock('1'); setImagenes([]); setNuevaImagenUrl('');
       api.get('/admin/stats').then(r => setStats(r.data));
       api.get('/muebles').then(r => setMuebles(r.data));
     } catch (error) {
@@ -561,25 +553,22 @@ export default function AdminPanel() {
     setComboEditando(c);
     setComboNombre(c.nombre);
     setComboDescripcion(c.descripcion || '');
-    setComboPrecioDia(c.precio_dia);
-    setComboPrecioSemana(c.precio_semana || '');
-    setComboPrecioMes(c.precio_mes || '');
+    setComboPrecioDia(c.precio_dia || '');
     setComboItems(c.items.map(i => ({ mueble_id: i.mueble_id, nombre: i.nombre, cantidad: i.cantidad })));
   };
 
   const handleSubmitCombo = async (e) => {
     e.preventDefault();
     if (!comboNombre.trim()) return toast.error('El nombre es obligatorio');
-    if (!comboPrecioDia || parseFloat(comboPrecioDia) <= 0) return toast.error('El precio por día debe ser mayor a 0');
     if (comboItems.length === 0) return toast.error('El combo debe incluir al menos un mueble');
     setLoadingComboForm(true);
     try {
       const payload = {
         nombre: comboNombre.trim(),
         descripcion: comboDescripcion.trim(),
-        precio_dia: parseFloat(comboPrecioDia),
-        precio_semana: comboPrecioSemana ? parseFloat(comboPrecioSemana) : null,
-        precio_mes: comboPrecioMes ? parseFloat(comboPrecioMes) : null,
+        precio_dia: comboPrecioDia ? parseFloat(comboPrecioDia) : 0.00,
+        precio_semana: null,
+        precio_mes: null,
         items: comboItems
       };
       
@@ -594,8 +583,6 @@ export default function AdminPanel() {
       setComboNombre('');
       setComboDescripcion('');
       setComboPrecioDia('');
-      setComboPrecioSemana('');
-      setComboPrecioMes('');
       setComboItems([]);
       setComboEditando(null);
       
@@ -721,29 +708,12 @@ export default function AdminPanel() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Categoría *</label>
-                    <select value={categoriaId} onChange={e => setCategoriaId(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff', boxSizing: 'border-box' }} required>
-                      <option value="">Seleccionar...</option>
-                      {categorias.map(cat => <option key={cat.id} value={cat.id}>{cat.nombre}</option>)}
-                    </select>
-                  </div>
-                  <div>
                     <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Stock disponible *</label>
                     <input type="number" min="0" value={stock} onChange={e => setStock(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
                   </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio / Día *</label>
-                    <input type="number" step="0.01" min="0.01" placeholder="0.00" value={precioDia} onChange={e => setPrecioDia(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio / Sem.</label>
-                    <input type="number" step="0.01" min="0" placeholder="0.00" value={precioSemana} onChange={e => setPrecioSemana(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio / Mes</label>
-                    <input type="number" step="0.01" min="0" placeholder="0.00" value={precioMes} onChange={e => setPrecioMes(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio (Opcional)</label>
+                    <input type="number" step="0.01" min="0" placeholder="0.00" value={precioDia} onChange={e => setPrecioDia(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
                   </div>
                 </div>
                 <div style={{ marginBottom: '1.25rem' }}>
@@ -781,9 +751,8 @@ export default function AdminPanel() {
                   {imagenes.length > 1 && <span style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600 }}>+{imagenes.length - 1} fotos</span>}
                 </div>
                 <div style={{ padding: '1.25rem' }}>
-                  <div style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{categorias.find(c => c.id === parseInt(categoriaId))?.nombre || 'Categoría'}</div>
                   <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: 6, color: '#1a1a2e' }}>{nombre || 'Nombre del Mueble'}</div>
-                  <div style={{ color: '#4a6cf7', fontWeight: 700, fontSize: '1.15rem', marginBottom: 4 }}>${precioDia ? parseFloat(precioDia).toFixed(2) : '0.00'}/día</div>
+                  <div style={{ color: '#4a6cf7', fontWeight: 700, fontSize: '1.15rem', marginBottom: 4 }}>${precioDia ? parseFloat(precioDia).toFixed(2) : '0.00'}</div>
                   <div style={{ fontSize: 12, color: parseInt(stock) > 0 ? '#22c55e' : '#ef4444', fontWeight: 600 }}>Stock: {stock || 0} unidades</div>
                 </div>
               </div>
@@ -796,7 +765,7 @@ export default function AdminPanel() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: '#f8f9ff', borderBottom: '1px solid #f0f0f0' }}>
-                    {['Imagen', 'Nombre', 'Categoría', 'Precio/Día', 'Stock', 'Estado'].map(h => (
+                    {['Imagen', 'Nombre', 'Precio', 'Stock', 'Estado'].map(h => (
                       <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555' }}>{h}</th>
                     ))}
                   </tr>
@@ -810,8 +779,9 @@ export default function AdminPanel() {
                         </div>
                       </td>
                       <td style={{ padding: '12px 16px', fontWeight: 600, color: '#1a1a2e' }}>{m.nombre}</td>
-                      <td style={{ padding: '12px 16px', color: '#666' }}>{m.categoria_nombre}</td>
-                      <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>${m.precio_dia}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>
+                        {m.precio_dia ? `$${parseFloat(m.precio_dia).toFixed(2)}` : '—'}
+                      </td>
                       <td style={{ padding: '12px 16px', color: '#666' }}>{m.stock} uds</td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ background: m.activo ? '#22c55e22' : '#ef444422', color: m.activo ? '#22c55e' : '#ef4444', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
@@ -821,7 +791,7 @@ export default function AdminPanel() {
                     </tr>
                   ))}
                   {muebles.length === 0 && (
-                    <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay muebles registrados aún.</td></tr>
+                    <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay muebles registrados aún.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -843,19 +813,9 @@ export default function AdminPanel() {
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Nombre del Combo *</label>
                   <input type="text" placeholder="Ej. Combo Cumpleaños Básico" value={comboNombre} onChange={e => setComboNombre(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio / Día *</label>
-                    <input type="number" step="0.01" min="0.01" placeholder="0.00" value={comboPrecioDia} onChange={e => setComboPrecioDia(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio / Sem.</label>
-                    <input type="number" step="0.01" min="0" placeholder="0.00" value={comboPrecioSemana} onChange={e => setComboPrecioSemana(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio / Mes</label>
-                    <input type="number" step="0.01" min="0" placeholder="0.00" value={comboPrecioMes} onChange={e => setComboPrecioMes(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
-                  </div>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio (Opcional)</label>
+                  <input type="number" step="0.01" min="0" placeholder="0.00" value={comboPrecioDia} onChange={e => setComboPrecioDia(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
                 </div>
                 <div style={{ marginBottom: '1.25rem' }}>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Descripción</label>
@@ -901,8 +861,6 @@ export default function AdminPanel() {
                       setComboNombre('');
                       setComboDescripcion('');
                       setComboPrecioDia('');
-                      setComboPrecioSemana('');
-                      setComboPrecioMes('');
                       setComboItems([]);
                     }} style={{ flex: 1, padding: '12px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
                   )}
@@ -919,7 +877,7 @@ export default function AdminPanel() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                   <thead>
                     <tr style={{ background: '#f8f9ff', borderBottom: '1px solid #f0f0f0' }}>
-                      {['Nombre', 'Precio/Día', 'Componentes', 'Acciones'].map(h => (
+                      {['Nombre', 'Precio', 'Componentes', 'Acciones'].map(h => (
                         <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555' }}>{h}</th>
                       ))}
                     </tr>
@@ -931,7 +889,9 @@ export default function AdminPanel() {
                           <div style={{ fontWeight: 600, color: '#1a1a2e' }}>🎁 {c.nombre}</div>
                           <div style={{ color: '#888', fontSize: 12 }}>{c.descripcion || 'Sin descripción'}</div>
                         </td>
-                        <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>${c.precio_dia}</td>
+                        <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>
+                          {c.precio_dia ? `$${parseFloat(c.precio_dia).toFixed(2)}` : '—'}
+                        </td>
                         <td style={{ padding: '12px 16px', fontSize: 12 }}>
                           {c.items.map(ci => (
                             <div key={ci.mueble_id} style={{ color: '#555' }}>
@@ -1024,8 +984,8 @@ export default function AdminPanel() {
                     <select value={muebleSeleccionado} onChange={e => setMuebleSeleccionado(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff' }}>
                       <option value="">Seleccionar...</option>
                       {tipoArticuloAgregar === 'combo' 
-                        ? combos.filter(c => c.activo).map(c => <option key={c.id} value={c.id}>🎁 {c.nombre} — ${c.precio_dia}/día</option>)
-                        : muebles.filter(m => m.activo).map(m => <option key={m.id} value={m.id}>🪑 {m.nombre} — ${m.precio_dia}/día</option>)
+                        ? combos.filter(c => c.activo).map(c => <option key={c.id} value={c.id}>🎁 {c.nombre} — ${c.precio_dia}</option>)
+                        : muebles.filter(m => m.activo).map(m => <option key={m.id} value={m.id}>🪑 {m.nombre} — ${m.precio_dia}</option>)
                       }
                     </select>
                   </div>
@@ -1087,7 +1047,7 @@ export default function AdminPanel() {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, color: '#22c55e' }}>+${parseFloat(p.monto).toFixed(2)}</div>
                       <div style={{ fontSize: 12, color: '#888', textTransform: 'capitalize' }}>{p.metodo} · {new Date(p.creado_en).toLocaleDateString('es')}</div>
-                      {p.notas && <div style={{ fontSize: 12, color: '#aaa', fontStyle: 'italic' }}>{p.notas}</div>}
+                      {p.notes && <div style={{ fontSize: 12, color: '#aaa', fontStyle: 'italic' }}>{p.notes}</div>}
                     </div>
                     <button onClick={() => eliminarPago(p.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 16 }} title="Eliminar pago">🗑️</button>
                   </div>
