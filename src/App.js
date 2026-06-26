@@ -27,8 +27,8 @@ function Navbar({ isMobile }) {
 
   const sidebarWidth = isMobile ? '70px' : '260px';
 
-  const linkStyle = (active, isSpecial = false) => ({
-    color: active ? '#fff' : (isSpecial ? '#f4c430' : '#ccc'),
+  const linkStyle = (active) => ({
+    color: active ? '#fff' : '#ccc',
     background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
     textDecoration: 'none',
     padding: '12px',
@@ -91,10 +91,7 @@ function Navbar({ isMobile }) {
 
         {user?.rol === 'admin' && (
           <>
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '8px 0' }} />
-            {!isMobile && <div style={{ color: '#888', fontSize: 11, fontWeight: 700, paddingLeft: 12, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Administración</div>}
-            
-            <Link to="/admin?tab=dashboard" style={linkStyle(isActive('/admin', 'dashboard'), true)}
+            <Link to="/admin?tab=dashboard" style={linkStyle(isActive('/admin', 'dashboard'))}
               onMouseOver={e => { if (!isActive('/admin', 'dashboard')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'dashboard')) e.currentTarget.style.background = 'transparent'; }}
               title="Resumen"
@@ -103,7 +100,7 @@ function Navbar({ isMobile }) {
               {!isMobile && <span>Resumen</span>}
             </Link>
 
-            <Link to="/admin?tab=reservas" style={linkStyle(isActive('/admin', 'reservas'), true)}
+            <Link to="/admin?tab=reservas" style={linkStyle(isActive('/admin', 'reservas'))}
               onMouseOver={e => { if (!isActive('/admin', 'reservas')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'reservas')) e.currentTarget.style.background = 'transparent'; }}
               title="Reservas"
@@ -112,7 +109,7 @@ function Navbar({ isMobile }) {
               {!isMobile && <span>Reservas</span>}
             </Link>
 
-            <Link to="/admin?tab=mobiliario" style={linkStyle(isActive('/admin', 'mobiliario'), true)}
+            <Link to="/admin?tab=mobiliario" style={linkStyle(isActive('/admin', 'mobiliario'))}
               onMouseOver={e => { if (!isActive('/admin', 'mobiliario')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'mobiliario')) e.currentTarget.style.background = 'transparent'; }}
               title="Mobiliario"
@@ -121,7 +118,7 @@ function Navbar({ isMobile }) {
               {!isMobile && <span>Mobiliario</span>}
             </Link>
 
-            <Link to="/admin?tab=combos" style={linkStyle(isActive('/admin', 'combos'), true)}
+            <Link to="/admin?tab=combos" style={linkStyle(isActive('/admin', 'combos'))}
               onMouseOver={e => { if (!isActive('/admin', 'combos')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'combos')) e.currentTarget.style.background = 'transparent'; }}
               title="Combos y Paquetes"
@@ -130,7 +127,7 @@ function Navbar({ isMobile }) {
               {!isMobile && <span>Combos y Paquetes</span>}
             </Link>
 
-            <Link to="/admin?tab=reportes" style={linkStyle(isActive('/admin', 'reportes'), true)}
+            <Link to="/admin?tab=reportes" style={linkStyle(isActive('/admin', 'reportes'))}
               onMouseOver={e => { if (!isActive('/admin', 'reportes')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'reportes')) e.currentTarget.style.background = 'transparent'; }}
               title="Reportes"
@@ -139,7 +136,7 @@ function Navbar({ isMobile }) {
               {!isMobile && <span>Reportes</span>}
             </Link>
 
-            <Link to="/admin?tab=terminos" style={linkStyle(isActive('/admin', 'terminos'), true)}
+            <Link to="/admin?tab=terminos" style={linkStyle(isActive('/admin', 'terminos'))}
               onMouseOver={e => { if (!isActive('/admin', 'terminos')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'terminos')) e.currentTarget.style.background = 'transparent'; }}
               title="Términos de Contrato"
