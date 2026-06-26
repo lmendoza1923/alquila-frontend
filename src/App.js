@@ -68,7 +68,7 @@ function Navbar({ isMobile }) {
       </div>
 
       {/* Navigation Links */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, width: '100%' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, width: '100%', overflowY: 'auto', paddingRight: '4px' }}>
         <Link to="/catalogo" style={linkStyle(isActive('/catalogo'))}
           onMouseOver={e => { if (!isActive('/catalogo')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
           onMouseOut={e => { if (!isActive('/catalogo')) e.currentTarget.style.background = 'transparent'; }}
@@ -137,6 +137,15 @@ function Navbar({ isMobile }) {
             >
               <span>📈</span>
               {!isMobile && <span>Reportes</span>}
+            </Link>
+
+            <Link to="/admin?tab=terminos" style={linkStyle(isActive('/admin', 'terminos'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'terminos')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseOut={e => { if (!isActive('/admin', 'terminos')) e.currentTarget.style.background = 'transparent'; }}
+              title="Términos de Contrato"
+            >
+              <span>📄</span>
+              {!isMobile && <span>Términos de Contrato</span>}
             </Link>
           </>
         )}

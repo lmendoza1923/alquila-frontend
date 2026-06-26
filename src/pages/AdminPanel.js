@@ -335,6 +335,10 @@ export default function AdminPanel() {
     api.get('/pagos/terminos').then(r => setTerminos(r.data.terminos)).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    setTerminosEdit(terminos);
+  }, [terminos]);
+
   // ── Editar reserva ──────────────────────────────────────────────────────────
   const abrirEditarReserva = (r) => {
     setReservaEditando(r);
@@ -738,13 +742,14 @@ export default function AdminPanel() {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ margin: 0 }}>Panel de administración</h1>
-        <button
-          onClick={abrirTerminos}
-          style={{ padding: '8px 16px', background: '#1a1a2e', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
-        >
-          📄 Editar términos del contrato
-        </button>
+        <h1 style={{ margin: 0 }}>
+          {tab === 'dashboard' ? 'Panel de administración' : 
+           tab === 'reservas' ? 'Gestión de Reservas' : 
+           tab === 'mobiliario' ? 'Inventario de Mobiliario' : 
+           tab === 'combos' ? 'Combos y Paquetes' : 
+           tab === 'reportes' ? 'Estadísticas e Ingresos' : 
+           'Términos del Contrato'}
+        </h1>
       </div>
 
 
@@ -1258,6 +1263,23 @@ export default function AdminPanel() {
             <p style={{ textAlign: 'center', color: '#888' }}>No hay datos de reportes disponibles.</p>
           )}
         </div>
+      {/* ── Términos de Contrato ── */}
+      {tab === 'terminos' && (
+        <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
+          <p style={{ color: '#888', fontSize: 13, margin: '0 0 1.5rem 0' }}>Este texto aparecerá al final de todos los contratos generados en PDF para sus clientes.</p>
+          <textarea
+            value={terminosEdit}
+            onChange={e => setTerminosEdit(e.target.value)}
+            rows={16}
+            style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6 }}
+            placeholder="Escribe aquí los términos y condiciones..."
+          />
+          <div style={{ display: 'flex', gap: 10, marginTop: '1rem', maxWidth: 400 }}>
+            <button onClick={guardarTerminos} disabled={loadingTerminos} style={{ flex: 1, padding: '12px', background: loadingTerminos ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingTerminos ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 14 }}>
+              {loadingTerminos ? 'Guardando...' : '✓ Guardar Términos'}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ══════════ MODAL EDITAR RESERVA ══════════ */}
@@ -1473,29 +1495,7 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* ══════════ MODAL TÉRMINOS ══════════ */}
-      {modalTerminos && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 660, maxHeight: '90vh', overflowY: 'auto', padding: '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
-            <button onClick={() => setModalTerminos(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
-            <h3 style={{ marginTop: 0, marginBottom: 4, color: '#1a1a2e' }}>📋 Términos y Condiciones del Contrato</h3>
-            <p style={{ color: '#888', fontSize: 13, margin: '0 0 1.5rem 0' }}>Este texto aparecerá en todos los contratos generados en PDF.</p>
-            <textarea
-              value={terminosEdit}
-              onChange={e => setTerminosEdit(e.target.value)}
-              rows={16}
-              style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6 }}
-              placeholder="Escribe aquí los términos y condiciones..."
-            />
-            <div style={{ display: 'flex', gap: 10, marginTop: '1rem' }}>
-              <button onClick={() => setModalTerminos(false)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
-              <button onClick={guardarTerminos} disabled={loadingTerminos} style={{ flex: 2, padding: '10px', background: loadingTerminos ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingTerminos ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 14 }}>
-                {loadingTerminos ? 'Guardando...' : '✓ Guardar Términos'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
