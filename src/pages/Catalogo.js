@@ -47,7 +47,7 @@ export default function Catalogo() {
   } = useCart();
 
   // Checkout states for Admin
-  const [form, setForm] = useState({ nombre: '', email: '', telefono: '', direccion: '', notas: '' });
+  const [form, setForm] = useState({ nombre: '', telefono: '', direccion: '', notas: '' });
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [servicios, setServicios] = useState([]);
 
@@ -69,9 +69,6 @@ export default function Catalogo() {
   const totalReserva = parseFloat(calcularTotal()) + totalServicios;
 
   const confirmarReservaAdmin = async () => {
-    if (!form.nombre || !form.email || !form.telefono || !form.direccion) {
-      toast.error('Completa todos los campos requeridos del cliente'); return;
-    }
     if (!fechas.inicio || !fechas.fin) { toast.error('Selecciona fechas en el calendario primero'); return; }
     if (!items.length) { toast.error('Agrega al menos un artículo a la reserva'); return; }
 
@@ -80,10 +77,10 @@ export default function Catalogo() {
       const { data } = await api.post('/reservas', {
         fecha_inicio: fechas.inicio.toISOString().split('T')[0],
         fecha_fin: fechas.fin.toISOString().split('T')[0],
-        nombre_cliente: form.nombre,
-        email_cliente: form.email,
-        telefono_cliente: form.telefono,
-        direccion_entrega: form.direccion,
+        nombre_cliente: form.nombre || null,
+        email_cliente: null,
+        telefono_cliente: form.telefono || null,
+        direccion_entrega: form.direccion || null,
         notas: form.notas,
         items: [
           ...items.map(i => ({ 
@@ -100,7 +97,7 @@ export default function Catalogo() {
       });
       vaciar();
       setServicios([]);
-      setForm({ nombre: '', email: '', telefono: '', direccion: '', notas: '' });
+      setForm({ nombre: '', telefono: '', direccion: '', notas: '' });
       toast.success('Reserva creada exitosamente');
       navigate(`/confirmacion/${data.reserva.id}`);
     } catch (err) {
@@ -425,19 +422,15 @@ export default function Catalogo() {
               <h4 style={{ margin: '12px 0 6px 0', fontSize: 13, color: '#555', fontWeight: 600 }}>Datos del cliente</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div>
-                  <label style={s.label}>Nombre completo *</label>
+                  <label style={s.label}>Nombre completo</label>
                   <input style={{ ...s.input, padding: '6px 10px', fontSize: 12, marginBottom: 0, width: '100%', boxSizing: 'border-box' }} value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Juan Pérez" />
                 </div>
                 <div>
-                  <label style={s.label}>Correo electrónico *</label>
-                  <input style={{ ...s.input, padding: '6px 10px', fontSize: 12, marginBottom: 0, width: '100%', boxSizing: 'border-box' }} type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="juan@email.com" />
-                </div>
-                <div>
-                  <label style={s.label}>Teléfono / WhatsApp *</label>
+                  <label style={s.label}>Teléfono / WhatsApp</label>
                   <input style={{ ...s.input, padding: '6px 10px', fontSize: 12, marginBottom: 0, width: '100%', boxSizing: 'border-box' }} value={form.telefono} onChange={e => set('telefono', e.target.value)} placeholder="6000-0000" />
                 </div>
                 <div>
-                  <label style={s.label}>Dirección de entrega *</label>
+                  <label style={s.label}>Dirección de entrega</label>
                   <input style={{ ...s.input, padding: '6px 10px', fontSize: 12, marginBottom: 0, width: '100%', boxSizing: 'border-box' }} value={form.direccion} onChange={e => set('direccion', e.target.value)} placeholder="Calle y ciudad" />
                 </div>
                 <div>
