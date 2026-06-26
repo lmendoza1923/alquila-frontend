@@ -21,8 +21,24 @@ export default function Carrito() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ nombre: '', email: '', telefono: '', direccion: '', notas: '' });
   const [loading, setLoading] = useState(false);
+  const [servicios, setServicios] = useState([]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const agregarFilaServicio = () => {
+    setServicios(prev => [...prev, { id: Date.now() + Math.random(), nombre: '', cantidad: 1, precio_unitario: '' }]);
+  };
+
+  const actualizarServicio = (id, campo, valor) => {
+    setServicios(prev => prev.map(s => s.id === id ? { ...s, [campo]: valor } : s));
+  };
+
+  const eliminarFilaServicio = (id) => {
+    setServicios(prev => prev.filter(s => s.id !== id));
+  };
+
+  const totalServicios = servicios.reduce((sum, s) => sum + (parseFloat(s.precio_unitario || 0) * (parseInt(s.cantidad) || 1)), 0);
+  const totalReserva = parseFloat(calcularTotal()) + totalServicios;
 
   const confirmar = async () => {
     if (!form.nombre || !form.email || !form.telefono || !form.direccion) {
@@ -41,11 +57,18 @@ export default function Carrito() {
         telefono_cliente: form.telefono,
         direccion_entrega: form.direccion,
         notas: form.notas,
-        items: items.map(i => ({ 
-          mueble_id: i.esCombo ? null : i.mueble_id, 
-          combo_id: i.esCombo ? i.combo_id : null, 
-          cantidad: i.cantidad 
-        }))
+        items: [
+          ...items.map(i => ({ 
+            mueble_id: i.esCombo ? null : i.mueble_id, 
+            combo_id: i.esCombo ? i.combo_id : null, 
+            cantidad: i.cantidad 
+          })),
+          ...servicios.filter(s => s.nombre.trim() !== '').map(s => ({
+            nombre: s.nombre.trim(),
+            cantidad: parseInt(s.cantidad) || 1,
+            precio_unitario: parseFloat(s.precio_unitario) || 0
+          }))
+        ]
       });
       vaciar();
       navigate(`/confirmacion/${data.reserva.id}`);
@@ -97,6 +120,67 @@ export default function Carrito() {
             })}
           </div>
 
+          {/* Servicios adicionales */}
+          <div style={s.card}>
+            <h3 style={{ marginTop: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>🔧 Servicios adicionales</span>
+              <button 
+                type="button" 
+                onClick={agregarFilaServicio} 
+                style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}
+              >
+                + Agregar servicio
+              </button>
+            </h3>
+            {servicios.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {servicios.map((ser, index) => (
+                  <div key={ser.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                      style={{ ...s.input, flex: 2, marginBottom: 0 }}
+                      value={ser.nombre}
+                      onChange={e => actualizarServicio(ser.id, 'nombre', e.target.value)}
+                      placeholder="Ej: Transporte / Montaje de toldo"
+                      required
+                    />
+                    <input
+                      type="number"
+                      style={{ ...s.input, width: 60, flex: 'none', marginBottom: 0, textAlign: 'center' }}
+                      value={ser.cantidad}
+                      min="1"
+                      onChange={e => actualizarServicio(ser.id, 'cantidad', parseInt(e.target.value) || 1)}
+                      placeholder="Cant"
+                      required
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      style={{ ...s.input, width: 90, flex: 'none', marginBottom: 0 }}
+                      value={ser.precio_unitario}
+                      min="0"
+                      onChange={e => actualizarServicio(ser.id, 'precio_unitario', e.target.value)}
+                      placeholder="Precio ($)"
+                      required
+                    />
+                    <div style={{ fontWeight: 600, minWidth: 60, textAlign: 'right', fontSize: 14 }}>
+                      ${(parseFloat(ser.precio_unitario || 0) * (parseInt(ser.cantidad) || 1)).toFixed(2)}
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => eliminarFilaServicio(ser.id)} 
+                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 16 }}
+                      title="Eliminar servicio"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                 ))}
+               </div>
+            ) : (
+              <p style={{ color: '#aaa', fontSize: 13, margin: 0 }}>No hay servicios adicionales agregados.</p>
+            )}
+          </div>
+
           <div style={s.card}>
             <h3 style={{ marginTop: 0 }}>Datos del cliente</h3>
             <label style={s.label}>Nombre completo *</label>
@@ -122,15 +206,21 @@ export default function Carrito() {
             {items.map(i => {
               const id = i.esCombo ? i.combo_id : i.mueble_id;
               return (
-                <div key={id} style={{ display: 'flex', justifycontent: 'space-between', fontSize: 13, marginBottom: 4, gap: 10 }}>
+                <div key={id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4, gap: 10 }}>
                   <span style={{ flex: 1 }}>{i.esCombo ? `🎁 ${i.nombre}` : i.nombre} x{i.cantidad}</span>
                   <span style={{ fontWeight: 600 }}>${(parseFloat(i.precio_dia) * i.cantidad * diasSeleccionados).toFixed(2)}</span>
                 </div>
               );
             })}
+            {servicios.filter(s => s.nombre.trim() !== '').map(ser => (
+              <div key={ser.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4, gap: 10 }}>
+                <span style={{ flex: 1 }}>🔧 {ser.nombre} x{ser.cantidad}</span>
+                <span style={{ fontWeight: 600 }}>${(parseFloat(ser.precio_unitario || 0) * (parseInt(ser.cantidad) || 1)).toFixed(2)}</span>
+              </div>
+            ))}
             <div style={{ borderTop: '2px solid #f0f0f0', marginTop: '0.75rem', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.1rem' }}>
               <span>Total</span>
-              <span style={{ color: '#4a6cf7' }}>${calcularTotal()}</span>
+              <span style={{ color: '#4a6cf7' }}>${totalReserva.toFixed(2)}</span>
             </div>
             <button style={{ ...s.btn, marginTop: '1.25rem' }} onClick={confirmar} disabled={loading}>
               {loading ? 'Procesando...' : '✅ Confirmar reserva'}

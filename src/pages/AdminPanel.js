@@ -419,19 +419,27 @@ export default function AdminPanel() {
     }
   };
 
-  const eliminarMuebleDeReserva = (id, esCombo = false) => {
+  const eliminarMuebleDeReserva = (id, esCombo = false, nombre = null) => {
     setItemsEditando(prev => {
-      const nuevos = prev.filter(i => esCombo ? i.combo_id !== id : i.mueble_id !== id);
+      const nuevos = prev.filter(i => {
+        if (!i.combo_id && !i.mueble_id) {
+          return i.nombre !== nombre;
+        }
+        return esCombo ? i.combo_id !== id : i.mueble_id !== id;
+      });
       recalcularTotal(nuevos);
       return nuevos;
     });
-    toast.success('Artículo eliminado de la reserva');
+    toast.success('Artículo/servicio eliminado de la reserva');
   };
 
-  const actualizarCantidadItem = (id, nuevaCantidad, esCombo = false) => {
-    if (nuevaCantidad <= 0) return eliminarMuebleDeReserva(id, esCombo);
+  const actualizarCantidadItem = (id, nuevaCantidad, esCombo = false, nombre = null) => {
+    if (nuevaCantidad <= 0) return eliminarMuebleDeReserva(id, esCombo, nombre);
     setItemsEditando(prev => {
       const nuevos = prev.map(i => {
+        if (!i.combo_id && !i.mueble_id) {
+          return i.nombre === nombre ? { ...i, cantidad: nuevaCantidad, subtotal: (i.subtotal / i.cantidad) * nuevaCantidad } : i;
+        }
         const match = esCombo ? (i.combo_id === id) : (i.mueble_id === id);
         return match ? { ...i, cantidad: nuevaCantidad } : i;
       });
@@ -449,10 +457,13 @@ export default function AdminPanel() {
         const combo = combos.find(c => c.id === item.combo_id);
         const precio = combo ? parseFloat(combo.precio_dia || 0) : (item.subtotal / item.cantidad / dias || 0);
         return sum + precio * item.cantidad * dias;
-      } else {
+      } else if (item.mueble_id) {
         const mueble = muebles.find(m => m.id === item.mueble_id);
         const precio = mueble ? parseFloat(mueble.precio_dia || 0) : (item.subtotal / item.cantidad / dias || 0);
         return sum + precio * item.cantidad * dias;
+      } else {
+        // Servicio manual (es precio fijo, no se multiplica por día)
+        return sum + parseFloat(item.subtotal || 0);
       }
     }, 0);
     setEditTotal(total.toFixed(2));
@@ -483,7 +494,9 @@ export default function AdminPanel() {
         items: itemsEditando.map(i => ({ 
           mueble_id: i.mueble_id || null, 
           combo_id: i.combo_id || null, 
-          cantidad: i.cantidad 
+          cantidad: i.cantidad,
+          nombre: (!i.mueble_id && !i.combo_id) ? i.nombre : null,
+          precio_unitario: (!i.mueble_id && !i.combo_id) ? (parseFloat(i.subtotal) / i.cantidad || 0) : null
         }))
       });
       toast.success('Reserva actualizada correctamente');
@@ -1303,9 +1316,9 @@ export default function AdminPanel() {
                           <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>
                             {item.combo_id ? `🎁 Combo: ${item.nombre}` : item.nombre}
                           </span>
-                          <input type="number" min="1" value={item.cantidad} onChange={e => actualizarCantidadItem(id, parseInt(e.target.value), !!item.combo_id)} style={{ width: 60, padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }} />
+                          <input type="number" min="1" value={item.cantidad} onChange={e => actualizarCantidadItem(id, parseInt(e.target.value), !!item.combo_id, item.nombre)} style={{ width: 60, padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }} />
                           <span style={{ fontSize: 12, color: '#888', minWidth: 40 }}>uds</span>
-                          <button type="button" onClick={() => eliminarMuebleDeReserva(id, !!item.combo_id)} style={{ background: '#ef444422', color: '#ef4444', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>🗑️ Eliminar</button>
+                          <button type="button" onClick={() => eliminarMuebleDeReserva(id, !!item.combo_id, item.nombre)} style={{ background: '#ef444422', color: '#ef4444', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>🗑️ Eliminar</button>
                         </div>
                       );
                     })}
