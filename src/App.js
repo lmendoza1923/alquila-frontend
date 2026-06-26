@@ -107,40 +107,42 @@ function Navbar({ isMobile }) {
           </Link>
         )}
 
-        <Link to="/carrito" style={{
-          color: '#ccc',
-          textDecoration: 'none',
-          padding: '12px',
-          borderRadius: 8,
-          fontSize: 16,
-          display: 'flex',
-          justifyContent: isMobile ? 'center' : 'flex-start',
-          alignItems: 'center',
-          gap: isMobile ? 0 : 12,
-          position: 'relative',
-          transition: 'background 0.2s'
-        }}
-          onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-          title="Carrito"
-        >
-          <span>🛒</span>
-          {!isMobile && <span>Carrito</span>}
-          {items.length > 0 && (
-            <span style={{
-              position: isMobile ? 'absolute' : 'static',
-              top: isMobile ? 4 : 'auto',
-              right: isMobile ? 4 : 'auto',
-              background: '#e53e3e',
-              color: '#fff',
-              borderRadius: '50%',
-              fontSize: 10,
-              padding: isMobile ? '2px 5px' : '2px 6px',
-              fontWeight: 700,
-              marginLeft: isMobile ? 0 : 6
-            }}>{items.length}</span>
-          )}
-        </Link>
+        {user?.rol !== 'admin' && (
+          <Link to="/carrito" style={{
+            color: '#ccc',
+            textDecoration: 'none',
+            padding: '12px',
+            borderRadius: 8,
+            fontSize: 16,
+            display: 'flex',
+            justifyContent: isMobile ? 'center' : 'flex-start',
+            alignItems: 'center',
+            gap: isMobile ? 0 : 12,
+            position: 'relative',
+            transition: 'background 0.2s'
+          }}
+            onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+            onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+            title="Carrito"
+          >
+            <span>🛒</span>
+            {!isMobile && <span>Carrito</span>}
+            {items.length > 0 && (
+              <span style={{
+                position: isMobile ? 'absolute' : 'static',
+                top: isMobile ? 4 : 'auto',
+                right: isMobile ? 4 : 'auto',
+                background: '#e53e3e',
+                color: '#fff',
+                borderRadius: '50%',
+                fontSize: 10,
+                padding: isMobile ? '2px 5px' : '2px 6px',
+                fontWeight: 700,
+                marginLeft: isMobile ? 0 : 6
+              }}>{items.length}</span>
+            )}
+          </Link>
+        )}
       </div>
 
       {/* User Area at Bottom */}
