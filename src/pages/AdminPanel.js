@@ -5,18 +5,31 @@ import toast from 'react-hot-toast';
 const estadoColor = { pendiente: '#f59e0b', confirmada: '#3b82f6', activa: '#22c55e', completada: '#6b7280', cancelada: '#ef4444' };
 
 // ─── Generador de PDF (sin librerías externas) ───────────────────────────────
-function generarContratoPDF(reserva, items, pagos, terminos, abono) {
+function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosCombos) {
   const totalPagado = pagos.reduce((s, p) => s + parseFloat(p.monto), 0);
   const abonoExtra = parseFloat(abono) || 0;
   const saldoPendiente = parseFloat(reserva.total) - totalPagado - abonoExtra;
 
-  const filasMuebles = items.map(i =>
-    `<tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;">${i.nombre || i.mueble || ''}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${i.cantidad}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
-    </tr>`
-  ).join('');
+  const filasMuebles = items.map(i => {
+    let detalleCombo = '';
+    if (i.combo_id && todosLosCombos) {
+      const comboObj = todosLosCombos.find(c => c.id === i.combo_id);
+      if (comboObj && comboObj.items) {
+        const listado = comboObj.items.map(ci => `• ${ci.cantidad * i.cantidad}x ${ci.nombre}`).join('<br>');
+        detalleCombo = `<div style="font-size:11px;color:#555;margin-top:4px;padding-left:12px;font-style:italic;line-height:1.4;">
+          <strong>Incluye:</strong><br>${listado}
+        </div>`;
+      }
+    }
+    return `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;vertical-align:top;">
+        <span style="font-weight:600;">${i.nombre || i.mueble || ''}</span>
+        ${detalleCombo}
+      </td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;vertical-align:top;">${i.cantidad}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;vertical-align:top;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
+    </tr>`;
+  }).join('');
 
   const filasPagos = pagos.length > 0 ? pagos.map(p =>
     `<tr>
@@ -1367,7 +1380,7 @@ export default function AdminPanel() {
               <button onClick={() => setModalContrato(null)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
               <button
                 onClick={() => {
-                  generarContratoPDF(modalContrato, modalContrato.items || [], pagosParaContrato, terminos, contratoAbono);
+                  generarContratoPDF(modalContrato, modalContrato.items || [], pagosParaContrato, terminos, contratoAbono, combos);
                   setModalContrato(null);
                 }}
                 style={{ flex: 2, padding: '10px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
