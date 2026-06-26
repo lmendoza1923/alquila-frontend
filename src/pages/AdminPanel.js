@@ -9,6 +9,8 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   const totalPagado = pagos.reduce((s, p) => s + parseFloat(p.monto), 0);
   const abonoExtra = parseFloat(abono) || 0;
   const saldoPendiente = parseFloat(reserva.total) - totalPagado - abonoExtra;
+  const subtotalMobiliario = items.reduce((s, i) => s + parseFloat(i.subtotal || 0), 0);
+  const totalAbono = totalPagado + abonoExtra;
 
   const filasMuebles = items.map(i => {
     let detalleCombo = '';
@@ -21,13 +23,15 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
         </div>`;
       }
     }
+    const unitPrice = i.cantidad > 0 ? (parseFloat(i.subtotal || 0) / i.cantidad) : 0;
     return `<tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;vertical-align:top;">
+      <td style="padding:8px 12px;vertical-align:top;">
         <span style="font-weight:600;">${i.nombre || i.mueble || ''}</span>
         ${detalleCombo}
       </td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;vertical-align:top;">${i.cantidad}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;vertical-align:top;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
+      <td style="padding:8px 12px;text-align:center;vertical-align:top;">${i.cantidad}</td>
+      <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${unitPrice.toFixed(2)}</td>
+      <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
     </tr>`;
   }).join('');
 
@@ -39,6 +43,27 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
       <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:600;color:#22c55e;">$${parseFloat(p.monto).toFixed(2)}</td>
     </tr>`
   ).join('') : `<tr><td colspan="4" style="padding:8px 12px;color:#888;">Sin pagos registrados aún.</td></tr>`;
+
+  const filasServicios = `
+    <tr>
+      <td style="padding:8px 12px;height:24px;">&nbsp;</td>
+      <td style="padding:8px 12px;">&nbsp;</td>
+      <td style="padding:8px 12px;">&nbsp;</td>
+      <td style="padding:8px 12px;">&nbsp;</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 12px;height:24px;">&nbsp;</td>
+      <td style="padding:8px 12px;">&nbsp;</td>
+      <td style="padding:8px 12px;">&nbsp;</td>
+      <td style="padding:8px 12px;">&nbsp;</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 12px;height:24px;">&nbsp;</td>
+      <td style="padding:8px 12px;">&nbsp;</td>
+      <td style="padding:8px 12px;">&nbsp;</td>
+      <td style="padding:8px 12px;">&nbsp;</td>
+    </tr>
+  `;
 
   const htmlContrato = `<!DOCTYPE html>
 <html lang="es">
@@ -58,10 +83,12 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .field label { font-size: 11px; color: #888; display: block; margin-bottom: 3px; }
   .field span { font-size: 14px; font-weight: 600; color: #1a1a2e; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 24px; }
+  table, th, td { border: 1px solid #ccc; }
   thead { background: #f8f9ff; }
   th { padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #555; font-weight: 700; }
-  .totals { background: #f8f9ff; border-radius: 8px; padding: 16px 20px; margin-top: 16px; }
+  td { padding: 8px 12px; }
+  .totals { background: #f8f9ff; border-radius: 8px; padding: 16px 20px; margin-top: 16px; width: 320px; margin-left: auto; box-sizing: border-box; }
   .total-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
   .total-row.final { font-size: 16px; font-weight: 700; color: #4a6cf7; border-top: 2px solid #4a6cf7; margin-top: 8px; padding-top: 10px; }
   .total-row.saldo { font-size: 15px; font-weight: 700; color: #ef4444; }
@@ -89,34 +116,62 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
     <div class="section-title">Datos del Cliente</div>
     <div class="grid-2">
       <div class="field"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
-      <div class="field"><label>Correo electrónico</label><span>${reserva.email_cliente || '—'}</span></div>
       <div class="field"><label>Teléfono</label><span>${reserva.telefono_cliente || '—'}</span></div>
-      <div class="field"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
+      <div class="field" style="grid-column: span 2;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">Detalles de la Reserva</div>
-    <div class="grid-2" style="margin-bottom:12px;">
-      <div class="field"><label>Fecha de inicio</label><span>${new Date(reserva.fecha_inicio).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-      <div class="field"><label>Fecha de fin</label><span>${new Date(reserva.fecha_fin).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-      <div class="field"><label>Duración</label><span>${Math.ceil((new Date(reserva.fecha_fin) - new Date(reserva.fecha_inicio)) / 86400000) + 1} día(s)</span></div>
-      <div class="field"><label>Estado</label><span style="color:${estadoColor[reserva.estado]}">${(reserva.estado||'').toUpperCase()}</span></div>
+    <div class="section-title">Detalles del evento</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;">
+      <div class="field">
+        <label>Entrega</label>
+        <span>${new Date(reserva.fecha_inicio).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+      </div>
+      <div class="field">
+        <label>Retiro</label>
+        <span>${new Date(reserva.fecha_fin).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+      </div>
     </div>
-    ${reserva.notas ? `<div class="field"><label>Notas adicionales</label><span style="font-weight:400;font-style:italic;">${reserva.notas}</span></div>` : ''}
+    ${reserva.notas ? `<div class="field" style="margin-top:12px;"><label>Notas adicionales</label><span style="font-weight:400;font-style:italic;">${reserva.notas}</span></div>` : ''}
   </div>
 
   <div class="section">
     <div class="section-title">Mobiliario Reservado</div>
     <table>
-      <thead><tr><th>Artículo</th><th style="text-align:center;">Cant.</th><th style="text-align:right;">Subtotal</th></tr></thead>
+      <thead>
+        <tr>
+          <th>DESCRIPCION</th>
+          <th style="text-align:center;width:80px;">CANT.</th>
+          <th style="text-align:right;width:120px;">P. UNITARIO</th>
+          <th style="text-align:right;width:120px;">IMPORTE</th>
+        </tr>
+      </thead>
       <tbody>${filasMuebles}</tbody>
     </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Servicios Adicionales</div>
+    <table>
+      <thead>
+        <tr>
+          <th>DESCRIPCION</th>
+          <th style="text-align:center;width:80px;">CANT.</th>
+          <th style="text-align:right;width:120px;">P. UNITARIO</th>
+          <th style="text-align:right;width:120px;">IMPORTE</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filasServicios}
+      </tbody>
+    </table>
+    
     <div class="totals">
-      <div class="total-row final"><span>TOTAL A PAGAR</span><span>$${parseFloat(reserva.total).toFixed(2)}</span></div>
-      ${abonoExtra > 0 ? `<div class="total-row" style="color:#22c55e;"><span>Abono en este contrato</span><span>-$${abonoExtra.toFixed(2)}</span></div>` : ''}
-      ${totalPagado > 0 ? `<div class="total-row" style="color:#22c55e;"><span>Pagos registrados</span><span>-$${totalPagado.toFixed(2)}</span></div>` : ''}
-      <div class="total-row saldo"><span>SALDO PENDIENTE</span><span>$${Math.max(0, saldoPendiente).toFixed(2)}</span></div>
+      <div class="total-row"><span>Subtotal:</span><span>$${subtotalMobiliario.toFixed(2)}</span></div>
+      <div class="total-row" style="color:#22c55e;"><span>Abono:</span><span>-$${totalAbono.toFixed(2)}</span></div>
+      <div class="total-row final" style="margin-top:4px;padding-top:4px;"><span>TOTAL:</span><span>$${parseFloat(reserva.total).toFixed(2)}</span></div>
+      <div class="total-row saldo" style="margin-top:4px;"><span>SALDO:</span><span>$${Math.max(0, saldoPendiente).toFixed(2)}</span></div>
     </div>
   </div>
 
