@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
@@ -13,10 +13,34 @@ import AdminPanel from './pages/AdminPanel';
 function Navbar({ isMobile }) {
   const { user, logout } = useAuth();
   const { items } = useCart();
+  const location = useLocation();
 
   if (!user) return null;
 
+  const isActive = (path, tabName) => {
+    if (path === '/admin') {
+      const currentTab = new URLSearchParams(location.search).get('tab') || 'dashboard';
+      return location.pathname === '/admin' && currentTab === tabName;
+    }
+    return location.pathname === path;
+  };
+
   const sidebarWidth = isMobile ? '70px' : '260px';
+
+  const linkStyle = (active, isSpecial = false) => ({
+    color: active ? '#fff' : (isSpecial ? '#f4c430' : '#ccc'),
+    background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+    textDecoration: 'none',
+    padding: '12px',
+    borderRadius: 8,
+    fontSize: 15,
+    display: 'flex',
+    justifyContent: isMobile ? 'center' : 'flex-start',
+    alignItems: 'center',
+    gap: isMobile ? 0 : 12,
+    transition: 'background 0.2s, color 0.2s',
+    fontWeight: active ? 600 : 500
+  });
 
   return (
     <div style={{
@@ -27,7 +51,7 @@ function Navbar({ isMobile }) {
       width: sidebarWidth,
       background: '#1a1a2e',
       zIndex: 1000,
-      padding: isMobile ? '2rem 0.5rem' : '2rem 1.5rem',
+      padding: isMobile ? '2rem 0.5rem' : '2rem 1.25rem',
       display: 'flex',
       flexDirection: 'column',
       alignItems: isMobile ? 'center' : 'stretch',
@@ -44,85 +68,83 @@ function Navbar({ isMobile }) {
       </div>
 
       {/* Navigation Links */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, width: '100%' }}>
-        <Link to="/catalogo" style={{
-          color: '#ccc',
-          textDecoration: 'none',
-          padding: '12px',
-          borderRadius: 8,
-          fontSize: 16,
-          display: 'flex',
-          justifyContent: isMobile ? 'center' : 'flex-start',
-          alignItems: 'center',
-          gap: isMobile ? 0 : 12,
-          transition: 'background 0.2s'
-        }}
-          onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, width: '100%' }}>
+        <Link to="/catalogo" style={linkStyle(isActive('/catalogo'))}
+          onMouseOver={e => { if (!isActive('/catalogo')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+          onMouseOut={e => { if (!isActive('/catalogo')) e.currentTarget.style.background = 'transparent'; }}
           title="Catálogo"
         >
           <span>🛍️</span>
           {!isMobile && <span>Catálogo</span>}
         </Link>
 
-        <Link to="/mis-reservas" style={{
-          color: '#ccc',
-          textDecoration: 'none',
-          padding: '12px',
-          borderRadius: 8,
-          fontSize: 16,
-          display: 'flex',
-          justifyContent: isMobile ? 'center' : 'flex-start',
-          alignItems: 'center',
-          gap: isMobile ? 0 : 12,
-          transition: 'background 0.2s'
-        }}
-          onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-          title="Mis reservas"
-        >
-          <span>📋</span>
-          {!isMobile && <span>Mis reservas</span>}
-        </Link>
-
-        {user?.rol === 'admin' && (
-          <Link to="/admin" style={{
-            color: '#f4c430',
-            textDecoration: 'none',
-            padding: '12px',
-            borderRadius: 8,
-            fontSize: 16,
-            display: 'flex',
-            justifyContent: isMobile ? 'center' : 'flex-start',
-            alignItems: 'center',
-            gap: isMobile ? 0 : 12,
-            transition: 'background 0.2s'
-          }}
-            onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-            onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-            title="Administración"
+        {user?.rol !== 'admin' && (
+          <Link to="/mis-reservas" style={linkStyle(isActive('/mis-reservas'))}
+            onMouseOver={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            onMouseOut={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'transparent'; }}
+            title="Mis reservas"
           >
-            <span>⚙️</span>
-            {!isMobile && <span>Admin</span>}
+            <span>📋</span>
+            {!isMobile && <span>Mis reservas</span>}
           </Link>
         )}
 
+        {user?.rol === 'admin' && (
+          <>
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '8px 0' }} />
+            {!isMobile && <div style={{ color: '#888', fontSize: 11, fontWeight: 700, paddingLeft: 12, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Administración</div>}
+            
+            <Link to="/admin?tab=dashboard" style={linkStyle(isActive('/admin', 'dashboard'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'dashboard')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseOut={e => { if (!isActive('/admin', 'dashboard')) e.currentTarget.style.background = 'transparent'; }}
+              title="Resumen"
+            >
+              <span>📊</span>
+              {!isMobile && <span>Resumen</span>}
+            </Link>
+
+            <Link to="/admin?tab=reservas" style={linkStyle(isActive('/admin', 'reservas'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'reservas')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseOut={e => { if (!isActive('/admin', 'reservas')) e.currentTarget.style.background = 'transparent'; }}
+              title="Reservas"
+            >
+              <span>📋</span>
+              {!isMobile && <span>Reservas</span>}
+            </Link>
+
+            <Link to="/admin?tab=mobiliario" style={linkStyle(isActive('/admin', 'mobiliario'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'mobiliario')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseOut={e => { if (!isActive('/admin', 'mobiliario')) e.currentTarget.style.background = 'transparent'; }}
+              title="Mobiliario"
+            >
+              <span>🪑</span>
+              {!isMobile && <span>Mobiliario</span>}
+            </Link>
+
+            <Link to="/admin?tab=combos" style={linkStyle(isActive('/admin', 'combos'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'combos')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseOut={e => { if (!isActive('/admin', 'combos')) e.currentTarget.style.background = 'transparent'; }}
+              title="Combos y Paquetes"
+            >
+              <span>🎁</span>
+              {!isMobile && <span>Combos y Paquetes</span>}
+            </Link>
+
+            <Link to="/admin?tab=reportes" style={linkStyle(isActive('/admin', 'reportes'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'reportes')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseOut={e => { if (!isActive('/admin', 'reportes')) e.currentTarget.style.background = 'transparent'; }}
+              title="Reportes"
+            >
+              <span>📈</span>
+              {!isMobile && <span>Reportes</span>}
+            </Link>
+          </>
+        )}
+
         {user?.rol !== 'admin' && (
-          <Link to="/carrito" style={{
-            color: '#ccc',
-            textDecoration: 'none',
-            padding: '12px',
-            borderRadius: 8,
-            fontSize: 16,
-            display: 'flex',
-            justifyContent: isMobile ? 'center' : 'flex-start',
-            alignItems: 'center',
-            gap: isMobile ? 0 : 12,
-            position: 'relative',
-            transition: 'background 0.2s'
-          }}
-            onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-            onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+          <Link to="/carrito" style={linkStyle(isActive('/carrito'))}
+            onMouseOver={e => { if (!isActive('/carrito')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            onMouseOut={e => { if (!isActive('/carrito')) e.currentTarget.style.background = 'transparent'; }}
             title="Carrito"
           >
             <span>🛒</span>

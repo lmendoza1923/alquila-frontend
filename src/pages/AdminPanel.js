@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
 
@@ -237,7 +238,9 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 export default function AdminPanel() {
   const [stats, setStats] = useState(null);
   const [reservas, setReservas] = useState([]);
-  const [tab, setTab] = useState('dashboard');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') || 'dashboard';
+  const setTab = (newTab) => setSearchParams({ tab: newTab });
   const [muebles, setMuebles] = useState([]);
   const [combos, setCombos] = useState([]);
 
@@ -744,13 +747,7 @@ export default function AdminPanel() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
-        {tabs.map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: tab === t ? '#4a6cf7' : '#e8eaf6', color: tab === t ? '#fff' : '#555', cursor: 'pointer', fontWeight: 600, textTransform: 'capitalize' }}>
-            {t === 'dashboard' ? 'Resumen' : t === 'reservas' ? 'Reservas' : t === 'mobiliario' ? 'Mobiliario' : t === 'combos' ? 'Combos y Paquetes' : 'Reportes'}
-          </button>
-        ))}
-      </div>
+
 
       {/* ── Dashboard ── */}
       {tab === 'dashboard' && stats && (
