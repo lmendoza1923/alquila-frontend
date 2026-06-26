@@ -12,29 +12,55 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   const subtotalMobiliario = items.reduce((s, i) => s + parseFloat(i.subtotal || 0), 0);
   const totalAbono = totalPagado + abonoExtra;
 
-  const filasMuebles = items.map(i => {
-    let detalleCombo = '';
-    if (i.combo_id && todosLosCombos) {
-      const comboObj = todosLosCombos.find(c => c.id === i.combo_id);
-      if (comboObj && comboObj.items) {
-        const listado = comboObj.items.map(ci => `• ${ci.cantidad * i.cantidad}x ${ci.nombre}`).join('<br>');
-        detalleCombo = `<div style="font-size:11px;color:#555;margin-top:4px;padding-left:12px;font-style:italic;line-height:1.4;">
-          <strong>Incluye:</strong><br>${listado}
-        </div>`;
-      }
-    }
+  // Limpiar prefijo +507 o 507 del teléfono
+  const cleanPhone = (reserva.telefono_cliente || '').replace(/^\+?507\s*/, '').trim();
+
+  // Clasificar en mobiliario y servicios
+  const esServicio = (nombre) => {
+    const keywords = ['servicio', 'transporte', 'flete', 'montaje', 'armado', 'instalacio', 'envio', 'cargo', 'adicional', 'limpieza', 'deposito', 'garantia'];
+    const n = (nombre || '').toLowerCase();
+    return keywords.some(k => n.includes(k));
+  };
+
+  const mobiliarioItems = items.filter(i => !esServicio(i.nombre || i.mueble));
+  const servicioItems = items.filter(i => esServicio(i.nombre || i.mueble));
+
+  // Generar filas para Mobiliario
+  const filasMobiliarioArray = [];
+  mobiliarioItems.forEach(i => {
     const unitPrice = i.cantidad > 0 ? (parseFloat(i.subtotal || 0) / i.cantidad) : 0;
-    return `<tr>
+    
+    // Fila principal del mueble o combo
+    filasMobiliarioArray.push(`<tr>
       <td style="padding:8px 12px;vertical-align:top;">
         <span style="font-weight:600;">${i.nombre || i.mueble || ''}</span>
-        ${detalleCombo}
       </td>
       <td style="padding:8px 12px;text-align:center;vertical-align:top;">${i.cantidad}</td>
       <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${unitPrice.toFixed(2)}</td>
       <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
-    </tr>`;
-  }).join('');
+    </tr>`);
 
+    // Si es un combo, agregar los componentes en filas individuales
+    if (i.combo_id && todosLosCombos) {
+      const comboObj = todosLosCombos.find(c => c.id === i.combo_id);
+      if (comboObj && comboObj.items) {
+        comboObj.items.forEach(ci => {
+          const compCant = ci.cantidad * i.cantidad;
+          filasMobiliarioArray.push(`<tr>
+            <td style="padding:8px 12px;padding-left:24px;vertical-align:top;color:#555;font-style:italic;">
+              &nbsp;&nbsp;— ${ci.nombre} <span style="font-size:11px;color:#888;">(Incluido)</span>
+            </td>
+            <td style="padding:8px 12px;text-align:center;vertical-align:top;color:#555;font-style:italic;">${compCant}</td>
+            <td style="padding:8px 12px;text-align:right;vertical-align:top;color:#555;font-style:italic;">—</td>
+            <td style="padding:8px 12px;text-align:right;vertical-align:top;color:#555;font-style:italic;">—</td>
+          </tr>`);
+        });
+      }
+    }
+  });
+  const filasMuebles = filasMobiliarioArray.join('');
+
+  // Generar filas para Pagos
   const filasPagos = pagos.length > 0 ? pagos.map(p =>
     `<tr>
       <td style="padding:6px 12px;border-bottom:1px solid #eee;">${new Date(p.creado_en).toLocaleDateString('es')}</td>
@@ -44,26 +70,28 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
     </tr>`
   ).join('') : `<tr><td colspan="4" style="padding:8px 12px;color:#888;">Sin pagos registrados aún.</td></tr>`;
 
-  const filasServicios = `
-    <tr>
-      <td style="padding:8px 12px;height:24px;">&nbsp;</td>
-      <td style="padding:8px 12px;">&nbsp;</td>
-      <td style="padding:8px 12px;">&nbsp;</td>
-      <td style="padding:8px 12px;">&nbsp;</td>
-    </tr>
-    <tr>
-      <td style="padding:8px 12px;height:24px;">&nbsp;</td>
-      <td style="padding:8px 12px;">&nbsp;</td>
-      <td style="padding:8px 12px;">&nbsp;</td>
-      <td style="padding:8px 12px;">&nbsp;</td>
-    </tr>
-    <tr>
-      <td style="padding:8px 12px;height:24px;">&nbsp;</td>
-      <td style="padding:8px 12px;">&nbsp;</td>
-      <td style="padding:8px 12px;">&nbsp;</td>
-      <td style="padding:8px 12px;">&nbsp;</td>
-    </tr>
-  `;
+  // Generar filas para Servicios Adicionales (iniciando con al menos 2 filas)
+  const filasServiciosArray = servicioItems.map(i => {
+    const unitPrice = i.cantidad > 0 ? (parseFloat(i.subtotal || 0) / i.cantidad) : 0;
+    return `<tr>
+      <td style="padding:8px 12px;vertical-align:top;">
+        <span style="font-weight:600;">${i.nombre || i.mueble || ''}</span>
+      </td>
+      <td style="padding:8px 12px;text-align:center;vertical-align:top;">${i.cantidad}</td>
+      <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${unitPrice.toFixed(2)}</td>
+      <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
+    </tr>`;
+  });
+
+  while (filasServiciosArray.length < 2) {
+    filasServiciosArray.push(`<tr>
+      <td style="padding:8px 12px;height:24px;color:#ccc;">&nbsp;</td>
+      <td style="padding:8px 12px;color:#ccc;text-align:center;">&nbsp;</td>
+      <td style="padding:8px 12px;color:#ccc;text-align:right;">&nbsp;</td>
+      <td style="padding:8px 12px;color:#ccc;text-align:right;">&nbsp;</td>
+    </tr>`);
+  }
+  const filasServicios = filasServiciosArray.join('');
 
   const htmlContrato = `<!DOCTYPE html>
 <html lang="es">
@@ -116,7 +144,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
     <div class="section-title">Datos del Cliente</div>
     <div class="grid-2">
       <div class="field"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
-      <div class="field"><label>Teléfono</label><span>${reserva.telefono_cliente || '—'}</span></div>
+      <div class="field"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
       <div class="field" style="grid-column: span 2;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
     </div>
   </div>
