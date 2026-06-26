@@ -210,6 +210,31 @@ export default function AdminPanel() {
   const [terminosEdit, setTerminosEdit] = useState('');
   const [loadingTerminos, setLoadingTerminos] = useState(false);
 
+  // Estados para Reportes
+  const [reportesData, setReportesData] = useState(null);
+  const [mesReporte, setMesReporte] = useState(new Date().getMonth() + 1);
+  const [anioReporte, setAnioReporte] = useState(new Date().getFullYear());
+  const [loadingReportes, setLoadingReportes] = useState(false);
+  const [activeBar, setActiveBar] = useState(null);
+
+  const cargarReporte = async (m, a) => {
+    setLoadingReportes(true);
+    try {
+      const res = await api.get('/admin/reportes', { params: { mes: m, anio: a } });
+      setReportesData(res.data);
+    } catch (err) {
+      toast.error('Error al cargar reporte de estadísticas');
+    } finally {
+      setLoadingReportes(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'reportes') {
+      cargarReporte(mesReporte, anioReporte);
+    }
+  }, [tab, mesReporte, anioReporte]);
+
   // Cargar datos iniciales
   useEffect(() => {
     api.get('/admin/stats').then(r => setStats(r.data));
@@ -605,7 +630,7 @@ export default function AdminPanel() {
     }
   };
 
-  const tabs = ['dashboard', 'reservas', 'mobiliario', 'combos'];
+  const tabs = ['dashboard', 'reservas', 'mobiliario', 'combos', 'reportes'];
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
@@ -623,7 +648,7 @@ export default function AdminPanel() {
       <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
         {tabs.map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: tab === t ? '#4a6cf7' : '#e8eaf6', color: tab === t ? '#fff' : '#555', cursor: 'pointer', fontWeight: 600, textTransform: 'capitalize' }}>
-            {t === 'dashboard' ? 'Resumen' : t === 'reservas' ? 'Reservas' : t === 'mobiliario' ? 'Mobiliario' : 'Combos y Paquetes'}
+            {t === 'dashboard' ? 'Resumen' : t === 'reservas' ? 'Reservas' : t === 'mobiliario' ? 'Mobiliario' : t === 'combos' ? 'Combos y Paquetes' : 'Reportes'}
           </button>
         ))}
       </div>
@@ -915,6 +940,227 @@ export default function AdminPanel() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Reportes y Estadísticas ── */}
+      {tab === 'reportes' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Controles de Filtro */}
+          <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h3 style={{ margin: 0, color: '#1a1a2e' }}>Estadísticas Mensuales del Negocio</h3>
+              <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: 13 }}>Filtra las ganancias e inventario alquilado por mes</p>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 4, fontWeight: 600 }}>Mes</label>
+                <select value={mesReporte} onChange={e => setMesReporte(parseInt(e.target.value))} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff' }}>
+                  {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => (
+                    <option key={i} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 4, fontWeight: 600 }}>Año</label>
+                <select value={anioReporte} onChange={e => setAnioReporte(parseInt(e.target.value))} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff' }}>
+                  {[2025, 2026, 2027, 2028].map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {loadingReportes ? (
+            <p style={{ textAlign: 'center', padding: '3rem', color: '#999' }}>Cargando estadísticas de negocio...</p>
+          ) : reportesData ? (
+            <>
+              {/* Tarjetas de Métricas Clave */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                  <div style={{ fontSize: '2.5rem', background: '#eef2ff', padding: '10px', borderRadius: 12 }}>📋</div>
+                  <div>
+                    <div style={{ color: '#888', fontSize: 13, fontWeight: 600 }}>Reservas del Mes</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1a1a2e', marginTop: 4 }}>{reportesData.total_reservas}</div>
+                  </div>
+                </div>
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                  <div style={{ fontSize: '2.5rem', background: '#ecfdf5', padding: '10px', borderRadius: 12 }}>💰</div>
+                  <div>
+                    <div style={{ color: '#888', fontSize: 13, fontWeight: 600 }}>Ingresos Recibidos</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#10b981', marginTop: 4 }}>${reportesData.total_ingresos.toFixed(2)}</div>
+                  </div>
+                </div>
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                  <div style={{ fontSize: '2.5rem', background: '#fff7ed', padding: '10px', borderRadius: 12 }}>🪑</div>
+                  <div>
+                    <div style={{ color: '#888', fontSize: 13, fontWeight: 600 }}>Artículos Alquilados</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#f97316', marginTop: 4 }}>{reportesData.total_articulos} <span style={{ fontSize: 12, fontWeight: 400, color: '#666' }}>unidades</span></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Gráficas */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' }}>
+                {/* Gráfica 1: Ganancias del Mes Filtrado */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                  <h4 style={{ margin: '0 0 1rem 0', color: '#1a1a2e' }}>Ganancias Diarias ({['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][mesReporte - 1]} {anioReporte})</h4>
+                  <div style={{ height: 200, display: 'flex', alignItems: 'flex-end', gap: 2, paddingBottom: '1rem', borderBottom: '1px solid #e2e8f0', position: 'relative' }}>
+                    {(() => {
+                      const totalDias = new Date(anioReporte, mesReporte, 0).getDate();
+                      const maxDaily = Math.max(...reportesData.ganancias_diarias.map(d => d.total), 1);
+                      const bars = [];
+                      for (let d = 1; d <= totalDias; d++) {
+                        const rec = reportesData.ganancias_diarias.find(x => x.dia === d);
+                        const total = rec ? rec.total : 0;
+                        const heightPct = (total / maxDaily) * 100;
+                        bars.push(
+                          <div
+                            key={d}
+                            onMouseEnter={() => setActiveBar({ type: 'daily', index: d })}
+                            onMouseLeave={() => setActiveBar(null)}
+                            title={`Día ${d}: $${total.toFixed(2)}`}
+                            style={{
+                              flex: 1,
+                              height: `${Math.max(heightPct, 3)}%`,
+                              background: total === 0 ? '#f1f5f9' : (activeBar?.type === 'daily' && activeBar?.index === d ? '#1d4ed8' : 'linear-gradient(180deg, #4a6cf7 0%, #818cf8 100%)'),
+                              borderRadius: '3px 3px 0 0',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              position: 'relative'
+                            }}
+                          >
+                            {activeBar?.type === 'daily' && activeBar?.index === d && total > 0 && (
+                              <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', background: '#1a1a2e', color: '#fff', padding: '4px 8px', borderRadius: 4, fontSize: 10, whiteSpace: 'nowrap', zIndex: 10, boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>
+                                ${total.toFixed(0)}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return bars;
+                    })()}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 10, color: '#888', padding: '0 4px' }}>
+                    <span>Día 1</span>
+                    <span>Día 10</span>
+                    <span>Día 20</span>
+                    <span>Día {new Date(anioReporte, mesReporte, 0).getDate()}</span>
+                  </div>
+                </div>
+
+                {/* Gráfica 2: Ganancias Generales de Todos los Meses */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                  <h4 style={{ margin: '0 0 1rem 0', color: '#1a1a2e' }}>Ingresos Mensuales Históricos</h4>
+                  <div style={{ height: 200, display: 'flex', alignItems: 'flex-end', gap: '0.75rem', paddingBottom: '1rem', borderBottom: '1px solid #e2e8f0', position: 'relative' }}>
+                    {(() => {
+                      const maxMonthly = Math.max(...reportesData.ganancias_mensuales_generales.map(m => m.total), 1);
+                      const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                      
+                      return reportesData.ganancias_mensuales_generales.map((m, idx) => {
+                        const heightPct = (m.total / maxMonthly) * 100;
+                        const label = `${mesesNombres[m.mes - 1]} ${m.anio.toString().slice(-2)}`;
+                        return (
+                          <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <div
+                              onMouseEnter={() => setActiveBar({ type: 'monthly', index: idx })}
+                              onMouseLeave={() => setActiveBar(null)}
+                              title={`${label}: $${m.total.toFixed(2)}`}
+                              style={{
+                                width: '100%',
+                                height: `${Math.max(heightPct, 3)}%`,
+                                background: m.total === 0 ? '#f1f5f9' : (activeBar?.type === 'monthly' && activeBar?.index === idx ? '#065f46' : 'linear-gradient(180deg, #10b981 0%, #34d399 100%)'),
+                                borderRadius: '4px 4px 0 0',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                position: 'relative'
+                              }}
+                            >
+                              {activeBar?.type === 'monthly' && activeBar?.index === idx && m.total > 0 && (
+                                <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', background: '#1a1a2e', color: '#fff', padding: '4px 8px', borderRadius: 4, fontSize: 10, whiteSpace: 'nowrap', zIndex: 10, boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>
+                                  ${m.total.toFixed(0)}
+                                </div>
+                              )}
+                            </div>
+                            <span style={{ fontSize: 9, color: '#888', marginTop: 8, whiteSpace: 'nowrap' }}>{label}</span>
+                          </div>
+                        );
+                      });
+                    })()}
+                    {reportesData.ganancias_mensuales_generales.length === 0 && (
+                      <p style={{ width: '100%', textAlign: 'center', color: '#999', margin: 'auto 0' }}>No hay datos históricos aún.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tops de Mobiliario y Combos */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+                {/* Top Artículos */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                  <h4 style={{ margin: '0 0 1rem 0', color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 8 }}>🪑 Mobiliario más Alquilado</h4>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #f0f0f0', textAlign: 'left', color: '#666' }}>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Pos.</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Nombre Artículo</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'right' }}>Total Alquilado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportesData.top_muebles.map((item, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #f8f8f8' }}>
+                            <td style={{ padding: '12px 8px', fontWeight: 700, color: idx === 0 ? '#eab308' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#888' }}>
+                              #{idx + 1}
+                            </td>
+                            <td style={{ padding: '12px 8px', fontWeight: 600, color: '#1a1a2e' }}>{item.nombre}</td>
+                            <td style={{ padding: '12px 8px', fontWeight: 700, color: '#4a6cf7', textAlign: 'right' }}>{item.total} uds</td>
+                          </tr>
+                        ))}
+                        {reportesData.top_muebles.length === 0 && (
+                          <tr><td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>Sin alquileres en este mes.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Top Combos */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                  <h4 style={{ margin: '0 0 1rem 0', color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 8 }}>🎁 Combos más Alquilados</h4>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #f0f0f0', textAlign: 'left', color: '#666' }}>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Pos.</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Nombre Combo</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'right' }}>Total Alquilado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportesData.top_combos.map((item, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #f8f8f8' }}>
+                            <td style={{ padding: '12px 8px', fontWeight: 700, color: idx === 0 ? '#eab308' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#888' }}>
+                              #{idx + 1}
+                            </td>
+                            <td style={{ padding: '12px 8px', fontWeight: 600, color: '#1a1a2e' }}>{item.nombre}</td>
+                            <td style={{ padding: '12px 8px', fontWeight: 700, color: '#10b981', textAlign: 'right' }}>{item.total} uds</td>
+                          </tr>
+                        ))}
+                        {reportesData.top_combos.length === 0 && (
+                          <tr><td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>Sin combos alquilados en este mes.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p style={{ textAlign: 'center', color: '#888' }}>No hay datos de reportes disponibles.</p>
+          )}
         </div>
       )}
 
