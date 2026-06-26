@@ -70,8 +70,8 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
     </tr>`
   ).join('') : `<tr><td colspan="4" style="padding:8px 12px;color:#888;">Sin pagos registrados aún.</td></tr>`;
 
-  // Generar filas para Servicios Adicionales (iniciando con al menos 2 filas)
-  const filasServiciosArray = servicioItems.map(i => {
+  // Generar filas para Servicios Adicionales (solo reales, sin filas vacías)
+  const filasServicios = servicioItems.map(i => {
     const unitPrice = i.cantidad > 0 ? (parseFloat(i.subtotal || 0) / i.cantidad) : 0;
     return `<tr>
       <td style="padding:8px 12px;vertical-align:top;">
@@ -81,17 +81,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
       <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${unitPrice.toFixed(2)}</td>
       <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
     </tr>`;
-  });
-
-  while (filasServiciosArray.length < 2) {
-    filasServiciosArray.push(`<tr>
-      <td style="padding:8px 12px;height:24px;color:#ccc;">&nbsp;</td>
-      <td style="padding:8px 12px;color:#ccc;text-align:center;">&nbsp;</td>
-      <td style="padding:8px 12px;color:#ccc;text-align:right;">&nbsp;</td>
-      <td style="padding:8px 12px;color:#ccc;text-align:right;">&nbsp;</td>
-    </tr>`);
-  }
-  const filasServicios = filasServiciosArray.join('');
+  }).join('');
 
   const htmlContrato = `<!DOCTYPE html>
 <html lang="es">
@@ -181,6 +171,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 
   <div class="section">
     <div class="section-title">Servicios Adicionales</div>
+    ${servicioItems.length > 0 ? `
     <table>
       <thead>
         <tr>
@@ -194,6 +185,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
         ${filasServicios}
       </tbody>
     </table>
+    ` : ''}
     
     <div class="totals">
       <div class="total-row"><span>Subtotal:</span><span>$${subtotalMobiliario.toFixed(2)}</span></div>
