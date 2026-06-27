@@ -296,8 +296,6 @@ export default function AdminPanel() {
   const [pagosParaContrato, setPagosParaContrato] = useState([]);
   const [terminos, setTerminos] = useState('');
 
-  // Estado términos del contrato
-  const [modalTerminos, setModalTerminos] = useState(false);
   const [terminosEdit, setTerminosEdit] = useState('');
   const [loadingTerminos, setLoadingTerminos] = useState(false);
 
@@ -592,18 +590,11 @@ export default function AdminPanel() {
     } catch { setPagosParaContrato([]); }
   };
 
-  // ── Términos ─────────────────────────────────────────────────────────────────
-  const abrirTerminos = () => {
-    setTerminosEdit(terminos);
-    setModalTerminos(true);
-  };
-
   const guardarTerminos = async () => {
     setLoadingTerminos(true);
     try {
       await api.put('/pagos/terminos', { terminos: terminosEdit });
       setTerminos(terminosEdit);
-      setModalTerminos(false);
       toast.success('Términos guardados');
     } catch { toast.error('Error al guardar términos'); }
     finally { setLoadingTerminos(false); }
@@ -736,7 +727,7 @@ export default function AdminPanel() {
     }
   };
 
-  const tabs = ['dashboard', 'reservas', 'mobiliario', 'combos', 'reportes'];
+
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
