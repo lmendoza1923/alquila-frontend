@@ -251,6 +251,8 @@ export default function AdminPanel() {
   const [imagenes, setImagenes] = useState([]);
   const [nuevaImagenUrl, setNuevaImagenUrl] = useState('');
   const [loadingForm, setLoadingForm] = useState(false);
+  const [muebleEditando, setMuebleEditando] = useState(null);
+  const [activo, setActivo] = useState(true);
 
   // Estados formulario combos
   const [comboNombre, setComboNombre] = useState('');
@@ -619,6 +621,28 @@ export default function AdminPanel() {
 
   const eliminarImagen = (index) => setImagenes(prev => prev.filter((_, i) => i !== index));
 
+  const iniciarEditarMueble = (m) => {
+    setMuebleEditando(m);
+    setNombre(m.nombre);
+    setDescripcion(m.descripcion || '');
+    setPrecioDia(m.precio_dia || '');
+    setStock(m.stock);
+    setImagenes(m.imagenes || []);
+    setActivo(m.activo);
+  };
+
+  const eliminarMueble = async (id, nombreMueble) => {
+    if (!window.confirm(`¿Eliminar definitivamente el mueble "${nombreMueble}"? Esto lo marcará como inactivo.`)) return;
+    try {
+      await api.delete(`/muebles/${id}`);
+      toast.success(`Mueble "${nombreMueble}" eliminado`);
+      api.get('/admin/stats').then(r => setStats(r.data));
+      api.get('/muebles').then(r => setMuebles(r.data));
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Error al eliminar el mueble');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!nombre.trim()) return toast.error('El nombre es obligatorio');
@@ -633,12 +657,22 @@ export default function AdminPanel() {
         precio_semana: null,
         precio_mes: null,
         stock: parseInt(stock),
-        imagenes
+        imagenes,
+        activo: muebleEditando ? activo : true
       };
-      const res = await api.post('/muebles', payload);
-      toast.success(`Mueble "${res.data.nombre}" creado con éxito`);
+
+      if (muebleEditando) {
+        const res = await api.put(`/muebles/${muebleEditando.id}`, payload);
+        toast.success(`Mueble "${res.data.nombre}" actualizado con éxito`);
+      } else {
+        const res = await api.post('/muebles', payload);
+        toast.success(`Mueble "${res.data.nombre}" creado con éxito`);
+      }
+
       setNombre(''); setDescripcion(''); setPrecioDia('');
       setStock('1'); setImagenes([]); setNuevaImagenUrl('');
+      setActivo(true);
+      setMuebleEditando(null);
       api.get('/admin/stats').then(r => setStats(r.data));
       api.get('/muebles').then(r => setMuebles(r.data));
     } catch (error) {
@@ -822,7 +856,9 @@ export default function AdminPanel() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
             <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-              <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.25rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.5rem' }}>Agregar nuevo mueble</h3>
+              <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.25rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.5rem' }}>
+                {muebleEditando ? `Editar Mueble: ${muebleEditando.nombre}` : 'Agregar nuevo mueble'}
+              </h3>
               <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: '1.25rem' }}>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Nombre del Mueble *</label>
@@ -859,9 +895,38 @@ export default function AdminPanel() {
                     </div>
                   )}
                 </div>
-                <button type="submit" disabled={loadingForm} style={{ width: '100%', padding: '12px', background: loadingForm ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingForm ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 15 }}>
-                  {loadingForm ? 'Guardando mueble...' : 'Guardar Mueble'}
-                </button>
+                {muebleEditando && (
+                  <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input 
+                      type="checkbox" 
+                      id="mueble-activo"
+                      checked={activo} 
+                      onChange={e => setActivo(e.target.checked)} 
+                      style={{ width: 18, height: 18, cursor: 'pointer' }}
+                    />
+                    <label htmlFor="mueble-activo" style={{ fontWeight: 600, fontSize: 13, color: '#444', cursor: 'pointer' }}>Mueble Activo / Disponible para alquilar</label>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button type="submit" disabled={loadingForm} style={{ flex: 2, padding: '12px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
+                    {loadingForm ? 'Guardando...' : (muebleEditando ? '✓ Guardar Cambios' : '✓ Registrar Mueble')}
+                  </button>
+                  {muebleEditando && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setNombre(''); setDescripcion(''); setPrecioDia('');
+                        setStock('1'); setImagenes([]); setNuevaImagenUrl('');
+                        setActivo(true);
+                        setMuebleEditando(null);
+                      }} 
+                      style={{ flex: 1, padding: '12px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
               </form>
             </div>
 
@@ -887,7 +952,7 @@ export default function AdminPanel() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: '#f8f9ff', borderBottom: '1px solid #f0f0f0' }}>
-                    {['Imagen', 'Nombre', 'Precio', 'Stock', 'Estado'].map(h => (
+                    {['Imagen', 'Nombre', 'Precio', 'Stock', 'Estado', 'Acciones'].map(h => (
                       <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555' }}>{h}</th>
                     ))}
                   </tr>
@@ -910,10 +975,16 @@ export default function AdminPanel() {
                           {m.activo ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => iniciarEditarMueble(m)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️</button>
+                          <button onClick={() => eliminarMueble(m.id, m.nombre)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar">🗑️</button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {muebles.length === 0 && (
-                    <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay muebles registrados aún.</td></tr>
+                    <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay muebles registrados aún.</td></tr>
                   )}
                 </tbody>
               </table>
