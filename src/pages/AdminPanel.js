@@ -1252,6 +1252,7 @@ export default function AdminPanel() {
             <p style={{ textAlign: 'center', color: '#888' }}>No hay datos de reportes disponibles.</p>
           )}
         </div>
+      )}
       {/* ── Términos de Contrato ── */}
       {tab === 'terminos' && (
         <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
