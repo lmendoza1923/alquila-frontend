@@ -240,7 +240,6 @@ export default function AdminPanel() {
   const [reservas, setReservas] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') || 'dashboard';
-  const setTab = (newTab) => setSearchParams({ tab: newTab });
   const [muebles, setMuebles] = useState([]);
   const [combos, setCombos] = useState([]);
 
@@ -266,7 +265,6 @@ export default function AdminPanel() {
   // Estados edición de reservas
   const [reservaEditando, setReservaEditando] = useState(null);
   const [editNombre, setEditNombre] = useState('');
-  const [editEmail, setEditEmail] = useState('');
   const [editTelefono, setEditTelefono] = useState('');
   const [editDireccion, setEditDireccion] = useState('');
   const [editNotas, setEditNotas] = useState('');
@@ -341,7 +339,7 @@ export default function AdminPanel() {
   const abrirEditarReserva = (r) => {
     setReservaEditando(r);
     setEditNombre(r.nombre_cliente || '');
-    setEditEmail(r.email_cliente || '');
+
     setEditTelefono(r.telefono_cliente || '');
     setEditDireccion(r.direccion_entrega || '');
     setEditNotas(r.notes || r.notas || '');
