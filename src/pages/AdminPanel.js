@@ -789,15 +789,22 @@ export default function AdminPanel() {
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <select value={r.estado} onChange={e => cambiarEstado(r.id, e.target.value)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #ddd', fontSize: 12, cursor: 'pointer' }}>
-                        {['pendiente', 'confirmada', 'activa', 'completada', 'cancelada'].map(e => (
-                          <option key={e} value={e}>{e}</option>
-                        ))}
-                      </select>
-                      <button onClick={() => abrirEditarReserva(r)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>✏️</button>
-                      <button onClick={() => abrirPagos(r)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳</button>
-                      <button onClick={() => abrirContrato(r)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄</button>
-                      <button onClick={() => eliminarReserva(r)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar">🗑️</button>
+                      <button onClick={() => abrirEditarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️</button>
+                      <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳</button>
+                      <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄</button>
+                      {r.estado !== 'cancelada' && r.estado !== 'completada' && (
+                        <button 
+                          onClick={() => {
+                            if (window.confirm(`¿Estás seguro de que deseas cancelar la reserva de ${r.nombre_cliente}?`)) {
+                              cambiarEstado(r.id, 'cancelada');
+                            }
+                          }}
+                          style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+                          title="Cancelar reserva"
+                        >
+                          Cancelar
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -1297,9 +1304,9 @@ export default function AdminPanel() {
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Fin *</label>
                   <input type="date" value={editFechaFin} onChange={e => { setEditFechaFin(e.target.value); recalcularTotal(itemsEditando); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required /></div>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Estado</label>
-                  <select value={editEstado} onChange={e => setEditEstado(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff', boxSizing: 'border-box' }}>
-                    {['pendiente','confirmada','activa','completada','cancelada'].map(e => <option key={e} value={e}>{e}</option>)}
-                  </select></div>
+                  <div style={{ padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, background: '#f8f9fa', color: '#555', fontWeight: 600, textTransform: 'uppercase', boxSizing: 'border-box', textAlign: 'center' }}>
+                    {editEstado}
+                  </div></div>
               </div>
 
               <div style={{ background: '#f8f9ff', borderRadius: 10, padding: '1.25rem', marginBottom: '1.25rem', border: '1px solid #eef2ff' }}>
