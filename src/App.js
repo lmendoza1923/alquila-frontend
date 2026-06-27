@@ -20,26 +20,31 @@ function Navbar({ isMobile }) {
   const isActive = (path, tabName) => {
     if (path === '/admin') {
       const currentTab = new URLSearchParams(location.search).get('tab') || 'dashboard';
-      return location.pathname === '/admin' && currentTab === tabName;
+      if (tabName !== undefined) {
+        return location.pathname === '/admin' && currentTab === tabName;
+      }
+      return location.pathname === '/admin';
     }
     return location.pathname === path;
   };
 
   const sidebarWidth = isMobile ? '70px' : '260px';
 
-  const linkStyle = (active) => ({
+  const linkStyle = (active, isSubmenu = false) => ({
     color: active ? '#fff' : '#ccc',
     background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
     textDecoration: 'none',
     padding: '12px',
+    paddingLeft: isSubmenu && !isMobile ? '32px' : '12px',
     borderRadius: 8,
-    fontSize: 15,
+    fontSize: isSubmenu ? 14 : 15,
     display: 'flex',
     justifyContent: isMobile ? 'center' : 'flex-start',
     alignItems: 'center',
     gap: isMobile ? 0 : 12,
     transition: 'background 0.2s, color 0.2s',
-    fontWeight: active ? 600 : 500
+    fontWeight: active ? 600 : 500,
+    opacity: isSubmenu ? 0.95 : 1
   });
 
   return (
@@ -78,21 +83,28 @@ function Navbar({ isMobile }) {
           {!isMobile && <span>Catálogo</span>}
         </Link>
 
-        {user?.rol !== 'admin' && (
-          <Link to="/mis-reservas" style={linkStyle(isActive('/mis-reservas'))}
-            onMouseOver={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-            onMouseOut={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'transparent'; }}
-            title="Mis reservas"
-          >
-            <span>📋</span>
-            {!isMobile && <span>Mis reservas</span>}
-          </Link>
-        )}
+        <Link to="/mis-reservas" style={linkStyle(isActive('/mis-reservas'))}
+          onMouseOver={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+          onMouseOut={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'transparent'; }}
+          title="Mis reservas"
+        >
+          <span>📋</span>
+          {!isMobile && <span>Mis reservas</span>}
+        </Link>
 
         {user?.rol === 'admin' && (
           <>
-            <Link to="/admin?tab=dashboard" style={linkStyle(isActive('/admin', 'dashboard'))}
-              onMouseOver={e => { if (!isActive('/admin', 'dashboard')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            <Link to="/admin" style={linkStyle(isActive('/admin'))}
+              onMouseOver={e => { if (!isActive('/admin')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseOut={e => { if (!isActive('/admin')) e.currentTarget.style.background = 'transparent'; }}
+              title="Admin"
+            >
+              <span>⚙️</span>
+              {!isMobile && <span>Admin</span>}
+            </Link>
+
+            <Link to="/admin?tab=dashboard" style={linkStyle(isActive('/admin', 'dashboard'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'dashboard')) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'dashboard')) e.currentTarget.style.background = 'transparent'; }}
               title="Resumen"
             >
@@ -100,8 +112,8 @@ function Navbar({ isMobile }) {
               {!isMobile && <span>Resumen</span>}
             </Link>
 
-            <Link to="/admin?tab=reservas" style={linkStyle(isActive('/admin', 'reservas'))}
-              onMouseOver={e => { if (!isActive('/admin', 'reservas')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            <Link to="/admin?tab=reservas" style={linkStyle(isActive('/admin', 'reservas'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'reservas')) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'reservas')) e.currentTarget.style.background = 'transparent'; }}
               title="Reservas"
             >
@@ -109,8 +121,8 @@ function Navbar({ isMobile }) {
               {!isMobile && <span>Reservas</span>}
             </Link>
 
-            <Link to="/admin?tab=mobiliario" style={linkStyle(isActive('/admin', 'mobiliario'))}
-              onMouseOver={e => { if (!isActive('/admin', 'mobiliario')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            <Link to="/admin?tab=mobiliario" style={linkStyle(isActive('/admin', 'mobiliario'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'mobiliario')) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'mobiliario')) e.currentTarget.style.background = 'transparent'; }}
               title="Mobiliario"
             >
@@ -118,8 +130,8 @@ function Navbar({ isMobile }) {
               {!isMobile && <span>Mobiliario</span>}
             </Link>
 
-            <Link to="/admin?tab=combos" style={linkStyle(isActive('/admin', 'combos'))}
-              onMouseOver={e => { if (!isActive('/admin', 'combos')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            <Link to="/admin?tab=combos" style={linkStyle(isActive('/admin', 'combos'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'combos')) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'combos')) e.currentTarget.style.background = 'transparent'; }}
               title="Combos y Paquetes"
             >
@@ -127,8 +139,8 @@ function Navbar({ isMobile }) {
               {!isMobile && <span>Combos y Paquetes</span>}
             </Link>
 
-            <Link to="/admin?tab=reportes" style={linkStyle(isActive('/admin', 'reportes'))}
-              onMouseOver={e => { if (!isActive('/admin', 'reportes')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            <Link to="/admin?tab=reportes" style={linkStyle(isActive('/admin', 'reportes'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'reportes')) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'reportes')) e.currentTarget.style.background = 'transparent'; }}
               title="Reportes"
             >
@@ -136,8 +148,8 @@ function Navbar({ isMobile }) {
               {!isMobile && <span>Reportes</span>}
             </Link>
 
-            <Link to="/admin?tab=terminos" style={linkStyle(isActive('/admin', 'terminos'))}
-              onMouseOver={e => { if (!isActive('/admin', 'terminos')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            <Link to="/admin?tab=terminos" style={linkStyle(isActive('/admin', 'terminos'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'terminos')) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'terminos')) e.currentTarget.style.background = 'transparent'; }}
               title="Términos de Contrato"
             >
