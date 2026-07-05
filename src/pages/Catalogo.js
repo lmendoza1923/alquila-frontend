@@ -52,6 +52,8 @@ export default function Catalogo() {
   const [servicios, setServicios] = useState([]);
   const [requiereTransporte, setRequiereTransporte] = useState(false);
   const [costoTransporte, setCostoTransporte] = useState('');
+  const [requiereDecoracion, setRequiereDecoracion] = useState(false);
+  const [costoDecoracion, setCostoDecoracion] = useState('');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -68,8 +70,9 @@ export default function Catalogo() {
   };
 
   const totalTransporte = requiereTransporte ? parseFloat(costoTransporte || 0) : 0;
+  const totalDecoracion = requiereDecoracion ? parseFloat(costoDecoracion || 0) : 0;
   const totalServicios = servicios.reduce((sum, s) => sum + (parseFloat(s.precio_unitario || 0) * (parseInt(s.cantidad) || 1)), 0);
-  const totalReserva = parseFloat(calcularTotal()) + totalServicios + totalTransporte;
+  const totalReserva = parseFloat(calcularTotal()) + totalServicios + totalTransporte + totalDecoracion;
 
   const confirmarReservaAdmin = async () => {
     if (!fechas.inicio || !fechas.fin) { toast.error('Selecciona fechas en el calendario primero'); return; }
@@ -98,6 +101,14 @@ export default function Catalogo() {
         });
       }
 
+      if (requiereDecoracion) {
+        itemsPayload.push({
+          nombre: 'Decoración',
+          cantidad: 1,
+          precio_unitario: parseFloat(costoDecoracion) || 0
+        });
+      }
+
       const { data } = await api.post('/reservas', {
         fecha_inicio: fechas.inicio.toISOString().split('T')[0],
         fecha_fin: fechas.fin.toISOString().split('T')[0],
@@ -112,6 +123,8 @@ export default function Catalogo() {
       setServicios([]);
       setRequiereTransporte(false);
       setCostoTransporte('');
+      setRequiereDecoracion(false);
+      setCostoDecoracion('');
       setForm({ nombre: '', telefono: '', direccion: '', notas: '' });
       toast.success('Reserva creada exitosamente');
       navigate(`/confirmacion/${data.reserva.id}`);
@@ -407,6 +420,38 @@ export default function Catalogo() {
                 </div>
               </div>
 
+              {/* Decoración */}
+              <div style={{ margin: '12px 0 12px 0', borderBottom: '1px solid #f0f0f0', paddingBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 6px 0' }}>
+                  <h4 style={{ margin: 0, fontSize: 13, color: '#555', fontWeight: 600 }}>✨ Decoración</h4>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: 12 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600, color: '#444' }}>
+                    <input
+                      type="checkbox"
+                      checked={requiereDecoracion}
+                      onChange={e => setRequiereDecoracion(e.target.checked)}
+                      style={{ width: 14, height: 14, cursor: 'pointer' }}
+                    />
+                    Incluir decoración
+                  </label>
+                  {requiereDecoracion && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
+                      <span style={{ fontSize: 11, color: '#666' }}>Costo ($):</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={costoDecoracion}
+                        onChange={e => setCostoDecoracion(e.target.value)}
+                        style={{ ...s.input, width: 70, padding: '4px 6px', fontSize: 11, marginBottom: 0 }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Servicios adicionales */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '12px 0 6px 0' }}>
                 <h4 style={{ margin: 0, fontSize: 13, color: '#555', fontWeight: 600 }}>Servicios adicionales</h4>
@@ -496,6 +541,12 @@ export default function Catalogo() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#666', marginBottom: 4 }}>
                     <span>Transporte:</span>
                     <strong>${(parseFloat(costoTransporte) || 0).toFixed(2)}</strong>
+                  </div>
+                )}
+                {requiereDecoracion && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#666', marginBottom: 4 }}>
+                    <span>Decoración:</span>
+                    <strong>${(parseFloat(costoDecoracion) || 0).toFixed(2)}</strong>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 15, color: '#1a1a2e' }}>

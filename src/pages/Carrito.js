@@ -24,6 +24,8 @@ export default function Carrito() {
   const [servicios, setServicios] = useState([]);
   const [requiereTransporte, setRequiereTransporte] = useState(false);
   const [costoTransporte, setCostoTransporte] = useState('');
+  const [requiereDecoracion, setRequiereDecoracion] = useState(false);
+  const [costoDecoracion, setCostoDecoracion] = useState('');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -40,8 +42,9 @@ export default function Carrito() {
   };
 
   const totalTransporte = requiereTransporte ? parseFloat(costoTransporte || 0) : 0;
+  const totalDecoracion = requiereDecoracion ? parseFloat(costoDecoracion || 0) : 0;
   const totalServicios = servicios.reduce((sum, s) => sum + (parseFloat(s.precio_unitario || 0) * (parseInt(s.cantidad) || 1)), 0);
-  const totalReserva = parseFloat(calcularTotal()) + totalServicios + totalTransporte;
+  const totalReserva = parseFloat(calcularTotal()) + totalServicios + totalTransporte + totalDecoracion;
 
   const confirmar = async () => {
     if (!fechas.inicio || !fechas.fin) { toast.error('Selecciona fechas en el catálogo'); return; }
@@ -67,6 +70,14 @@ export default function Carrito() {
           nombre: 'Transporte',
           cantidad: 1,
           precio_unitario: parseFloat(costoTransporte) || 0
+        });
+      }
+
+      if (requiereDecoracion) {
+        itemsPayload.push({
+          nombre: 'Decoración',
+          cantidad: 1,
+          precio_unitario: parseFloat(costoDecoracion) || 0
         });
       }
 
@@ -155,6 +166,38 @@ export default function Carrito() {
                     placeholder="0.00"
                     value={costoTransporte}
                     onChange={e => setCostoTransporte(e.target.value)}
+                    style={{ ...s.input, width: 110, marginBottom: 0, padding: '6px 10px' }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Decoración */}
+          <div style={s.card}>
+            <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>✨ Decoración</span>
+            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={requiereDecoracion}
+                  onChange={e => setRequiereDecoracion(e.target.checked)}
+                  style={{ width: 18, height: 18, cursor: 'pointer' }}
+                />
+                Incluir costo de decoración
+              </label>
+              {requiereDecoracion && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                  <label style={{ fontSize: 13, color: '#666', fontWeight: 600 }}>Costo ($):</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={costoDecoracion}
+                    onChange={e => setCostoDecoracion(e.target.value)}
                     style={{ ...s.input, width: 110, marginBottom: 0, padding: '6px 10px' }}
                   />
                 </div>
@@ -262,6 +305,12 @@ export default function Carrito() {
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4, gap: 10 }}>
                 <span style={{ flex: 1 }}>🚚 Transporte</span>
                 <span style={{ fontWeight: 600 }}>${(parseFloat(costoTransporte) || 0).toFixed(2)}</span>
+              </div>
+            )}
+            {requiereDecoracion && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4, gap: 10 }}>
+                <span style={{ flex: 1 }}>✨ Decoración</span>
+                <span style={{ fontWeight: 600 }}>${(parseFloat(costoDecoracion) || 0).toFixed(2)}</span>
               </div>
             )}
             <div style={{ borderTop: '2px solid #f0f0f0', marginTop: '0.75rem', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.1rem' }}>

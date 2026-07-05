@@ -18,7 +18,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 
   // Clasificar en mobiliario y servicios
   const esServicio = (nombre) => {
-    const keywords = ['servicio', 'transporte', 'flete', 'montaje', 'armado', 'instalacio', 'envio', 'cargo', 'adicional', 'limpieza', 'deposito', 'garantia'];
+    const keywords = ['servicio', 'transporte', 'flete', 'montaje', 'armado', 'instalacio', 'envio', 'cargo', 'adicional', 'limpieza', 'deposito', 'garantia', 'decorac'];
     const n = (nombre || '').toLowerCase();
     return keywords.some(k => n.includes(k));
   };
