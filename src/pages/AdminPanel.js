@@ -135,26 +135,20 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 
   <div class="section">
     <div class="section-title">Datos del Cliente</div>
-    <div class="grid-2">
-      <div class="field"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
-      <div class="field"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
-      <div class="field" style="grid-column: span 2;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
+    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+      <div class="field" style="flex: 1.5; min-width: 150px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
+      <div class="field" style="flex: 1; min-width: 100px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
+      <div class="field" style="flex: 2.5; min-width: 200px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
     </div>
   </div>
 
   <div class="section">
     <div class="section-title">Detalles del evento</div>
-    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;">
-      <div class="field">
-        <label>Entrega</label>
-        <span>${new Date(reserva.fecha_inicio).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-      </div>
-      <div class="field">
-        <label>Retiro</label>
-        <span>${new Date(reserva.fecha_fin).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-      </div>
+    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+      <div class="field" style="flex: 1.2; min-width: 180px;"><label>Entrega</label><span>${new Date(reserva.fecha_inicio).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+      <div class="field" style="flex: 1.2; min-width: 180px;"><label>Retiro</label><span>${new Date(reserva.fecha_fin).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+      ${reserva.notas ? `<div class="field" style="flex: 2.6; min-width: 200px;"><label>Notas adicionales</label><span style="font-weight:400;font-style:italic;">${reserva.notas}</span></div>` : ''}
     </div>
-    ${reserva.notas ? `<div class="field" style="margin-top:12px;"><label>Notas adicionales</label><span style="font-weight:400;font-style:italic;">${reserva.notas}</span></div>` : ''}
   </div>
 
   <div class="section">
