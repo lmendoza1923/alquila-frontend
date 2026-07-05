@@ -22,6 +22,8 @@ export default function Carrito() {
   const [form, setForm] = useState({ nombre: '', telefono: '', direccion: '', notas: '' });
   const [loading, setLoading] = useState(false);
   const [servicios, setServicios] = useState([]);
+  const [requiereTransporte, setRequiereTransporte] = useState(false);
+  const [costoTransporte, setCostoTransporte] = useState('');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -37,8 +39,9 @@ export default function Carrito() {
     setServicios(prev => prev.filter(s => s.id !== id));
   };
 
+  const totalTransporte = requiereTransporte ? parseFloat(costoTransporte || 0) : 0;
   const totalServicios = servicios.reduce((sum, s) => sum + (parseFloat(s.precio_unitario || 0) * (parseInt(s.cantidad) || 1)), 0);
-  const totalReserva = parseFloat(calcularTotal()) + totalServicios;
+  const totalReserva = parseFloat(calcularTotal()) + totalServicios + totalTransporte;
 
   const confirmar = async () => {
     if (!fechas.inicio || !fechas.fin) { toast.error('Selecciona fechas en el catálogo'); return; }
@@ -46,6 +49,27 @@ export default function Carrito() {
 
     setLoading(true);
     try {
+      const itemsPayload = [
+        ...items.map(i => ({ 
+          mueble_id: i.esCombo ? null : i.mueble_id, 
+          combo_id: i.esCombo ? i.combo_id : null, 
+          cantidad: i.cantidad 
+        })),
+        ...servicios.filter(s => s.nombre.trim() !== '').map(s => ({
+          nombre: s.nombre.trim(),
+          cantidad: parseInt(s.cantidad) || 1,
+          precio_unitario: parseFloat(s.precio_unitario) || 0
+        }))
+      ];
+
+      if (requiereTransporte) {
+        itemsPayload.push({
+          nombre: 'Transporte',
+          cantidad: 1,
+          precio_unitario: parseFloat(costoTransporte) || 0
+        });
+      }
+
       const { data } = await api.post('/reservas', {
         fecha_inicio: fechas.inicio.toISOString().split('T')[0],
         fecha_fin: fechas.fin.toISOString().split('T')[0],
@@ -54,18 +78,7 @@ export default function Carrito() {
         telefono_cliente: form.telefono || null,
         direccion_entrega: form.direccion || null,
         notas: form.notas,
-        items: [
-          ...items.map(i => ({ 
-            mueble_id: i.esCombo ? null : i.mueble_id, 
-            combo_id: i.esCombo ? i.combo_id : null, 
-            cantidad: i.cantidad 
-          })),
-          ...servicios.filter(s => s.nombre.trim() !== '').map(s => ({
-            nombre: s.nombre.trim(),
-            cantidad: parseInt(s.cantidad) || 1,
-            precio_unitario: parseFloat(s.precio_unitario) || 0
-          }))
-        ]
+        items: itemsPayload
       });
       vaciar();
       navigate(`/confirmacion/${data.reserva.id}`);
@@ -115,6 +128,38 @@ export default function Carrito() {
                 </div>
               );
             })}
+          </div>
+
+          {/* Transporte */}
+          <div style={s.card}>
+            <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🚚 Transporte</span>
+            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={requiereTransporte}
+                  onChange={e => setRequiereTransporte(e.target.checked)}
+                  style={{ width: 18, height: 18, cursor: 'pointer' }}
+                />
+                Incluir costo de envío / transporte
+              </label>
+              {requiereTransporte && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                  <label style={{ fontSize: 13, color: '#666', fontWeight: 600 }}>Costo ($):</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={costoTransporte}
+                    onChange={e => setCostoTransporte(e.target.value)}
+                    style={{ ...s.input, width: 110, marginBottom: 0, padding: '6px 10px' }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Servicios adicionales */}
@@ -213,6 +258,12 @@ export default function Carrito() {
                 <span style={{ fontWeight: 600 }}>${(parseFloat(ser.precio_unitario || 0) * (parseInt(ser.cantidad) || 1)).toFixed(2)}</span>
               </div>
             ))}
+            {requiereTransporte && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4, gap: 10 }}>
+                <span style={{ flex: 1 }}>🚚 Transporte</span>
+                <span style={{ fontWeight: 600 }}>${(parseFloat(costoTransporte) || 0).toFixed(2)}</span>
+              </div>
+            )}
             <div style={{ borderTop: '2px solid #f0f0f0', marginTop: '0.75rem', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.1rem' }}>
               <span>Total</span>
               <span style={{ color: '#4a6cf7' }}>${totalReserva.toFixed(2)}</span>
