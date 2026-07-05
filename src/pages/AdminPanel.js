@@ -405,15 +405,27 @@ export default function AdminPanel() {
     setEditFechaFin(r.fecha_fin ? new Date(r.fecha_fin).toISOString().split('T')[0] : '');
     setEditTotal(r.total || '');
     setEditEstado(r.estado || 'pendiente');
-    
-    const items = (r.items || []).filter(i => i && (i.mueble || i.combo_id)).map((i, idx) => ({
-      mueble_id: i.mueble_id || null,
-      combo_id: i.combo_id || null,
-      nombre: i.mueble,
-      cantidad: i.cantidad,
-      subtotal: i.subtotal,
-      componentes: i.componentes || []
-    }));
+    const items = (r.items || []).filter(i => i && (i.mueble || i.combo_id)).map((i, idx) => {
+      let customComps = i.componentes || [];
+      if (i.combo_id && (!customComps || customComps.length === 0)) {
+        const comboObj = combos.find(c => c.id === i.combo_id);
+        if (comboObj && comboObj.items) {
+          customComps = comboObj.items.map(ci => ({
+            mueble_id: ci.mueble_id,
+            nombre: ci.nombre,
+            cantidad: ci.cantidad
+          }));
+        }
+      }
+      return {
+        mueble_id: i.mueble_id || null,
+        combo_id: i.combo_id || null,
+        nombre: i.mueble,
+        cantidad: i.cantidad,
+        subtotal: i.subtotal,
+        componentes: customComps
+      };
+    });
     
     setItemsEditando(items);
     setMuebleSeleccionado('');
