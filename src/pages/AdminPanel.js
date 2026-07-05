@@ -1286,6 +1286,54 @@ export default function AdminPanel() {
                 </div>
               </div>
 
+              {/* Desglose de Facturación / Ingresos por Categoría */}
+              {reportesData.desglose && (
+                <div style={{ marginTop: '1.5rem', background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '1.5rem' }}>
+                  <h3 style={{ marginTop: 0, marginBottom: '1.25rem', color: '#1a1a2e', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    📊 Desglose de Ingresos Reservados (Ganancias por Categoría)
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                    <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                      <div style={{ color: '#64748b', fontSize: 12, fontWeight: 600 }}>Total Reservado</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#4a6cf7', marginTop: 6 }}>
+                        ${reportesData.desglose.total_reservado.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Valor total contratado</div>
+                    </div>
+                    <div style={{ background: '#f0fdf4', padding: '1.25rem', borderRadius: 10, border: '1px solid #bbf7d0' }}>
+                      <div style={{ color: '#166534', fontSize: 12, fontWeight: 600 }}>Mobiliario Reservado</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#15803d', marginTop: 6 }}>
+                        ${reportesData.desglose.mobiliario.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#16a34a', marginTop: 4 }}>Mobiliario y combos</div>
+                    </div>
+                    <div style={{ background: '#fef2f2', padding: '1.25rem', borderRadius: 10, border: '1px solid #fecaca' }}>
+                      <div style={{ color: '#991b1b', fontSize: 12, fontWeight: 600 }}>Fletes / Transporte</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#b91c1c', marginTop: 6 }}>
+                        ${reportesData.desglose.transporte.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>Envíos y retornos</div>
+                    </div>
+                    <div style={{ background: '#fffbeb', padding: '1.25rem', borderRadius: 10, border: '1px solid #fef3c7' }}>
+                      <div style={{ color: '#92400e', fontSize: 12, fontWeight: 600 }}>Decoración</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#b45309', marginTop: 6 }}>
+                        ${reportesData.desglose.decoracion.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#d97706', marginTop: 4 }}>Servicios de decoración</div>
+                    </div>
+                    {reportesData.desglose.otros > 0 && (
+                      <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                        <div style={{ color: '#475569', fontSize: 12, fontWeight: 600 }}>Otros Servicios</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#334155', marginTop: 6 }}>
+                          ${reportesData.desglose.otros.toFixed(2)}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Servicios no clasificados</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Gráficas */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' }}>
                 {/* Gráfica 1: Ganancias del Período Filtrado */}
