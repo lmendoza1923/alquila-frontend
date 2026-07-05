@@ -234,6 +234,45 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   setTimeout(() => ventana.print(), 600);
 }
 
+// Helper dates for reports
+const formatYYYYMMDD = (d) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getFirstDayOfCurrentMonth = () => {
+  const d = new Date();
+  return formatYYYYMMDD(new Date(d.getFullYear(), d.getMonth(), 1));
+};
+
+const getToday = () => {
+  return formatYYYYMMDD(new Date());
+};
+
+const getDatesInRange = (startDateStr, endDateStr) => {
+  const start = new Date(startDateStr + 'T00:00:00');
+  const end = new Date(endDateStr + 'T00:00:00');
+  const dates = [];
+  let curr = new Date(start);
+  while (curr <= end) {
+    dates.push(new Date(curr));
+    curr.setDate(curr.getDate() + 1);
+  }
+  return dates;
+};
+
+const formatShortDate = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const day = parseInt(parts[2]);
+  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const month = monthNames[parseInt(parts[1]) - 1];
+  return `${day} ${month}`;
+};
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function AdminPanel() {
   const [stats, setStats] = useState(null);
@@ -301,15 +340,30 @@ export default function AdminPanel() {
 
   // Estados para Reportes
   const [reportesData, setReportesData] = useState(null);
+  const [tipoReporte, setTipoReporte] = useState('mes'); // 'mes' o 'personalizado'
   const [mesReporte, setMesReporte] = useState(new Date().getMonth() + 1);
   const [anioReporte, setAnioReporte] = useState(new Date().getFullYear());
+  const [fechaInicioReporte, setFechaInicioReporte] = useState(getFirstDayOfCurrentMonth());
+  const [fechaFinReporte, setFechaFinReporte] = useState(getToday());
   const [loadingReportes, setLoadingReportes] = useState(false);
   const [activeBar, setActiveBar] = useState(null);
 
-  const cargarReporte = async (m, a) => {
+  const cargarReporte = async () => {
+    if (tipoReporte === 'personalizado' && fechaInicioReporte > fechaFinReporte) {
+      toast.error('La fecha de inicio no puede ser posterior a la fecha de fin');
+      return;
+    }
     setLoadingReportes(true);
     try {
-      const res = await api.get('/admin/reportes', { params: { mes: m, anio: a } });
+      const params = { tipo: tipoReporte };
+      if (tipoReporte === 'mes') {
+        params.mes = mesReporte;
+        params.anio = anioReporte;
+      } else {
+        params.fechaInicio = fechaInicioReporte;
+        params.fechaFin = fechaFinReporte;
+      }
+      const res = await api.get('/admin/reportes', { params });
       setReportesData(res.data);
     } catch (err) {
       toast.error('Error al cargar reporte de estadísticas');
@@ -320,9 +374,9 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (tab === 'reportes') {
-      cargarReporte(mesReporte, anioReporte);
+      cargarReporte();
     }
-  }, [tab, mesReporte, anioReporte]);
+  }, [tab, tipoReporte, mesReporte, anioReporte, fechaInicioReporte, fechaFinReporte]);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -1117,26 +1171,89 @@ export default function AdminPanel() {
           {/* Controles de Filtro */}
           <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h3 style={{ margin: 0, color: '#1a1a2e' }}>Estadísticas Mensuales del Negocio</h3>
-              <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: 13 }}>Filtra las ganancias e inventario alquilado por mes</p>
+              <h3 style={{ margin: 0, color: '#1a1a2e' }}>Estadísticas del Negocio</h3>
+              <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: 13 }}>Filtra las ganancias e inventario alquilado por mes o rango de fechas</p>
             </div>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 4, fontWeight: 600 }}>Mes</label>
-                <select value={mesReporte} onChange={e => setMesReporte(parseInt(e.target.value))} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff' }}>
-                  {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => (
-                    <option key={i} value={i + 1}>{m}</option>
-                  ))}
-                </select>
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              {/* Segmented Control */}
+              <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
+                <button
+                  onClick={() => setTipoReporte('mes')}
+                  style={{
+                    padding: '8px 16px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: tipoReporte === 'mes' ? '#fff' : 'transparent',
+                    color: tipoReporte === 'mes' ? '#1a1a2e' : '#64748b',
+                    boxShadow: tipoReporte === 'mes' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Mes Completo
+                </button>
+                <button
+                  onClick={() => setTipoReporte('personalizado')}
+                  style={{
+                    padding: '8px 16px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: tipoReporte === 'personalizado' ? '#fff' : 'transparent',
+                    color: tipoReporte === 'personalizado' ? '#1a1a2e' : '#64748b',
+                    boxShadow: tipoReporte === 'personalizado' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Rango Personalizado
+                </button>
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 4, fontWeight: 600 }}>Año</label>
-                <select value={anioReporte} onChange={e => setAnioReporte(parseInt(e.target.value))} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff' }}>
-                  {[2025, 2026, 2027, 2028].map(y => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-              </div>
+
+              {tipoReporte === 'mes' ? (
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 4, fontWeight: 600 }}>Mes</label>
+                    <select value={mesReporte} onChange={e => setMesReporte(parseInt(e.target.value))} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff' }}>
+                      {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => (
+                        <option key={i} value={i + 1}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 4, fontWeight: 600 }}>Año</label>
+                    <select value={anioReporte} onChange={e => setAnioReporte(parseInt(e.target.value))} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff' }}>
+                      {[2025, 2026, 2027, 2028].map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 4, fontWeight: 600 }}>Fecha Inicio</label>
+                    <input
+                      type="date"
+                      value={fechaInicioReporte}
+                      onChange={e => setFechaInicioReporte(e.target.value)}
+                      style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff', outline: 'none' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 4, fontWeight: 600 }}>Fecha Fin</label>
+                    <input
+                      type="date"
+                      value={fechaFinReporte}
+                      onChange={e => setFechaFinReporte(e.target.value)}
+                      style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, cursor: 'pointer', background: '#fff', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1149,7 +1266,7 @@ export default function AdminPanel() {
                 <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                   <div style={{ fontSize: '2.5rem', background: '#eef2ff', padding: '10px', borderRadius: 12 }}>📋</div>
                   <div>
-                    <div style={{ color: '#888', fontSize: 13, fontWeight: 600 }}>Reservas del Mes</div>
+                    <div style={{ color: '#888', fontSize: 13, fontWeight: 600 }}>Reservas del Período</div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1a1a2e', marginTop: 4 }}>{reportesData.total_reservas}</div>
                   </div>
                 </div>
@@ -1171,50 +1288,64 @@ export default function AdminPanel() {
 
               {/* Gráficas */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' }}>
-                {/* Gráfica 1: Ganancias del Mes Filtrado */}
+                {/* Gráfica 1: Ganancias del Período Filtrado */}
                 <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', color: '#1a1a2e' }}>Ganancias Diarias ({['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][mesReporte - 1]} {anioReporte})</h4>
+                  <h4 style={{ margin: '0 0 1rem 0', color: '#1a1a2e' }}>
+                    {tipoReporte === 'mes'
+                      ? `Ganancias Diarias (${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][mesReporte - 1]} ${anioReporte})`
+                      : `Ganancias Diarias (${formatShortDate(reportesData.fecha_inicio)} - ${formatShortDate(reportesData.fecha_fin)})`
+                    }
+                  </h4>
                   <div style={{ height: 200, display: 'flex', alignItems: 'flex-end', gap: 2, paddingBottom: '1rem', borderBottom: '1px solid #e2e8f0', position: 'relative' }}>
                     {(() => {
-                      const totalDias = new Date(anioReporte, mesReporte, 0).getDate();
+                      const datesArray = getDatesInRange(reportesData.fecha_inicio, reportesData.fecha_fin);
                       const maxDaily = Math.max(...reportesData.ganancias_diarias.map(d => d.total), 1);
                       const bars = [];
-                      for (let d = 1; d <= totalDias; d++) {
-                        const rec = reportesData.ganancias_diarias.find(x => x.dia === d);
+                      datesArray.forEach((dateObj, idx) => {
+                        const dateStr = formatYYYYMMDD(dateObj);
+                        const rec = reportesData.ganancias_diarias.find(x => x.fecha === dateStr);
                         const total = rec ? rec.total : 0;
                         const heightPct = (total / maxDaily) * 100;
                         bars.push(
                           <div
-                            key={d}
-                            onMouseEnter={() => setActiveBar({ type: 'daily', index: d })}
+                            key={dateStr}
+                            onMouseEnter={() => setActiveBar({ type: 'daily', index: dateStr })}
                             onMouseLeave={() => setActiveBar(null)}
-                            title={`Día ${d}: $${total.toFixed(2)}`}
+                            title={`${formatShortDate(dateStr)}: $${total.toFixed(2)}`}
                             style={{
                               flex: 1,
                               height: `${Math.max(heightPct, 3)}%`,
-                              background: total === 0 ? '#f1f5f9' : (activeBar?.type === 'daily' && activeBar?.index === d ? '#1d4ed8' : 'linear-gradient(180deg, #4a6cf7 0%, #818cf8 100%)'),
+                              background: total === 0 ? '#f1f5f9' : (activeBar?.type === 'daily' && activeBar?.index === dateStr ? '#1d4ed8' : 'linear-gradient(180deg, #4a6cf7 0%, #818cf8 100%)'),
                               borderRadius: '3px 3px 0 0',
                               cursor: 'pointer',
                               transition: 'all 0.2s ease',
                               position: 'relative'
                             }}
                           >
-                            {activeBar?.type === 'daily' && activeBar?.index === d && total > 0 && (
+                            {activeBar?.type === 'daily' && activeBar?.index === dateStr && total > 0 && (
                               <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', background: '#1a1a2e', color: '#fff', padding: '4px 8px', borderRadius: 4, fontSize: 10, whiteSpace: 'nowrap', zIndex: 10, boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>
                                 ${total.toFixed(0)}
                               </div>
                             )}
                           </div>
                         );
-                      }
+                      });
                       return bars;
                     })()}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 10, color: '#888', padding: '0 4px' }}>
-                    <span>Día 1</span>
-                    <span>Día 10</span>
-                    <span>Día 20</span>
-                    <span>Día {new Date(anioReporte, mesReporte, 0).getDate()}</span>
+                    {(() => {
+                      const datesArray = getDatesInRange(reportesData.fecha_inicio, reportesData.fecha_fin);
+                      return (
+                        <>
+                          <span>{formatShortDate(reportesData.fecha_inicio)}</span>
+                          {datesArray.length > 5 && (
+                            <span>{formatShortDate(formatYYYYMMDD(datesArray[Math.floor(datesArray.length / 2)]))}</span>
+                          )}
+                          <span>{formatShortDate(reportesData.fecha_fin)}</span>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -1288,7 +1419,7 @@ export default function AdminPanel() {
                           </tr>
                         ))}
                         {reportesData.top_muebles.length === 0 && (
-                          <tr><td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>Sin alquileres en este mes.</td></tr>
+                          <tr><td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>Sin alquileres en este período.</td></tr>
                         )}
                       </tbody>
                     </table>
@@ -1318,7 +1449,7 @@ export default function AdminPanel() {
                           </tr>
                         ))}
                         {reportesData.top_combos.length === 0 && (
-                          <tr><td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>Sin combos alquilados en este mes.</td></tr>
+                          <tr><td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>Sin combos alquilados en este período.</td></tr>
                         )}
                       </tbody>
                     </table>
