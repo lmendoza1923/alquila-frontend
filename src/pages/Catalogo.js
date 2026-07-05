@@ -50,6 +50,8 @@ export default function Catalogo() {
   const [form, setForm] = useState({ nombre: '', telefono: '', direccion: '', notas: '' });
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [servicios, setServicios] = useState([]);
+  const [requiereTransporte, setRequiereTransporte] = useState(false);
+  const [costoTransporte, setCostoTransporte] = useState('');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -65,8 +67,9 @@ export default function Catalogo() {
     setServicios(prev => prev.filter(s => s.id !== id));
   };
 
+  const totalTransporte = requiereTransporte ? parseFloat(costoTransporte || 0) : 0;
   const totalServicios = servicios.reduce((sum, s) => sum + (parseFloat(s.precio_unitario || 0) * (parseInt(s.cantidad) || 1)), 0);
-  const totalReserva = parseFloat(calcularTotal()) + totalServicios;
+  const totalReserva = parseFloat(calcularTotal()) + totalServicios + totalTransporte;
 
   const confirmarReservaAdmin = async () => {
     if (!fechas.inicio || !fechas.fin) { toast.error('Selecciona fechas en el calendario primero'); return; }
@@ -74,6 +77,27 @@ export default function Catalogo() {
 
     setLoadingCheckout(true);
     try {
+      const itemsPayload = [
+        ...items.map(i => ({ 
+          mueble_id: i.esCombo ? null : i.mueble_id, 
+          combo_id: i.esCombo ? i.combo_id : null, 
+          cantidad: i.cantidad 
+        })),
+        ...servicios.filter(s => s.nombre.trim() !== '').map(s => ({
+          nombre: s.nombre.trim(),
+          cantidad: parseInt(s.cantidad) || 1,
+          precio_unitario: parseFloat(s.precio_unitario) || 0
+        }))
+      ];
+
+      if (requiereTransporte) {
+        itemsPayload.push({
+          nombre: 'Transporte',
+          cantidad: 1,
+          precio_unitario: parseFloat(costoTransporte) || 0
+        });
+      }
+
       const { data } = await api.post('/reservas', {
         fecha_inicio: fechas.inicio.toISOString().split('T')[0],
         fecha_fin: fechas.fin.toISOString().split('T')[0],
@@ -82,21 +106,12 @@ export default function Catalogo() {
         telefono_cliente: form.telefono || null,
         direccion_entrega: form.direccion || null,
         notas: form.notas,
-        items: [
-          ...items.map(i => ({ 
-            mueble_id: i.esCombo ? null : i.mueble_id, 
-            combo_id: i.esCombo ? i.combo_id : null, 
-            cantidad: i.cantidad 
-          })),
-          ...servicios.filter(s => s.nombre.trim() !== '').map(s => ({
-            nombre: s.nombre.trim(),
-            cantidad: parseInt(s.cantidad) || 1,
-            precio_unitario: parseFloat(s.precio_unitario) || 0
-          }))
-        ]
+        items: itemsPayload
       });
       vaciar();
       setServicios([]);
+      setRequiereTransporte(false);
+      setCostoTransporte('');
       setForm({ nombre: '', telefono: '', direccion: '', notas: '' });
       toast.success('Reserva creada exitosamente');
       navigate(`/confirmacion/${data.reserva.id}`);
@@ -360,6 +375,38 @@ export default function Catalogo() {
                 <p style={{ color: '#aaa', fontSize: 12, margin: '6px 0 12px 0', fontStyle: 'italic' }}>Ningún artículo agregado.</p>
               )}
 
+              {/* Transporte */}
+              <div style={{ margin: '12px 0 12px 0', borderBottom: '1px solid #f0f0f0', paddingBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 6px 0' }}>
+                  <h4 style={{ margin: 0, fontSize: 13, color: '#555', fontWeight: 600 }}>🚚 Transporte</h4>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: 12 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600, color: '#444' }}>
+                    <input
+                      type="checkbox"
+                      checked={requiereTransporte}
+                      onChange={e => setRequiereTransporte(e.target.checked)}
+                      style={{ width: 14, height: 14, cursor: 'pointer' }}
+                    />
+                    Incluir envío
+                  </label>
+                  {requiereTransporte && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
+                      <span style={{ fontSize: 11, color: '#666' }}>Costo ($):</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={costoTransporte}
+                        onChange={e => setCostoTransporte(e.target.value)}
+                        style={{ ...s.input, width: 70, padding: '4px 6px', fontSize: 11, marginBottom: 0 }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Servicios adicionales */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '12px 0 6px 0' }}>
                 <h4 style={{ margin: 0, fontSize: 13, color: '#555', fontWeight: 600 }}>Servicios adicionales</h4>
@@ -445,6 +492,12 @@ export default function Catalogo() {
                   <span>Duración:</span>
                   <strong>{diasSeleccionados} días</strong>
                 </div>
+                {requiereTransporte && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#666', marginBottom: 4 }}>
+                    <span>Transporte:</span>
+                    <strong>${(parseFloat(costoTransporte) || 0).toFixed(2)}</strong>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 15, color: '#1a1a2e' }}>
                   <span>Total</span>
                   <span style={{ color: '#4a6cf7' }}>${totalReserva.toFixed(2)}</span>
