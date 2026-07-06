@@ -378,7 +378,7 @@ export default function AdminPanel() {
   useEffect(() => {
     api.get('/admin/stats').then(r => setStats(r.data));
     api.get('/reservas').then(r => setReservas(r.data));
-    api.get('/muebles').then(r => setMuebles(r.data)).catch(() => {});
+    api.get('/muebles?todos=true').then(r => setMuebles(r.data)).catch(() => {});
     api.get('/combos').then(r => setCombos(r.data)).catch(() => {});
     api.get('/pagos/terminos').then(r => setTerminos(r.data.terminos)).catch(() => {});
   }, []);
@@ -608,7 +608,7 @@ export default function AdminPanel() {
       } : r));
       setReservaEditando(null);
       api.get('/admin/stats').then(r => setStats(r.data));
-      api.get('/muebles').then(r => setMuebles(r.data));
+      api.get('/muebles?todos=true').then(r => setMuebles(r.data));
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error al actualizar la reserva');
     } finally {
@@ -782,7 +782,7 @@ export default function AdminPanel() {
       await api.delete(`/muebles/${id}`);
       toast.success(`Mueble "${nombreMueble}" eliminado`);
       api.get('/admin/stats').then(r => setStats(r.data));
-      api.get('/muebles').then(r => setMuebles(r.data));
+      api.get('/muebles?todos=true').then(r => setMuebles(r.data));
     } catch (error) {
       toast.error(error.response?.data?.error || 'Error al eliminar el mueble');
     }
@@ -819,7 +819,7 @@ export default function AdminPanel() {
       setActivo(true);
       setMuebleEditando(null);
       api.get('/admin/stats').then(r => setStats(r.data));
-      api.get('/muebles').then(r => setMuebles(r.data));
+      api.get('/muebles?todos=true').then(r => setMuebles(r.data));
     } catch (error) {
       toast.error(error.response?.data?.error || 'Error al guardar el mueble');
     } finally {
