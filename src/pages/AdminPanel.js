@@ -933,6 +933,7 @@ export default function AdminPanel() {
             { label: 'Total reservas', value: stats.total_reservas, icon: '📋' },
             { label: 'Ingresos totales', value: `$${stats.ingresos_total?.toFixed(2)}`, icon: '💰' },
             { label: 'Muebles activos', value: stats.total_muebles, icon: '🪑' },
+            { label: 'Combos activos', value: stats.total_combos || 0, icon: '🎁' },
             { label: 'Pendientes', value: stats.reservas_pendientes, icon: '⏳' },
           ].map(s => (
             <div key={s.label} style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', textAlign: 'center' }}>
@@ -1243,7 +1244,9 @@ export default function AdminPanel() {
             </div>
 
             <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-              <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.25rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.5rem' }}>Combos Registrados ({combos.length})</h3>
+              <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.25rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.5rem' }}>
+                Combos Registrados ({combos.length}) — Activos: {combos.filter(c => c.activo).length}
+              </h3>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                   <thead>
