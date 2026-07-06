@@ -297,6 +297,7 @@ export default function AdminPanel() {
   const [muebleParaComboSeleccionado, setMuebleParaComboSeleccionado] = useState('');
   const [cantidadParaComboAgregar, setCantidadParaComboAgregar] = useState(1);
   const [comboEditando, setComboEditando] = useState(null);
+  const [comboActivo, setComboActivo] = useState(true);
   const [loadingComboForm, setLoadingComboForm] = useState(false);
 
   // Estados edición de reservas
@@ -379,7 +380,7 @@ export default function AdminPanel() {
     api.get('/admin/stats').then(r => setStats(r.data));
     api.get('/reservas').then(r => setReservas(r.data));
     api.get('/muebles?todos=true').then(r => setMuebles(r.data)).catch(() => {});
-    api.get('/combos').then(r => setCombos(r.data)).catch(() => {});
+    api.get('/combos?todos=true').then(r => setCombos(r.data)).catch(() => {});
     api.get('/pagos/terminos').then(r => setTerminos(r.data.terminos)).catch(() => {});
   }, []);
 
@@ -854,6 +855,7 @@ export default function AdminPanel() {
     setComboDescripcion(c.descripcion || '');
     setComboPrecioDia(c.precio_dia || '');
     setComboItems(c.items.map(i => ({ mueble_id: i.mueble_id, nombre: i.nombre, cantidad: i.cantidad })));
+    setComboActivo(c.activo !== undefined ? c.activo : true);
   };
 
   const handleSubmitCombo = async (e) => {
@@ -868,7 +870,8 @@ export default function AdminPanel() {
         precio_dia: comboPrecioDia ? parseFloat(comboPrecioDia) : 0.00,
         precio_semana: null,
         precio_mes: null,
-        items: comboItems
+        items: comboItems,
+        activo: comboEditando ? comboActivo : true
       };
       
       if (comboEditando) {
@@ -883,9 +886,10 @@ export default function AdminPanel() {
       setComboDescripcion('');
       setComboPrecioDia('');
       setComboItems([]);
+      setComboActivo(true);
       setComboEditando(null);
       
-      api.get('/combos').then(r => setCombos(r.data));
+      api.get('/combos?todos=true').then(r => setCombos(r.data));
     } catch (error) {
       toast.error(error.response?.data?.error || 'Error al guardar el combo');
     } finally {
@@ -1175,6 +1179,18 @@ export default function AdminPanel() {
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Descripción</label>
                   <textarea rows="2" placeholder="Qué eventos cubre o detalles..." value={comboDescripcion} onChange={e => setComboDescripcion(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
                 </div>
+                {comboEditando && (
+                  <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input 
+                      type="checkbox" 
+                      id="combo-activo"
+                      checked={comboActivo} 
+                      onChange={e => setComboActivo(e.target.checked)} 
+                      style={{ width: 18, height: 18, cursor: 'pointer' }}
+                    />
+                    <label htmlFor="combo-activo" style={{ fontWeight: 600, fontSize: 13, color: '#444', cursor: 'pointer' }}>Combo Activo / Disponible para alquilar</label>
+                  </div>
+                )}
 
                 {/* Relación con muebles */}
                 <div style={{ background: '#f8f9ff', padding: '1.25rem', borderRadius: 10, border: '1px solid #eef2ff', marginBottom: '1.5rem' }}>
@@ -1216,6 +1232,7 @@ export default function AdminPanel() {
                       setComboDescripcion('');
                       setComboPrecioDia('');
                       setComboItems([]);
+                      setComboActivo(true);
                     }} style={{ flex: 1, padding: '12px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
                   )}
                   <button type="submit" disabled={loadingComboForm} style={{ flex: 2, padding: '12px', background: loadingComboForm ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingComboForm ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 15 }}>
@@ -1231,7 +1248,7 @@ export default function AdminPanel() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                   <thead>
                     <tr style={{ background: '#f8f9ff', borderBottom: '1px solid #f0f0f0' }}>
-                      {['Nombre', 'Precio', 'Componentes', 'Acciones'].map(h => (
+                      {['Nombre', 'Precio', 'Componentes', 'Estado', 'Acciones'].map(h => (
                         <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555' }}>{h}</th>
                       ))}
                     </tr>
@@ -1252,6 +1269,11 @@ export default function AdminPanel() {
                               • {ci.cantidad}x {ci.nombre}
                             </div>
                           ))}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ background: c.activo ? '#22c55e22' : '#ef444422', color: c.activo ? '#22c55e' : '#ef4444', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                            {c.activo ? 'Activo' : 'Inactivo'}
+                          </span>
                         </td>
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ display: 'flex', gap: 6 }}>
