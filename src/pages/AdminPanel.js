@@ -720,6 +720,50 @@ export default function AdminPanel() {
     setNuevaImagenUrl('');
   };
 
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files || files.length === 0) return;
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Comprimir al 60% en formato JPEG para optimizar espacio en base de datos
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          setImagenes(prev => [...prev, dataUrl]);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
   const eliminarImagen = (index) => setImagenes(prev => prev.filter((_, i) => i !== index));
 
   const iniciarEditarMueble = (m) => {
@@ -980,10 +1024,26 @@ export default function AdminPanel() {
                   <textarea rows="3" placeholder="Detalles sobre el mueble..." value={descripcion} onChange={e => setDescripcion(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
                 </div>
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Enlaces de Imágenes</label>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                    <input type="text" placeholder="https://ejemplo.com/imagen.jpg" value={nuevaImagenUrl} onChange={e => setNuevaImagenUrl(e.target.value)} style={{ flex: 1, padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
-                    <button type="button" onClick={agregarImagen} style={{ padding: '10px 16px', background: '#e8eaf6', color: '#4a6cf7', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>+ Añadir</button>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Imágenes del Mobiliario</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 10, background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Cargar desde este equipo (Se comprimirá automáticamente):</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        multiple 
+                        onChange={handleImageUpload} 
+                        style={{ fontSize: 13, padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                      />
+                    </div>
+                    <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 0' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>O ingresar enlace web (URL):</span>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input type="text" placeholder="https://ejemplo.com/imagen.jpg" value={nuevaImagenUrl} onChange={e => setNuevaImagenUrl(e.target.value)} style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, boxSizing: 'border-box' }} />
+                        <button type="button" onClick={agregarImagen} style={{ padding: '8px 14px', background: '#e8eaf6', color: '#4a6cf7', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>+ Añadir URL</button>
+                      </div>
+                    </div>
                   </div>
                   {imagenes.length > 0 && (
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', background: '#f8f9ff', padding: 8, borderRadius: 8, border: '1px dashed #cbd5e1' }}>
