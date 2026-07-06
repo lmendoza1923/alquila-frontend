@@ -418,6 +418,7 @@ export default function AdminPanel() {
         nombre: i.mueble,
         cantidad: i.cantidad,
         subtotal: i.subtotal,
+        precio_unitario: i.precio_unitario !== undefined && i.precio_unitario !== null ? parseFloat(i.precio_unitario) : null,
         componentes: customComps
       };
     });
@@ -446,6 +447,7 @@ export default function AdminPanel() {
           combo_id: combo.id,
           nombre: combo.nombre,
           cantidad: cantidadAgregar,
+          precio_unitario: parseFloat(combo.precio_dia || 0),
           subtotal: parseFloat(combo.precio_dia || 0) * cantidadAgregar
         }];
       }
@@ -469,6 +471,7 @@ export default function AdminPanel() {
           combo_id: null,
           nombre: mueble.nombre,
           cantidad: cantidadAgregar,
+          precio_unitario: parseFloat(mueble.precio_dia || 0),
           subtotal: parseFloat(mueble.precio_dia || 0) * cantidadAgregar
         }];
       }
@@ -499,10 +502,24 @@ export default function AdminPanel() {
     setItemsEditando(prev => {
       const nuevos = prev.map(i => {
         if (!i.combo_id && !i.mueble_id) {
-          return i.nombre === nombre ? { ...i, cantidad: nuevaCantidad, subtotal: (i.subtotal / i.cantidad) * nuevaCantidad } : i;
+          return i.nombre === nombre ? { ...i, cantidad: nuevaCantidad, subtotal: (i.precio_unitario || 0) * nuevaCantidad } : i;
         }
         const match = esCombo ? (i.combo_id === id) : (i.mueble_id === id);
         return match ? { ...i, cantidad: nuevaCantidad } : i;
+      });
+      recalcularTotal(nuevos);
+      return nuevos;
+    });
+  };
+
+  const actualizarPrecioItem = (id, nuevoPrecio, esCombo = false, nombre = null) => {
+    setItemsEditando(prev => {
+      const nuevos = prev.map(i => {
+        if (!i.combo_id && !i.mueble_id) {
+          return i.nombre === nombre ? { ...i, precio_unitario: nuevoPrecio, subtotal: nuevoPrecio * i.cantidad } : i;
+        }
+        const match = esCombo ? (i.combo_id === id) : (i.mueble_id === id);
+        return match ? { ...i, precio_unitario: nuevoPrecio } : i;
       });
       recalcularTotal(nuevos);
       return nuevos;
@@ -551,16 +568,32 @@ export default function AdminPanel() {
     if (dias <= 0) return;
     const total = items.reduce((sum, item) => {
       if (item.combo_id) {
-        const combo = combos.find(c => c.id === item.combo_id);
-        const precio = combo ? parseFloat(combo.precio_dia || 0) : (item.subtotal / item.cantidad / dias || 0);
-        return sum + precio * item.cantidad * dias;
+        let precio = item.precio_unitario;
+        if (precio === undefined || precio === null || isNaN(precio)) {
+          const combo = combos.find(c => c.id === item.combo_id);
+          precio = combo ? parseFloat(combo.precio_dia || 0) : 0;
+        }
+        const subtotal = parseFloat(precio) * item.cantidad * dias;
+        item.subtotal = subtotal;
+        return sum + subtotal;
       } else if (item.mueble_id) {
-        const mueble = muebles.find(m => m.id === item.mueble_id);
-        const precio = mueble ? parseFloat(mueble.precio_dia || 0) : (item.subtotal / item.cantidad / dias || 0);
-        return sum + precio * item.cantidad * dias;
+        let precio = item.precio_unitario;
+        if (precio === undefined || precio === null || isNaN(precio)) {
+          const mueble = muebles.find(m => m.id === item.mueble_id);
+          precio = mueble ? parseFloat(mueble.precio_dia || 0) : 0;
+        }
+        const subtotal = parseFloat(precio) * item.cantidad * dias;
+        item.subtotal = subtotal;
+        return sum + subtotal;
       } else {
-        // Servicio manual (es precio fijo, no se multiplica por día)
-        return sum + parseFloat(item.subtotal || 0);
+        let precio = item.precio_unitario;
+        if (precio === undefined || precio === null || isNaN(precio)) {
+          precio = item.subtotal / item.cantidad || 0;
+        }
+        const subtotal = parseFloat(precio) * item.cantidad;
+        item.subtotal = subtotal;
+        item.precio_unitario = precio;
+        return sum + subtotal;
       }
     }, 0);
     setEditTotal(total.toFixed(2));
@@ -591,7 +624,7 @@ export default function AdminPanel() {
           combo_id: i.combo_id || null, 
           cantidad: i.cantidad,
           nombre: (!i.mueble_id && !i.combo_id) ? i.nombre : null,
-          precio_unitario: (!i.mueble_id && !i.combo_id) ? (parseFloat(i.subtotal) / i.cantidad || 0) : null,
+          precio_unitario: i.precio_unitario !== undefined && i.precio_unitario !== null ? parseFloat(i.precio_unitario) : null,
           componentes: i.combo_id ? i.componentes : null
         }))
       });
@@ -603,6 +636,7 @@ export default function AdminPanel() {
           combo_id: i.combo_id, 
           mueble: i.nombre, 
           cantidad: i.cantidad, 
+          precio_unitario: i.precio_unitario,
           subtotal: i.subtotal,
           componentes: i.componentes || []
         }))
@@ -1682,9 +1716,9 @@ export default function AdminPanel() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Inicio *</label>
-                  <input type="date" value={editFechaInicio} onChange={e => { setEditFechaInicio(e.target.value); recalcularTotal(itemsEditando); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required /></div>
+                  <input type="date" value={editFechaInicio} onChange={e => { const val = e.target.value; setEditFechaInicio(val); setItemsEditando(prev => recalcularTotal(prev, val, null)); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required /></div>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Fin *</label>
-                  <input type="date" value={editFechaFin} onChange={e => { setEditFechaFin(e.target.value); recalcularTotal(itemsEditando); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required /></div>
+                  <input type="date" value={editFechaFin} onChange={e => { const val = e.target.value; setEditFechaFin(val); setItemsEditando(prev => recalcularTotal(prev, null, val)); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required /></div>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Estado</label>
                   <div style={{ padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, background: '#f8f9fa', color: '#555', fontWeight: 600, textTransform: 'uppercase', boxSizing: 'border-box', textAlign: 'center' }}>
                     {editEstado}
@@ -1699,13 +1733,33 @@ export default function AdminPanel() {
                       const id = item.combo_id || item.mueble_id;
                       return (
                         <div key={idx} style={{ display: 'flex', flexDirection: 'column', padding: '8px 0', borderBottom: '1px solid #e8eaf6' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: '#1a1a2e', minWidth: '150px' }}>
                               {item.combo_id ? `🎁 Combo: ${item.nombre}` : item.nombre}
                             </span>
-                            <input type="number" min="1" value={item.cantidad} onChange={e => actualizarCantidadItem(id, parseInt(e.target.value), !!item.combo_id, item.nombre)} style={{ width: 60, padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }} />
-                            <span style={{ fontSize: 12, color: '#888', minWidth: 40 }}>uds</span>
-                            <button type="button" onClick={() => eliminarMuebleDeReserva(id, !!item.combo_id, item.nombre)} style={{ background: '#ef444422', color: '#ef4444', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>🗑️ Eliminar</button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ fontSize: 11, color: '#666' }}>Cant:</span>
+                              <input type="number" min="1" value={item.cantidad} onChange={e => actualizarCantidadItem(id, parseInt(e.target.value) || 1, !!item.combo_id, item.nombre)} style={{ width: 55, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }} />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ fontSize: 11, color: '#666' }}>Precio:</span>
+                              <input 
+                                type="number" 
+                                step="0.01" 
+                                min="0" 
+                                value={item.precio_unitario !== null && item.precio_unitario !== undefined ? item.precio_unitario : ''} 
+                                placeholder={item.combo_id ? (combos.find(c => c.id === item.combo_id)?.precio_dia || '0.00') : (muebles.find(m => m.id === item.mueble_id)?.precio_dia || '0.00')}
+                                onChange={e => actualizarPrecioItem(id, parseFloat(e.target.value) || 0, !!item.combo_id, item.nombre)} 
+                                style={{ width: 75, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }} 
+                              />
+                              <span style={{ fontSize: 11, color: '#888' }}>
+                                {item.combo_id || item.mueble_id ? '/día' : 'fijo'}
+                              </span>
+                            </div>
+                            <span style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', minWidth: 65, textAlign: 'right' }}>
+                              ${parseFloat(item.subtotal || 0).toFixed(2)}
+                            </span>
+                            <button type="button" onClick={() => eliminarMuebleDeReserva(id, !!item.combo_id, item.nombre)} style={{ background: '#ef444422', color: '#ef4444', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }} title="Eliminar artículo">🗑️</button>
                           </div>
                           {item.combo_id && (
                             <div style={{ paddingLeft: '20px', marginTop: '6px', fontSize: '12px', background: '#fafafa', borderRadius: '8px', padding: '10px', width: '90%', marginLeft: '20px', boxSizing: 'border-box' }}>
