@@ -19,7 +19,7 @@ const s = {
 export default function Carrito() {
   const { items, fechas, actualizar, quitar, calcularTotal, diasSeleccionados, vaciar } = useCart();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nombre: '', telefono: '', direccion: '', notas: '' });
+  const [form, setForm] = useState({ alias: '', nombre: '', telefono: '', direccion: '', notas: '' });
   const [loading, setLoading] = useState(false);
   const [servicios, setServicios] = useState([]);
   const [requiereTransporte, setRequiereTransporte] = useState(false);
@@ -84,6 +84,7 @@ export default function Carrito() {
       const { data } = await api.post('/reservas', {
         fecha_inicio: fechas.inicio.toISOString().split('T')[0],
         fecha_fin: fechas.fin.toISOString().split('T')[0],
+        alias_cliente: form.alias || null,
         nombre_cliente: form.nombre || null,
         email_cliente: null,
         telefono_cliente: form.telefono || null,
@@ -268,6 +269,8 @@ export default function Carrito() {
 
           <div style={s.card}>
             <h3 style={{ marginTop: 0 }}>Datos del cliente</h3>
+            <label style={s.label}>Alias del cliente (para identificarlo rápido)</label>
+            <input style={s.input} value={form.alias} onChange={e => set('alias', e.target.value)} placeholder="Ej: Juan Boda / Fiesta de María" />
             <label style={s.label}>Nombre completo</label>
             <input style={s.input} value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Ej: Juan Pérez" />
             <label style={s.label}>Teléfono / WhatsApp</label>

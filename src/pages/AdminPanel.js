@@ -303,6 +303,7 @@ export default function AdminPanel() {
   // Estados edición de reservas
   const [reservaEditando, setReservaEditando] = useState(null);
   const [editNombre, setEditNombre] = useState('');
+  const [editAlias, setEditAlias] = useState('');
   const [editTelefono, setEditTelefono] = useState('');
   const [editDireccion, setEditDireccion] = useState('');
   const [editNotas, setEditNotas] = useState('');
@@ -391,6 +392,7 @@ export default function AdminPanel() {
   // ── Editar reserva ──────────────────────────────────────────────────────────
   const abrirEditarReserva = (r) => {
     setReservaEditando(r);
+    setEditAlias(r.alias_cliente || '');
     setEditNombre(r.nombre_cliente || '');
 
     setEditTelefono(r.telefono_cliente || '');
@@ -606,6 +608,7 @@ export default function AdminPanel() {
     setLoadingEdit(true);
     try {
       const payload = {
+        alias_cliente: editAlias.trim(),
         nombre_cliente: editNombre.trim(),
         email_cliente: null,
         telefono_cliente: editTelefono.trim(),
@@ -995,8 +998,10 @@ export default function AdminPanel() {
                 <tr key={r.id} style={{ borderBottom: '1px solid #f8f8f8' }}>
                   <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#888' }}>{r.id.slice(0,8).toUpperCase()}</td>
                   <td style={{ padding: '12px 16px' }}>
-                    <div style={{ fontWeight: 600 }}>{r.nombre_cliente}</div>
-                    {r.email_cliente && <div style={{ color: '#888', fontSize: 12 }}>{r.email_cliente}</div>}
+                    <div style={{ fontWeight: 600 }}>{r.alias_cliente || r.nombre_cliente || 'Sin nombre'}</div>
+                    {r.alias_cliente && r.nombre_cliente && (
+                      <div style={{ color: '#888', fontSize: 12, fontStyle: 'italic' }}>({r.nombre_cliente})</div>
+                    )}
                   </td>
                   <td style={{ padding: '12px 16px', color: '#666', fontSize: 13 }}>
                     {new Date(r.fecha_inicio).toLocaleDateString('es')} → {new Date(r.fecha_fin).toLocaleDateString('es')}
@@ -1705,6 +1710,8 @@ export default function AdminPanel() {
             </h3>
             <form onSubmit={guardarEdicionReserva}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Alias del Cliente</label>
+                  <input type="text" value={editAlias} onChange={e => setEditAlias(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} placeholder="Ej: Boda Juan / Fiesta Maria" /></div>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Nombre del Cliente</label>
                   <input type="text" value={editNombre} onChange={e => setEditNombre(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} /></div>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Teléfono</label>
