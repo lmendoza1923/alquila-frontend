@@ -47,7 +47,7 @@ export default function Catalogo() {
   } = useCart();
 
   // Checkout states for Admin
-  const [form, setForm] = useState({ nombre: '', telefono: '', direccion: '', notas: '' });
+  const [form, setForm] = useState({ alias: '', nombre: '', telefono: '', direccion: '', notas: '' });
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [servicios, setServicios] = useState([]);
   const [requiereTransporte, setRequiereTransporte] = useState(false);
@@ -112,6 +112,7 @@ export default function Catalogo() {
       const { data } = await api.post('/reservas', {
         fecha_inicio: fechas.inicio.toISOString().split('T')[0],
         fecha_fin: fechas.fin.toISOString().split('T')[0],
+        alias_cliente: form.alias || null,
         nombre_cliente: form.nombre || null,
         email_cliente: null,
         telefono_cliente: form.telefono || null,
@@ -125,7 +126,7 @@ export default function Catalogo() {
       setCostoTransporte('');
       setRequiereDecoracion(false);
       setCostoDecoracion('');
-      setForm({ nombre: '', telefono: '', direccion: '', notas: '' });
+      setForm({ alias: '', nombre: '', telefono: '', direccion: '', notas: '' });
       toast.success('Reserva creada exitosamente');
       navigate(`/confirmacion/${data.reserva.id}`);
     } catch (err) {
@@ -513,6 +514,10 @@ export default function Catalogo() {
               {/* Datos del cliente */}
               <h4 style={{ margin: '12px 0 6px 0', fontSize: 13, color: '#555', fontWeight: 600 }}>Datos del cliente</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div>
+                  <label style={s.label}>Alias del cliente (para identificarlo rápido)</label>
+                  <input style={{ ...s.input, padding: '6px 10px', fontSize: 12, marginBottom: 0, width: '100%', boxSizing: 'border-box' }} value={form.alias} onChange={e => set('alias', e.target.value)} placeholder="Ej: Fiesta María / Juan Boda" />
+                </div>
                 <div>
                   <label style={s.label}>Nombre completo</label>
                   <input style={{ ...s.input, padding: '6px 10px', fontSize: 12, marginBottom: 0, width: '100%', boxSizing: 'border-box' }} value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Juan Pérez" />
