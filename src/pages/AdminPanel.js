@@ -988,7 +988,7 @@ export default function AdminPanel() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f8f9ff' }}>
-                {['ID', 'Cliente', 'Fechas', 'Total', 'Estado', 'Acciones'].map(h => (
+                {['Alias', 'Cliente', 'Fechas', 'Total', 'Estado', 'Acciones'].map(h => (
                   <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
                 ))}
               </tr>
@@ -996,12 +996,10 @@ export default function AdminPanel() {
             <tbody>
               {reservas.map(r => (
                 <tr key={r.id} style={{ borderBottom: '1px solid #f8f8f8' }}>
-                  <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#888' }}>{r.id.slice(0,8).toUpperCase()}</td>
+                  <td style={{ padding: '12px 16px', fontWeight: 600, color: '#333' }}>{r.alias_cliente || '-'}</td>
                   <td style={{ padding: '12px 16px' }}>
-                    <div style={{ fontWeight: 600 }}>{r.alias_cliente || r.nombre_cliente || 'Sin nombre'}</div>
-                    {r.alias_cliente && r.nombre_cliente && (
-                      <div style={{ color: '#888', fontSize: 12, fontStyle: 'italic' }}>({r.nombre_cliente})</div>
-                    )}
+                    <div style={{ fontWeight: 600 }}>{r.nombre_cliente || 'Sin nombre'}</div>
+                    {r.email_cliente && <div style={{ color: '#888', fontSize: 12 }}>{r.email_cliente}</div>}
                   </td>
                   <td style={{ padding: '12px 16px', color: '#666', fontSize: 13 }}>
                     {new Date(r.fecha_inicio).toLocaleDateString('es')} → {new Date(r.fecha_fin).toLocaleDateString('es')}
