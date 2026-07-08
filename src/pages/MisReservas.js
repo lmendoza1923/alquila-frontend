@@ -28,6 +28,9 @@ export default function MisReservas() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <div>
               <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>#{r.id.slice(0,8).toUpperCase()}</span>
+              {r.alias_cliente && (
+                <span style={{ marginLeft: 12, fontWeight: 600, color: '#333', background: '#f3f4f6', padding: '2px 8px', borderRadius: 6, fontSize: 13 }}>{r.alias_cliente}</span>
+              )}
               <span style={{ marginLeft: 12, background: estadoColor[r.estado] + '22', color: estadoColor[r.estado], padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{r.estado}</span>
             </div>
             <span style={{ fontWeight: 700, color: '#4a6cf7', fontSize: '1.1rem' }}>${r.total}</span>
