@@ -5,6 +5,13 @@ import { useNavigate } from 'react-router-dom';
 
 const estadoColor = { pendiente: '#f59e0b', confirmada: '#3b82f6', activa: '#22c55e', completada: '#6b7280', cancelada: '#ef4444' };
 
+const formatFecha = (fechaStr, options) => {
+  if (!fechaStr) return '';
+  const [yyyy, mm, dd] = fechaStr.substring(0, 10).split('-');
+  const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  return date.toLocaleDateString('es', options);
+};
+
 export default function MisReservas() {
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +43,7 @@ export default function MisReservas() {
             <span style={{ fontWeight: 700, color: '#4a6cf7', fontSize: '1.1rem' }}>${r.total}</span>
           </div>
           <div style={{ color: '#666', fontSize: 14, marginTop: 6 }}>
-            📅 {new Date(r.fecha_inicio).toLocaleDateString('es')} → {new Date(r.fecha_fin).toLocaleDateString('es')}
+            📅 {formatFecha(r.fecha_inicio)} → {formatFecha(r.fecha_fin)}
           </div>
           {r.items && r.items[0]?.mueble && (
             <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>

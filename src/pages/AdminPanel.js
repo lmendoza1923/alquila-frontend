@@ -5,6 +5,13 @@ import toast from 'react-hot-toast';
 
 const estadoColor = { pendiente: '#f59e0b', confirmada: '#3b82f6', activa: '#22c55e', completada: '#6b7280', cancelada: '#ef4444' };
 
+const formatFecha = (fechaStr, options) => {
+  if (!fechaStr) return '';
+  const [yyyy, mm, dd] = fechaStr.substring(0, 10).split('-');
+  const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  return date.toLocaleDateString('es', options);
+};
+
 // ─── Generador de PDF (sin librerías externas) ───────────────────────────────
 function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosCombos) {
   const totalPagado = pagos.reduce((s, p) => s + parseFloat(p.monto), 0);
@@ -145,9 +152,9 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   <div class="section">
     <div class="section-title">Detalles del evento</div>
     <div style="display: flex; gap: 24px; flex-wrap: wrap;">
-      <div class="field" style="flex: 1.2; min-width: 180px;"><label>Entrega</label><span>${new Date(reserva.fecha_inicio).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-      <div class="field" style="flex: 1.2; min-width: 180px;"><label>Retiro</label><span>${new Date(reserva.fecha_fin).toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-      ${reserva.notas ? `<div class="field" style="flex: 2.6; min-width: 200px;"><label>Notas adicionales</label><span style="font-weight:400;font-style:italic;">${reserva.notas}</span></div>` : ''}
+      <div class="field" style="flex: 1.2; min-width: 180px;"><label>Entrega</label><span>${formatFecha(reserva.fecha_inicio, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+      <div class="field" style="flex: 1.2; min-width: 180px;"><label>Retiro</label><span>${formatFecha(reserva.fecha_fin, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+      ${reserva.notes || reserva.notas ? `<div class="field" style="flex: 2.6; min-width: 200px;"><label>Notas adicionales</label><span style="font-weight:400;font-style:italic;">${reserva.notes || reserva.notas}</span></div>` : ''}
     </div>
   </div>
 
@@ -398,8 +405,8 @@ export default function AdminPanel() {
     setEditTelefono(r.telefono_cliente || '');
     setEditDireccion(r.direccion_entrega || '');
     setEditNotas(r.notes || r.notas || '');
-    setEditFechaInicio(r.fecha_inicio ? new Date(r.fecha_inicio).toISOString().split('T')[0] : '');
-    setEditFechaFin(r.fecha_fin ? new Date(r.fecha_fin).toISOString().split('T')[0] : '');
+    setEditFechaInicio(r.fecha_inicio ? r.fecha_inicio.substring(0, 10) : '');
+    setEditFechaFin(r.fecha_fin ? r.fecha_fin.substring(0, 10) : '');
     setEditTotal(r.total || '');
     setEditEstado(r.estado || 'pendiente');
     const items = (r.items || []).filter(i => i && (i.mueble || i.combo_id)).map((i, idx) => {
@@ -564,11 +571,20 @@ export default function AdminPanel() {
     }));
   };
 
-  const recalcularTotal = (items) => {
-    if (!editFechaInicio || !editFechaFin) return;
-    const dias = Math.ceil((new Date(editFechaFin) - new Date(editFechaInicio)) / 86400000) + 1;
-    if (dias <= 0) return;
-    const total = items.reduce((sum, item) => {
+  const recalcularTotal = (items, customInicio, customFin) => {
+    const inicio = customInicio !== undefined && customInicio !== null ? customInicio : editFechaInicio;
+    const fin = customFin !== undefined && customFin !== null ? customFin : editFechaFin;
+    if (!inicio || !fin) return items;
+
+    const [y1, m1, d1] = inicio.substring(0, 10).split('-');
+    const [y2, m2, d2] = fin.substring(0, 10).split('-');
+    const date1 = new Date(Number(y1), Number(m1) - 1, Number(d1));
+    const date2 = new Date(Number(y2), Number(m2) - 1, Number(d2));
+    const dias = Math.ceil((date2 - date1) / 86400000) + 1;
+
+    if (dias <= 0) return items;
+
+    const updatedItems = items.map(item => {
       if (item.combo_id) {
         let precio = item.precio_unitario;
         if (precio === undefined || precio === null || isNaN(precio)) {
@@ -576,8 +592,7 @@ export default function AdminPanel() {
           precio = combo ? parseFloat(combo.precio_dia || 0) : 0;
         }
         const subtotal = parseFloat(precio) * item.cantidad * dias;
-        item.subtotal = subtotal;
-        return sum + subtotal;
+        return { ...item, precio_unitario: precio, subtotal };
       } else if (item.mueble_id) {
         let precio = item.precio_unitario;
         if (precio === undefined || precio === null || isNaN(precio)) {
@@ -585,20 +600,20 @@ export default function AdminPanel() {
           precio = mueble ? parseFloat(mueble.precio_dia || 0) : 0;
         }
         const subtotal = parseFloat(precio) * item.cantidad * dias;
-        item.subtotal = subtotal;
-        return sum + subtotal;
+        return { ...item, precio_unitario: precio, subtotal };
       } else {
         let precio = item.precio_unitario;
         if (precio === undefined || precio === null || isNaN(precio)) {
           precio = item.subtotal / item.cantidad || 0;
         }
         const subtotal = parseFloat(precio) * item.cantidad;
-        item.subtotal = subtotal;
-        item.precio_unitario = precio;
-        return sum + subtotal;
+        return { ...item, precio_unitario: precio, subtotal };
       }
-    }, 0);
+    });
+
+    const total = updatedItems.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
     setEditTotal(total.toFixed(2));
+    return updatedItems;
   };
 
   const guardarEdicionReserva = async (e) => {
@@ -1002,7 +1017,7 @@ export default function AdminPanel() {
                     {r.email_cliente && <div style={{ color: '#888', fontSize: 12 }}>{r.email_cliente}</div>}
                   </td>
                   <td style={{ padding: '12px 16px', color: '#666', fontSize: 13 }}>
-                    {new Date(r.fecha_inicio).toLocaleDateString('es')} → {new Date(r.fecha_fin).toLocaleDateString('es')}
+                    {formatFecha(r.fecha_inicio)} → {formatFecha(r.fecha_fin)}
                   </td>
                   <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>${r.total}</td>
                   <td style={{ padding: '12px 16px' }}>
