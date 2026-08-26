@@ -827,6 +827,7 @@ export default function AdminPanel() {
     setStock(m.stock);
     setImagenes(m.imagenes || []);
     setActivo(m.activo);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const eliminarMueble = async (id, nombreMueble) => {
@@ -908,6 +909,7 @@ export default function AdminPanel() {
     setComboPrecioDia(c.precio_dia || '');
     setComboItems(c.items.map(i => ({ mueble_id: i.mueble_id, nombre: i.nombre, cantidad: i.cantidad })));
     setComboActivo(c.activo !== undefined ? c.activo : true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSubmitCombo = async (e) => {
