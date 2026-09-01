@@ -2096,7 +2096,7 @@ export default function AdminPanel() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
             <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
               <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.25rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.5rem' }}>
-                {muebleEditando ? `Editar Mueble: ${muebleEditando.nombre}` : 'Agregar nuevo mueble'}
+                {muebleEditando ? `Editar Mueble: ${muebleEditando.nombre}` : 'Registrar nuevo mueble'}
               </h3>
               <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: '1.25rem' }}>
@@ -2116,39 +2116,6 @@ export default function AdminPanel() {
                 <div style={{ marginBottom: '1.25rem' }}>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Descripción</label>
                   <textarea rows="3" placeholder="Detalles sobre el mueble..." value={descripcion} onChange={e => setDescripcion(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
-                </div>
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Imágenes del Mobiliario</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 10, background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Cargar desde este equipo (Se comprimirá automáticamente):</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        multiple 
-                        onChange={handleImageUpload} 
-                        style={{ fontSize: 13, padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
-                      />
-                    </div>
-                    <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 0' }} />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>O ingresar enlace web (URL):</span>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <input type="text" placeholder="https://ejemplo.com/imagen.jpg" value={nuevaImagenUrl} onChange={e => setNuevaImagenUrl(e.target.value)} style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, boxSizing: 'border-box' }} />
-                        <button type="button" onClick={agregarImagen} style={{ padding: '8px 14px', background: '#e8eaf6', color: '#4a6cf7', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>+ Añadir URL</button>
-                      </div>
-                    </div>
-                  </div>
-                  {imagenes.length > 0 && (
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', background: '#f8f9ff', padding: 8, borderRadius: 8, border: '1px dashed #cbd5e1' }}>
-                      {imagenes.map((img, idx) => (
-                        <div key={idx} style={{ position: 'relative', width: 60, height: 60, borderRadius: 6, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                          <img src={img} alt={`Preview ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <button type="button" onClick={() => eliminarImagen(idx)} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(239,68,68,0.9)', color: '#fff', border: 'none', borderRadius: '50%', width: 16, height: 16, cursor: 'pointer', fontSize: 10, padding: 0, fontWeight: 'bold' }}>×</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
                 {muebleEditando && (
                   <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -2184,21 +2151,6 @@ export default function AdminPanel() {
                 </div>
               </form>
             </div>
-
-            <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.25rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.5rem', width: '100%' }}>Previsualización en tiempo real</h3>
-              <div style={{ width: '100%', maxWidth: 280, background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', border: '1px solid #eef2ff' }}>
-                <div style={{ height: 180, background: '#e8eaf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, position: 'relative' }}>
-                  {imagenes[0] ? <img src={imagenes[0]} alt="Vista previa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🪑'}
-                  {imagenes.length > 1 && <span style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600 }}>+{imagenes.length - 1} fotos</span>}
-                </div>
-                <div style={{ padding: '1.25rem' }}>
-                  <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: 6, color: '#1a1a2e' }}>{nombre || 'Nombre del Mueble'}</div>
-                  <div style={{ color: '#4a6cf7', fontWeight: 700, fontSize: '1.15rem', marginBottom: 4 }}>${precioDia ? parseFloat(precioDia).toFixed(2) : '0.00'}</div>
-                  <div style={{ fontSize: 12, color: parseInt(stock) > 0 ? '#22c55e' : '#ef4444', fontWeight: 600 }}>Stock: {stock || 0} unidades</div>
-                </div>
-              </div>
-            </div>
           </div>
 
           <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
@@ -2207,7 +2159,7 @@ export default function AdminPanel() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: '#f8f9ff', borderBottom: '1px solid #f0f0f0' }}>
-                    {['Imagen', 'Nombre', 'Precio', 'Stock', 'Estado', 'Acciones'].map(h => (
+                    {['Nombre', 'Precio', 'Stock', 'Estado', 'Acciones'].map(h => (
                       <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555' }}>{h}</th>
                     ))}
                   </tr>
@@ -2216,11 +2168,9 @@ export default function AdminPanel() {
                   {muebles.map(m => (
                     <tr key={m.id} style={{ borderBottom: '1px solid #f8f8f8' }}>
                       <td style={{ padding: '12px 16px' }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 6, background: '#e8eaf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, overflow: 'hidden' }}>
-                          {m.imagenes?.[0] ? <img src={m.imagenes[0]} alt={m.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🪑'}
-                        </div>
+                        <div style={{ fontWeight: 600, color: '#1a1a2e' }}>🪑 {m.nombre}</div>
+                        {m.descripcion && <div style={{ color: '#888', fontSize: 12, marginTop: 2 }}>{m.descripcion}</div>}
                       </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#1a1a2e' }}>{m.nombre}</td>
                       <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>
                         {m.precio_dia ? `$${parseFloat(m.precio_dia).toFixed(2)}` : '—'}
                       </td>
@@ -2239,7 +2189,7 @@ export default function AdminPanel() {
                     </tr>
                   ))}
                   {muebles.length === 0 && (
-                    <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay muebles registrados aún.</td></tr>
+                    <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay muebles registrados aún.</td></tr>
                   )}
                 </tbody>
               </table>
