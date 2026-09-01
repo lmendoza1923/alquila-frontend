@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
+import { useConfig, DEFAULT_CONFIG } from '../context/ConfigContext';
 
 const estadoColor = { pendiente: '#f59e0b', confirmada: '#3b82f6', activa: '#22c55e', completada: '#6b7280', cancelada: '#ef4444' };
 
@@ -13,12 +14,21 @@ const formatFecha = (fechaStr, options) => {
 };
 
 // ─── Generador de Contrato PDF ───────────────────────────────────────────────
-function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosCombos) {
+function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosCombos, configEmpresa) {
   const totalPagado = pagos.reduce((s, p) => s + parseFloat(p.monto), 0);
   const abonoExtra = parseFloat(abono) || 0;
   const saldoPendiente = parseFloat(reserva.total) - totalPagado - abonoExtra;
   const subtotalMobiliario = items.reduce((s, i) => s + parseFloat(i.subtotal || 0), 0);
   const totalAbono = totalPagado + abonoExtra;
+
+  const empNombre = configEmpresa?.nombre_empresa || 'Alquila tu Party';
+  const empLogo = configEmpresa?.logo_url || '🎉';
+  const empColor = configEmpresa?.color_primario || '#3b82f6';
+  const empEslogan = configEmpresa?.eslogan || 'Contrato de Alquiler de Mobiliario y Servicios';
+  
+  const logoHtml = (empLogo.startsWith('http') || empLogo.startsWith('data:'))
+    ? `<img src="${empLogo}" alt="Logo" style="max-height:34px;max-width:140px;vertical-align:middle;margin-right:8px;object-fit:contain;" />`
+    : `<span style="font-size:22px;margin-right:6px;">${empLogo}</span>`;
 
   // Limpiar prefijo +507 o 507 del teléfono
   const cleanPhone = (reserva.telefono_cliente || '').replace(/^\+?507\s*/, '').trim();
@@ -91,13 +101,12 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.4; }
   .page { max-width: 780px; margin: 0 auto; padding: 32px 40px; box-sizing: border-box; }
-  .header { border-bottom: 2.5px solid #3b82f6; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
-  .logo { font-size: 22px; font-weight: 800; color: #3b82f6; letter-spacing: -0.5px; }
-  .logo span { color: #0f172a; }
+  .header { border-bottom: 2.5px solid ${empColor}; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .logo { font-size: 22px; font-weight: 800; color: ${empColor}; letter-spacing: -0.5px; display: flex; align-items: center; }
   .contract-id { text-align: right; font-size: 11.5px; color: #64748b; }
   .contract-id strong { display: block; font-size: 15px; color: #0f172a; margin-bottom: 2px; }
   .section { margin-bottom: 18px; }
-  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #2563eb; margin-bottom: 8px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: ${empColor}; margin-bottom: 8px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; }
   .field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 2px; font-weight: 600; }
   .field span { font-size: 12.5px; font-weight: 600; color: #0f172a; }
   table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 14px; }
@@ -108,7 +117,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   .totals-container { display: flex; justify-content: flex-end; margin-top: 10px; }
   .totals { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; width: 280px; box-sizing: border-box; }
   .total-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; }
-  .total-row.final { font-size: 13.5px; font-weight: 800; color: #2563eb; border-top: 1.5px solid #cbd5e1; margin-top: 5px; padding-top: 6px; }
+  .total-row.final { font-size: 13.5px; font-weight: 800; color: ${empColor}; border-top: 1.5px solid #cbd5e1; margin-top: 5px; padding-top: 6px; }
   .total-row.saldo { font-size: 13px; font-weight: 800; color: #dc2626; }
   .terms { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; font-size: 10.5px; color: #475569; line-height: 1.5; white-space: pre-wrap; max-height: 220px; overflow: hidden; }
   .firma { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; }
@@ -123,8 +132,8 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 <div class="page">
   <div class="header">
     <div>
-      <div class="logo">🎉 Alquila<span> tu Party</span></div>
-      <div style="font-size:11px;color:#64748b;margin-top:2px;">Contrato de Alquiler de Mobiliario y Servicios</div>
+      <div class="logo">${logoHtml}<span>${empNombre}</span></div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px;">${empEslogan}</div>
     </div>
     <div class="contract-id">
       <strong>Contrato #${reserva.id.slice(0,8).toUpperCase()}</strong>
@@ -138,16 +147,6 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
       <div class="field" style="flex: 1.5; min-width: 140px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
       <div class="field" style="flex: 1; min-width: 90px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
       <div class="field" style="flex: 2.5; min-width: 180px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Detalles del Evento</div>
-    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-      <div class="field" style="flex: 1.2; min-width: 160px;"><label>Fecha de Entrega</label><span>${formatFecha(reserva.fecha_inicio, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-      <div class="field" style="flex: 1.2; min-width: 160px;"><label>Fecha de Retiro</label><span>${formatFecha(reserva.fecha_fin, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-      ${(reserva.alias_cliente) ? `<div class="field" style="flex: 1; min-width: 100px;"><label>Alias / Evento</label><span>${reserva.alias_cliente}</span></div>` : ''}
-      ${(reserva.notes || reserva.notas) ? `<div class="field" style="flex: 2; min-width: 180px;"><label>Notas adicionales</label><span style="font-weight:400;font-style:italic;">${reserva.notes || reserva.notas}</span></div>` : ''}
     </div>
   </div>
 
@@ -206,12 +205,12 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
     </div>
     <div class="firma-box">
       <div style="margin-bottom:34px;">&nbsp;</div>
-      Firma Alquila tu Party<br><strong>Representante Autorizado</strong>
+      Firma ${empNombre}<br><strong>Representante Autorizado</strong>
     </div>
   </div>
 
   <div style="text-align:center;margin-top:28px;font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:10px;">
-    Documento oficial generado el ${new Date().toLocaleString('es')} · Alquila tu Party
+    Documento oficial generado el ${new Date().toLocaleString('es')} · ${empNombre}
   </div>
 </div>
 </body>
@@ -224,7 +223,15 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 }
 
 // ─── Generador de Hoja de Entrega y Control (Sin Precios + Casillas Check) ────
-function generarHojaEntregaPDF(reserva, items, todosLosCombos) {
+function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
+  const empNombre = configEmpresa?.nombre_empresa || 'Alquila tu Party';
+  const empLogo = configEmpresa?.logo_url || '🎉';
+  const empColor = configEmpresa?.color_primario || '#2563eb';
+  
+  const logoHtml = (empLogo.startsWith('http') || empLogo.startsWith('data:'))
+    ? `<img src="${empLogo}" alt="Logo" style="max-height:34px;max-width:140px;vertical-align:middle;margin-right:8px;object-fit:contain;" />`
+    : `<span style="font-size:22px;margin-right:6px;">${empLogo}</span>`;
+
   // Limpiar prefijo +507 o 507 del teléfono
   const cleanPhone = (reserva.telefono_cliente || '').replace(/^\+?507\s*/, '').trim();
 
@@ -304,13 +311,12 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos) {
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.4; }
   .page { max-width: 780px; margin: 0 auto; padding: 32px 40px; box-sizing: border-box; }
-  .header { border-bottom: 2.5px solid #2563eb; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
-  .logo { font-size: 22px; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
-  .logo span { color: #0f172a; }
+  .header { border-bottom: 2.5px solid ${empColor}; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .logo { font-size: 22px; font-weight: 800; color: ${empColor}; letter-spacing: -0.5px; display: flex; align-items: center; }
   .doc-id { text-align: right; font-size: 11.5px; color: #64748b; }
   .doc-id strong { display: block; font-size: 15px; color: #0f172a; margin-bottom: 2px; }
   .section { margin-bottom: 18px; }
-  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #2563eb; margin-bottom: 8px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: ${empColor}; margin-bottom: 8px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; }
   .field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 2px; font-weight: 600; }
   .field span { font-size: 12.5px; font-weight: 600; color: #0f172a; }
   table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 14px; }
@@ -318,13 +324,13 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos) {
   thead { background: #f8fafc; }
   th { padding: 6px 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #334155; font-weight: 700; }
   td { padding: 5px 8px; }
-  .chk-box { width: 16px; height: 16px; border: 2px solid #2563eb; border-radius: 3px; margin: 0 auto; background: #fff; }
+  .chk-box { width: 16px; height: 16px; border: 2px solid ${empColor}; border-radius: 3px; margin: 0 auto; background: #fff; }
   .chk-box-sm { width: 13px; height: 13px; border: 1.5px solid #64748b; border-radius: 2px; margin: 0 auto; background: #fff; }
   .obs-box { border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; min-height: 50px; font-size: 11px; color: #64748b; background: #f8fafc; }
-  .clausula { font-size: 10.5px; color: #475569; font-style: italic; line-height: 1.45; margin-top: 14px; padding: 8px 12px; background: #f1f5f9; border-radius: 6px; border-left: 3px solid #2563eb; }
+  .clausula { font-size: 10.5px; color: #475569; font-style: italic; line-height: 1.45; margin-top: 14px; padding: 8px 12px; background: #f1f5f9; border-radius: 6px; border-left: 3px solid ${empColor}; }
   .firmas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 28px; }
   .firma-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; background: #fff; }
-  .firma-card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #2563eb; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px; margin-bottom: 24px; text-align: center; }
+  .firma-card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: ${empColor}; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px; margin-bottom: 24px; text-align: center; }
   .firma-linea { border-top: 1.5px solid #94a3b8; padding-top: 4px; text-align: center; font-size: 10.5px; color: #475569; margin-top: 30px; }
   @media print { 
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -336,7 +342,7 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos) {
 <div class="page">
   <div class="header">
     <div>
-      <div class="logo">🎉 Alquila<span> tu Party</span></div>
+      <div class="logo">${logoHtml}<span>${empNombre}</span></div>
       <div style="font-size:11px;color:#64748b;margin-top:2px;">Hoja de Entrega y Control de Mobiliario</div>
     </div>
     <div class="doc-id">
@@ -416,7 +422,7 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos) {
     <div class="firma-card">
       <div class="firma-card-title">1. Entrega del Mobiliario</div>
       <div class="firma-linea">
-        Firma Responsable Entrega (Alquila tu Party)
+        Firma Responsable Entrega (${empNombre})
       </div>
       <div class="firma-linea" style="margin-top:22px;">
         Firma Recibido Conforme (Cliente)
@@ -426,7 +432,7 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos) {
     <div class="firma-card">
       <div class="firma-card-title">2. Devolución / Retiro</div>
       <div class="firma-linea">
-        Firma Responsable Retiro (Alquila tu Party)
+        Firma Responsable Retiro (${empNombre})
       </div>
       <div class="firma-linea" style="margin-top:22px;">
         Firma Entrega Conforme (Cliente)
@@ -435,7 +441,7 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos) {
   </div>
 
   <div style="text-align:center;margin-top:24px;font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:8px;">
-    Hoja de control de entrega generada el ${new Date().toLocaleString('es')} · Alquila tu Party
+    Hoja de control de entrega generada el ${new Date().toLocaleString('es')} · ${empNombre}
   </div>
 </div>
 </body>
@@ -623,6 +629,59 @@ export default function AdminPanel() {
 
   const [terminosEdit, setTerminosEdit] = useState('');
   const [loadingTerminos, setLoadingTerminos] = useState(false);
+
+  // Estados para Configuración de Marca y Estética
+  const { config, saveConfig } = useConfig();
+  const [configForm, setConfigForm] = useState(config || DEFAULT_CONFIG);
+  const [guardandoConfig, setGuardandoConfig] = useState(false);
+  const [logoTipo, setLogoTipo] = useState('emoji'); // 'emoji' | 'url'
+
+  useEffect(() => {
+    if (config) {
+      setConfigForm(config);
+      if (config.logo_url && (config.logo_url.startsWith('http') || config.logo_url.startsWith('data:'))) {
+        setLogoTipo('url');
+      } else {
+        setLogoTipo('emoji');
+      }
+    }
+  }, [config]);
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('La imagen debe pesar menos de 2MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setConfigForm(prev => ({ ...prev, logo_url: ev.target.result }));
+      setLogoTipo('url');
+      toast.success('Imagen cargada como logo');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleGuardarConfiguracion = async (e) => {
+    if (e) e.preventDefault();
+    setGuardandoConfig(true);
+    try {
+      await saveConfig(configForm);
+      toast.success('¡Configuración de la empresa y diseño guardados con éxito!');
+    } catch (err) {
+      toast.error('Error al guardar la configuración');
+    } finally {
+      setGuardandoConfig(false);
+    }
+  };
+
+  const handleRestaurarConfiguracion = () => {
+    if (window.confirm('¿Restablecer la configuración y colores a los valores por defecto?')) {
+      setConfigForm(DEFAULT_CONFIG);
+      setLogoTipo('emoji');
+    }
+  };
 
   // Estados para Reportes
   const [reportesData, setReportesData] = useState(null);
@@ -1255,6 +1314,7 @@ export default function AdminPanel() {
            tab === 'mobiliario' ? 'Inventario de Mobiliario' : 
            tab === 'combos' ? 'Combos y Paquetes' : 
            tab === 'reportes' ? 'Estadísticas e Ingresos' : 
+           tab === 'configuracion' ? 'Configuración de la Empresa y Estética' :
            'Términos del Contrato'}
         </h1>
         {tab === 'reservas' && (
@@ -1522,7 +1582,7 @@ export default function AdminPanel() {
                             <button onClick={() => abrirEditarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️</button>
                             <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳</button>
                             <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄</button>
-                            <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚</button>
+                            <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚</button>
                             <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️</button>
                             {r.estado !== 'cancelada' && r.estado !== 'completada' && (
                               <button 
@@ -1685,7 +1745,7 @@ export default function AdminPanel() {
                                 <button onClick={() => abrirEditarReserva(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Editar">✏️</button>
                                 <button onClick={() => abrirPagos(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#22c55e', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Pagos">💳</button>
                                 <button onClick={() => abrirContrato(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#f59e0b', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Contrato PDF">📄</button>
-                                <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Hoja de Entrega">🚚</button>
+                                <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Hoja de Entrega">🚚</button>
                               </div>
                             </div>
                           ))}
@@ -1899,7 +1959,7 @@ export default function AdminPanel() {
                                 <button onClick={() => abrirEditarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️ Editar</button>
                                 <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳 Pagos</button>
                                 <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄 Contrato</button>
-                                <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚 Entrega</button>
+                                <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚 Entrega</button>
                                 <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️ Eliminar</button>
                               </div>
                             </div>
@@ -2579,6 +2639,517 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {/* ── Configuración de la Empresa y Estética ── */}
+      {tab === 'configuracion' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '1.75rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #f0f0f0', paddingBottom: '1rem' }}>
+              <div>
+                <h2 style={{ margin: '0 0 4px 0', fontSize: '1.25rem', color: '#1a1a2e' }}>🎨 Personalización de la Marca y Apariencia</h2>
+                <p style={{ margin: 0, color: '#64748b', fontSize: 13 }}>Personaliza el nombre, logo, eslogan, datos de contacto y la paleta de colores de todo el sistema.</p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={handleRestaurarConfiguracion}
+                  style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                >
+                  🔄 Restablecer
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGuardarConfiguracion}
+                  disabled={guardandoConfig}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: configForm.color_primario || '#4a6cf7',
+                    color: '#fff',
+                    cursor: guardandoConfig ? 'not-allowed' : 'pointer',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {guardandoConfig ? 'Guardando...' : '💾 Guardar Cambios'}
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleGuardarConfiguracion} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+              {/* Sección 1: Identidad de Marca */}
+              <div>
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  🏢 Identidad de la Empresa
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                      Nombre de la Empresa / Marca *
+                    </label>
+                    <input
+                      type="text"
+                      value={configForm.nombre_empresa || ''}
+                      onChange={e => setConfigForm({ ...configForm, nombre_empresa: e.target.value })}
+                      placeholder="Ej: Alquila tu Party"
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                      Eslogan o Subtítulo
+                    </label>
+                    <input
+                      type="text"
+                      value={configForm.eslogan || ''}
+                      onChange={e => setConfigForm({ ...configForm, eslogan: e.target.value })}
+                      placeholder="Ej: Alquiler de Mobiliario y Eventos"
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Logo Selector */}
+                <div style={{ marginTop: '1.25rem', background: '#f8fafc', padding: '1.25rem', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 8 }}>
+                    Logo de la Empresa
+                  </label>
+                  
+                  {/* Selector de modo: Emoji / Icono vs Imagen */}
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setLogoTipo('emoji')}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: 6,
+                        border: logoTipo === 'emoji' ? '2px solid #4a6cf7' : '1px solid #cbd5e1',
+                        background: logoTipo === 'emoji' ? '#eef2ff' : '#fff',
+                        color: logoTipo === 'emoji' ? '#4a6cf7' : '#475569',
+                        fontWeight: 600,
+                        fontSize: 13,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✨ Emoji o Ícono
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogoTipo('url')}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: 6,
+                        border: logoTipo === 'url' ? '2px solid #4a6cf7' : '1px solid #cbd5e1',
+                        background: logoTipo === 'url' ? '#eef2ff' : '#fff',
+                        color: logoTipo === 'url' ? '#4a6cf7' : '#475569',
+                        fontWeight: 600,
+                        fontSize: 13,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🖼️ Imagen (URL o Subir Archivo)
+                    </button>
+                  </div>
+
+                  {logoTipo === 'emoji' ? (
+                    <div>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                        {['🎉', '🎈', '🏰', '👑', '✨', '🎪', '🍰', '🥂', '🛋️', '🏢', '⭐', '🌟', '🎊', '🥳', '🎁', '🎩', '💎'].map(emoji => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => setConfigForm({ ...configForm, logo_url: emoji })}
+                            style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: 8,
+                              fontSize: '22px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              border: configForm.logo_url === emoji ? '2px solid #4a6cf7' : '1px solid #cbd5e1',
+                              background: configForm.logo_url === emoji ? '#eef2ff' : '#fff',
+                              cursor: 'pointer',
+                              transition: 'transform 0.1s'
+                            }}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: 12, color: '#64748b' }}>O escribe tu propio icono/emoji:</span>
+                        <input
+                          type="text"
+                          value={configForm.logo_url || ''}
+                          onChange={e => setConfigForm({ ...configForm, logo_url: e.target.value })}
+                          placeholder="🎉"
+                          style={{ width: '80px', padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 16, textAlign: 'center' }}
+                          maxLength={5}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          value={configForm.logo_url || ''}
+                          onChange={e => setConfigForm({ ...configForm, logo_url: e.target.value })}
+                          placeholder="https://ejemplo.com/logo.png o pega Data URL"
+                          style={{ flex: 1, minWidth: '220px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13 }}
+                        />
+                        <label style={{
+                          padding: '8px 16px',
+                          background: '#fff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: 8,
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          color: '#334155',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}>
+                          📁 Subir desde equipo
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                      </div>
+                      <span style={{ fontSize: 11, color: '#94a3b8' }}>Formatos recomendados: PNG o SVG transparente. Tamaño máximo: 2MB.</span>
+                    </div>
+                  )}
+
+                  {/* Previsualización del Logo */}
+                  <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Vista previa del Logo:</span>
+                    <div style={{
+                      padding: '6px 14px',
+                      background: configForm.color_sidebar || '#1a1a2e',
+                      borderRadius: 8,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: '#fff'
+                    }}>
+                      {configForm.logo_url && (configForm.logo_url.startsWith('http') || configForm.logo_url.startsWith('data:')) ? (
+                        <img src={configForm.logo_url} alt="Logo" style={{ maxHeight: 28, maxWidth: 36, objectFit: 'contain' }} />
+                      ) : (
+                        <span style={{ fontSize: '20px' }}>{configForm.logo_url || '🎉'}</span>
+                      )}
+                      <span style={{ fontWeight: 700, fontSize: '13px' }}>{configForm.nombre_empresa || 'Alquila tu Party'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección 2: Estética y Colores de la Página */}
+              <div>
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  🎨 Paleta de Colores y Estética
+                </h3>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                  {/* Color Primario */}
+                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 4 }}>
+                      Color Primario (Botones, Acentos y PDF)
+                    </label>
+                    <span style={{ display: 'block', fontSize: 11, color: '#64748b', marginBottom: 10 }}>
+                      Define el color de los botones principales, totales y encabezados de contrato.
+                    </span>
+
+                    {/* Presets color primario */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                      {[
+                        { color: '#4a6cf7', name: 'Azul Real' },
+                        { color: '#8b5cf6', name: 'Púrpura Elegante' },
+                        { color: '#10b981', name: 'Verde Esmeralda' },
+                        { color: '#d97706', name: 'Dorado / Ámbar' },
+                        { color: '#ec4899', name: 'Rosa Fiesta' },
+                        { color: '#f97316', name: 'Naranja Sunset' },
+                        { color: '#ef4444', name: 'Rojo Pasión' },
+                        { color: '#06b6d4', name: 'Cyan Moderno' },
+                      ].map(item => (
+                        <button
+                          key={item.color}
+                          type="button"
+                          onClick={() => setConfigForm({ ...configForm, color_primario: item.color })}
+                          title={item.name}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: item.color,
+                            border: configForm.color_primario === item.color ? '3px solid #0f172a' : '2px solid #fff',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                            cursor: 'pointer',
+                            transform: configForm.color_primario === item.color ? 'scale(1.15)' : 'scale(1)',
+                            transition: 'all 0.15s'
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="color"
+                        value={configForm.color_primario || '#4a6cf7'}
+                        onChange={e => setConfigForm({ ...configForm, color_primario: e.target.value })}
+                        style={{ width: '42px', height: '38px', padding: 0, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
+                      />
+                      <input
+                        type="text"
+                        value={configForm.color_primario || '#4a6cf7'}
+                        onChange={e => setConfigForm({ ...configForm, color_primario: e.target.value })}
+                        style={{ width: '100px', padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13, textTransform: 'uppercase', fontFamily: 'monospace' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Color Sidebar */}
+                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 4 }}>
+                      Color de la Barra Lateral (Sidebar)
+                    </label>
+                    <span style={{ display: 'block', fontSize: 11, color: '#64748b', marginBottom: 10 }}>
+                      Define el fondo del menú lateral de navegación.
+                    </span>
+
+                    {/* Presets color sidebar */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                      {[
+                        { color: '#1a1a2e', name: 'Azul Noche' },
+                        { color: '#111827', name: 'Negro Carbón' },
+                        { color: '#1e1b4b', name: 'Púrpura Profundo' },
+                        { color: '#0f172a', name: 'Azul Marino' },
+                        { color: '#1e293b', name: 'Gris Pizarra' },
+                        { color: '#064e3b', name: 'Verde Bosque' },
+                      ].map(item => (
+                        <button
+                          key={item.color}
+                          type="button"
+                          onClick={() => setConfigForm({ ...configForm, color_sidebar: item.color })}
+                          title={item.name}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: item.color,
+                            border: configForm.color_sidebar === item.color ? '3px solid #4a6cf7' : '2px solid #fff',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                            cursor: 'pointer',
+                            transform: configForm.color_sidebar === item.color ? 'scale(1.15)' : 'scale(1)',
+                            transition: 'all 0.15s'
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="color"
+                        value={configForm.color_sidebar || '#1a1a2e'}
+                        onChange={e => setConfigForm({ ...configForm, color_sidebar: e.target.value })}
+                        style={{ width: '42px', height: '38px', padding: 0, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
+                      />
+                      <input
+                        type="text"
+                        value={configForm.color_sidebar || '#1a1a2e'}
+                        onChange={e => setConfigForm({ ...configForm, color_sidebar: e.target.value })}
+                        style={{ width: '100px', padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13, textTransform: 'uppercase', fontFamily: 'monospace' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección 3: Datos de Contacto */}
+              <div>
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  📞 Información de Contacto
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                      Teléfono / WhatsApp Comercial
+                    </label>
+                    <input
+                      type="text"
+                      value={configForm.telefono_contacto || ''}
+                      onChange={e => setConfigForm({ ...configForm, telefono_contacto: e.target.value })}
+                      placeholder="+507 6000-0000"
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                      Correo Electrónico
+                    </label>
+                    <input
+                      type="email"
+                      value={configForm.email_contacto || ''}
+                      onChange={e => setConfigForm({ ...configForm, email_contacto: e.target.value })}
+                      placeholder="info@empresa.com"
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                      Dirección Física / Ciudad
+                    </label>
+                    <input
+                      type="text"
+                      value={configForm.direccion_empresa || ''}
+                      onChange={e => setConfigForm({ ...configForm, direccion_empresa: e.target.value })}
+                      placeholder="Ciudad de Panamá, Panamá"
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección 4: Vista Previa en Vivo */}
+              <div>
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  👁️ Previsualización en Vivo de la Apariencia
+                </h3>
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 12,
+                  padding: '1.5rem',
+                  display: 'flex',
+                  gap: '1.5rem',
+                  flexWrap: 'wrap',
+                  alignItems: 'stretch'
+                }}>
+                  {/* Mockup Sidebar */}
+                  <div style={{
+                    width: '200px',
+                    background: configForm.color_sidebar || '#1a1a2e',
+                    borderRadius: 10,
+                    padding: '16px 12px',
+                    color: '#fff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                      {configForm.logo_url && (configForm.logo_url.startsWith('http') || configForm.logo_url.startsWith('data:')) ? (
+                        <img src={configForm.logo_url} alt="Logo" style={{ maxHeight: 22, maxWidth: 22, objectFit: 'contain' }} />
+                      ) : (
+                        <span style={{ fontSize: '16px' }}>{configForm.logo_url || '🎉'}</span>
+                      )}
+                      <span style={{ fontWeight: 700, fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {configForm.nombre_empresa || 'Alquila tu Party'}
+                      </span>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.15)', padding: '6px 10px', borderRadius: 6, fontSize: '11px', fontWeight: 600 }}>
+                      📊 Resumen
+                    </div>
+                    <div style={{ padding: '6px 10px', borderRadius: 6, fontSize: '11px', color: '#94a3b8' }}>
+                      📋 Reservas
+                    </div>
+                    <div style={{ padding: '6px 10px', borderRadius: 6, fontSize: '11px', color: '#94a3b8' }}>
+                      🪑 Mobiliario
+                    </div>
+                  </div>
+
+                  {/* Mockup Content Area */}
+                  <div style={{ flex: 1, minWidth: '240px', background: '#fff', padding: '16px', borderRadius: 10, border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ margin: 0, color: '#1a1a2e', fontSize: '14px' }}>
+                        {configForm.nombre_empresa || 'Alquila tu Party'} · Demo
+                      </h4>
+                      <span style={{ background: (configForm.color_primario || '#4a6cf7') + '22', color: configForm.color_primario || '#4a6cf7', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: 6 }}>
+                        Vista Previa
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, color: '#64748b', fontSize: '12px' }}>
+                      {configForm.eslogan || 'Alquiler de Mobiliario y Eventos'}
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: 6,
+                          border: 'none',
+                          background: configForm.color_primario || '#4a6cf7',
+                          color: '#fff',
+                          fontWeight: 700,
+                          fontSize: 12
+                        }}
+                      >
+                        Botón Principal
+                      </button>
+                      <button
+                        type="button"
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: 6,
+                          border: `1px solid ${configForm.color_primario || '#4a6cf7'}`,
+                          background: 'transparent',
+                          color: configForm.color_primario || '#4a6cf7',
+                          fontWeight: 600,
+                          fontSize: 12
+                        }}
+                      >
+                        Botón Secundario
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón de Guardado al final */}
+              <div style={{ display: 'flex', gap: '12px', borderTop: '1px solid #f0f0f0', paddingTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={handleGuardarConfiguracion}
+                  disabled={guardandoConfig}
+                  style={{
+                    padding: '12px 24px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: configForm.color_primario || '#4a6cf7',
+                    color: '#fff',
+                    cursor: guardandoConfig ? 'not-allowed' : 'pointer',
+                    fontWeight: 700,
+                    fontSize: 14,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                  }}
+                >
+                  {guardandoConfig ? 'Guardando...' : '💾 Guardar Toda la Configuración'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRestaurarConfiguracion}
+                  style={{ padding: '12px 18px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
+                >
+                  Restablecer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ══════════ MODAL EDITAR RESERVA ══════════ */}
       {reservaEditando && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -2861,7 +3432,7 @@ export default function AdminPanel() {
                 <button onClick={() => setModalContrato(null)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Cerrar</button>
                 <button
                   onClick={() => {
-                    generarContratoPDF(modalContrato, modalContrato.items || [], pagosParaContrato, terminos, contratoAbono, combos);
+                    generarContratoPDF(modalContrato, modalContrato.items || [], pagosParaContrato, terminos, contratoAbono, combos, config);
                     setModalContrato(null);
                   }}
                   style={{ flex: 2, padding: '10px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
@@ -2871,7 +3442,7 @@ export default function AdminPanel() {
               </div>
               <button
                 onClick={() => {
-                  generarHojaEntregaPDF(modalContrato, modalContrato.items || [], combos);
+                  generarHojaEntregaPDF(modalContrato, modalContrato.items || [], combos, config);
                   setModalContrato(null);
                 }}
                 style={{ width: '100%', padding: '11px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}

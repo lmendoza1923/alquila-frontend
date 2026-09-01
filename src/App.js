@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from 'react
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
+import { ConfigProvider, useConfig } from './context/ConfigContext';
 import Catalogo from './pages/Catalogo';
 import Carrito from './pages/Carrito';
 import Confirmacion from './pages/Confirmacion';
@@ -13,6 +14,7 @@ import AdminPanel from './pages/AdminPanel';
 function Navbar({ isMobile }) {
   const { user, logout } = useAuth();
   const { items } = useCart();
+  const { config } = useConfig();
   const location = useLocation();
 
   if (!user) return null;
@@ -54,7 +56,7 @@ function Navbar({ isMobile }) {
       left: 0,
       bottom: 0,
       width: sidebarWidth,
-      background: '#1a1a2e',
+      background: config?.color_sidebar || '#1a1a2e',
       zIndex: 1000,
       padding: isMobile ? '2rem 0.5rem' : '2rem 1.25rem',
       display: 'flex',
@@ -63,12 +65,17 @@ function Navbar({ isMobile }) {
       boxShadow: '4px 0 24px rgba(0,0,0,0.15)',
       borderRight: '1px solid rgba(255,255,255,0.08)',
       boxSizing: 'border-box',
-      transition: 'width 0.3s ease, padding 0.3s ease'
+      transition: 'width 0.3s ease, padding 0.3s ease, background 0.3s ease'
     }}>
       {/* Brand Logo */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2.5rem', width: '100%' }}>
-        <Link to="/" style={{ color: '#fff', fontWeight: 700, fontSize: isMobile ? '1.5rem' : '1.25rem', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-          {isMobile ? '🎉' : '🎉 Alquila tu Party'}
+        <Link to="/" style={{ color: '#fff', fontWeight: 700, fontSize: isMobile ? '1.4rem' : '1.15rem', textDecoration: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+          {config?.logo_url && (config.logo_url.startsWith('http') || config.logo_url.startsWith('data:')) ? (
+            <img src={config.logo_url} alt="Logo" style={{ maxHeight: 28, maxWidth: 28, objectFit: 'contain', borderRadius: 4 }} />
+          ) : (
+            <span>{config?.logo_url || '🎉'}</span>
+          )}
+          {!isMobile && <span style={{ textOverflow: 'ellipsis', overflow: 'hidden' }}>{config?.nombre_empresa || 'Alquila tu Party'}</span>}
         </Link>
       </div>
 
@@ -148,6 +155,15 @@ function Navbar({ isMobile }) {
             >
               <span>📄</span>
               {!isMobile && <span>Términos de Contrato</span>}
+            </Link>
+
+            <Link to="/admin?tab=configuracion" style={linkStyle(isActive('/admin', 'configuracion'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'configuracion')) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+              onMouseOut={e => { if (!isActive('/admin', 'configuracion')) e.currentTarget.style.background = 'transparent'; }}
+              title="Configuración"
+            >
+              <span>🎨</span>
+              {!isMobile && <span>Configuración</span>}
             </Link>
           </>
         )}
@@ -266,12 +282,14 @@ function AppContent() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <Toaster position="top-right" />
-          <AppContent />
-        </CartProvider>
-      </AuthProvider>
+      <ConfigProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Toaster position="top-right" />
+            <AppContent />
+          </CartProvider>
+        </AuthProvider>
+      </ConfigProvider>
     </BrowserRouter>
   );
 }
