@@ -12,7 +12,7 @@ const formatFecha = (fechaStr, options) => {
   return date.toLocaleDateString('es', options);
 };
 
-// ─── Generador de PDF (sin librerías externas) ───────────────────────────────
+// ─── Generador de Contrato PDF ───────────────────────────────────────────────
 function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosCombos) {
   const totalPagado = pagos.reduce((s, p) => s + parseFloat(p.monto), 0);
   const abonoExtra = parseFloat(abono) || 0;
@@ -40,12 +40,12 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
     
     // Fila principal del mueble o combo
     filasMobiliarioArray.push(`<tr>
-      <td style="padding:8px 12px;vertical-align:top;">
+      <td style="padding:6px 10px;vertical-align:top;">
         <span style="font-weight:600;">${i.nombre || i.mueble || ''}</span>
       </td>
-      <td style="padding:8px 12px;text-align:center;vertical-align:top;">${i.cantidad}</td>
-      <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${unitPrice.toFixed(2)}</td>
-      <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
+      <td style="padding:6px 10px;text-align:center;vertical-align:top;font-weight:600;">${i.cantidad}</td>
+      <td style="padding:6px 10px;text-align:right;vertical-align:top;">$${unitPrice.toFixed(2)}</td>
+      <td style="padding:6px 10px;text-align:right;vertical-align:top;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
     </tr>`);
 
     // Si es un combo, agregar los componentes en filas individuales
@@ -59,37 +59,27 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 
       componentesCombo.forEach(ci => {
         const compCant = ci.cantidad * i.cantidad;
-        filasMobiliarioArray.push(`<tr style="background-color:#fafafa;font-size:12px;color:#555;">
-          <td style="padding-left:20px;">└─ ${ci.nombre}</td>
-          <td style="text-align:center;">${compCant}</td>
-          <td style="text-align:right;">-</td>
-          <td style="text-align:right;">-</td>
+        filasMobiliarioArray.push(`<tr style="background-color:#fafafa;font-size:11px;color:#555;">
+          <td style="padding:4px 10px 4px 22px;">└─ ${ci.nombre}</td>
+          <td style="padding:4px 10px;text-align:center;">${compCant}</td>
+          <td style="padding:4px 10px;text-align:right;color:#888;">—</td>
+          <td style="padding:4px 10px;text-align:right;color:#888;">—</td>
         </tr>`);
       });
     }
   });
   const filasMuebles = filasMobiliarioArray.join('');
 
-  // Generar filas para Pagos
-  const filasPagos = pagos.length > 0 ? pagos.map(p =>
-    `<tr>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;">${new Date(p.creado_en).toLocaleDateString('es')}</td>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;text-transform:capitalize;">${p.metodo}</td>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;">${p.notes || p.notas || '—'}</td>
-      <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:600;color:#22c55e;">$${parseFloat(p.monto).toFixed(2)}</td>
-    </tr>`
-  ).join('') : `<tr><td colspan="4" style="padding:8px 12px;color:#888;">Sin pagos registrados aún.</td></tr>`;
-
-  // Generar filas para Servicios Adicionales (solo reales, sin filas vacías)
+  // Generar filas para Servicios Adicionales
   const filasServicios = servicioItems.map(i => {
     const unitPrice = i.cantidad > 0 ? (parseFloat(i.subtotal || 0) / i.cantidad) : 0;
     return `<tr>
-      <td style="padding:8px 12px;vertical-align:top;">
+      <td style="padding:6px 10px;vertical-align:top;">
         <span style="font-weight:600;">${i.nombre || i.mueble || ''}</span>
       </td>
-      <td style="padding:8px 12px;text-align:center;vertical-align:top;">${i.cantidad}</td>
-      <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${unitPrice.toFixed(2)}</td>
-      <td style="padding:8px 12px;text-align:right;vertical-align:top;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
+      <td style="padding:6px 10px;text-align:center;vertical-align:top;font-weight:600;">${i.cantidad}</td>
+      <td style="padding:6px 10px;text-align:right;vertical-align:top;">$${unitPrice.toFixed(2)}</td>
+      <td style="padding:6px 10px;text-align:right;vertical-align:top;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
     </tr>`;
   }).join('');
 
@@ -97,34 +87,36 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Contrato de Alquiler</title>
+<title>Contrato de Alquiler #${reserva.id.slice(0,8).toUpperCase()}</title>
 <style>
-  body { font-family: Georgia, serif; color: #1a1a2e; margin: 0; padding: 0; background: #fff; }
-  .page { max-width: 800px; margin: 0 auto; padding: 48px 56px; }
-  .header { border-bottom: 3px solid #4a6cf7; padding-bottom: 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-start; }
-  .logo { font-size: 26px; font-weight: 700; color: #4a6cf7; }
-  .logo span { color: #1a1a2e; }
-  .contract-id { text-align: right; font-size: 13px; color: #888; }
-  .contract-id strong { display: block; font-size: 18px; color: #1a1a2e; }
-  .section { margin-bottom: 28px; }
-  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #4a6cf7; margin-bottom: 12px; border-bottom: 1px solid #eef2ff; padding-bottom: 6px; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .field label { font-size: 11px; color: #888; display: block; margin-bottom: 3px; }
-  .field span { font-size: 14px; font-weight: 600; color: #1a1a2e; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 24px; }
-  table, th, td { border: 1px solid #ccc; }
-  thead { background: #f8f9ff; }
-  th { padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #555; font-weight: 700; }
-  td { padding: 8px 12px; }
-  .totals { background: #f8f9ff; border-radius: 8px; padding: 16px 20px; margin-top: 16px; width: 320px; margin-left: auto; box-sizing: border-box; }
-  .total-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
-  .total-row.final { font-size: 16px; font-weight: 700; color: #4a6cf7; border-top: 2px solid #4a6cf7; margin-top: 8px; padding-top: 10px; }
-  .total-row.saldo { font-size: 15px; font-weight: 700; color: #ef4444; }
-  .terms { background: #f8f9ff; border-radius: 8px; padding: 20px 24px; font-size: 12px; color: #555; line-height: 1.8; white-space: pre-wrap; }
-  .firma { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 48px; }
-  .firma-box { border-top: 1px solid #999; padding-top: 8px; text-align: center; font-size: 12px; color: #888; }
-  .badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.4; }
+  .page { max-width: 780px; margin: 0 auto; padding: 32px 40px; box-sizing: border-box; }
+  .header { border-bottom: 2.5px solid #3b82f6; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .logo { font-size: 22px; font-weight: 800; color: #3b82f6; letter-spacing: -0.5px; }
+  .logo span { color: #0f172a; }
+  .contract-id { text-align: right; font-size: 11.5px; color: #64748b; }
+  .contract-id strong { display: block; font-size: 15px; color: #0f172a; margin-bottom: 2px; }
+  .section { margin-bottom: 18px; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #2563eb; margin-bottom: 8px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; }
+  .field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 2px; font-weight: 600; }
+  .field span { font-size: 12.5px; font-weight: 600; color: #0f172a; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 14px; }
+  table, th, td { border: 1px solid #cbd5e1; }
+  thead { background: #f8fafc; }
+  th { padding: 6px 10px; text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #334155; font-weight: 700; }
+  td { padding: 6px 10px; }
+  .totals-container { display: flex; justify-content: flex-end; margin-top: 10px; }
+  .totals { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; width: 280px; box-sizing: border-box; }
+  .total-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; }
+  .total-row.final { font-size: 13.5px; font-weight: 800; color: #2563eb; border-top: 1.5px solid #cbd5e1; margin-top: 5px; padding-top: 6px; }
+  .total-row.saldo { font-size: 13px; font-weight: 800; color: #dc2626; }
+  .terms { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; font-size: 10.5px; color: #475569; line-height: 1.5; white-space: pre-wrap; max-height: 220px; overflow: hidden; }
+  .firma { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; }
+  .firma-box { border-top: 1.5px solid #94a3b8; padding-top: 6px; text-align: center; font-size: 11px; color: #475569; font-weight: 500; }
+  @media print { 
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { padding: 20px 24px; max-width: 100%; }
+  }
 </style>
 </head>
 <body>
@@ -132,7 +124,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   <div class="header">
     <div>
       <div class="logo">🎉 Alquila<span> tu Party</span></div>
-      <div style="font-size:12px;color:#888;margin-top:4px;">Contrato de Alquiler de Mobiliario</div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px;">Contrato de Alquiler de Mobiliario y Servicios</div>
     </div>
     <div class="contract-id">
       <strong>Contrato #${reserva.id.slice(0,8).toUpperCase()}</strong>
@@ -142,19 +134,20 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 
   <div class="section">
     <div class="section-title">Datos del Cliente</div>
-    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
-      <div class="field" style="flex: 1.5; min-width: 150px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
-      <div class="field" style="flex: 1; min-width: 100px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
-      <div class="field" style="flex: 2.5; min-width: 200px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div class="field" style="flex: 1.5; min-width: 140px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
+      <div class="field" style="flex: 1; min-width: 90px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
+      <div class="field" style="flex: 2.5; min-width: 180px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">Detalles del evento</div>
-    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
-      <div class="field" style="flex: 1.2; min-width: 180px;"><label>Entrega</label><span>${formatFecha(reserva.fecha_inicio, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-      <div class="field" style="flex: 1.2; min-width: 180px;"><label>Retiro</label><span>${formatFecha(reserva.fecha_fin, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-      ${reserva.notes || reserva.notas ? `<div class="field" style="flex: 2.6; min-width: 200px;"><label>Notas adicionales</label><span style="font-weight:400;font-style:italic;">${reserva.notes || reserva.notas}</span></div>` : ''}
+    <div class="section-title">Detalles del Evento</div>
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div class="field" style="flex: 1.2; min-width: 160px;"><label>Fecha de Entrega</label><span>${formatFecha(reserva.fecha_inicio, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+      <div class="field" style="flex: 1.2; min-width: 160px;"><label>Fecha de Retiro</label><span>${formatFecha(reserva.fecha_fin, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+      ${(reserva.alias_cliente) ? `<div class="field" style="flex: 1; min-width: 100px;"><label>Alias / Evento</label><span>${reserva.alias_cliente}</span></div>` : ''}
+      ${(reserva.notes || reserva.notas) ? `<div class="field" style="flex: 2; min-width: 180px;"><label>Notas adicionales</label><span style="font-weight:400;font-style:italic;">${reserva.notes || reserva.notas}</span></div>` : ''}
     </div>
   </div>
 
@@ -163,69 +156,62 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
     <table>
       <thead>
         <tr>
-          <th>DESCRIPCION</th>
-          <th style="text-align:center;width:80px;">CANT.</th>
-          <th style="text-align:right;width:120px;">P. UNITARIO</th>
-          <th style="text-align:right;width:120px;">IMPORTE</th>
+          <th>DESCRIPCIÓN</th>
+          <th style="text-align:center;width:65px;">CANT.</th>
+          <th style="text-align:right;width:105px;">P. UNITARIO</th>
+          <th style="text-align:right;width:105px;">IMPORTE</th>
         </tr>
       </thead>
       <tbody>${filasMuebles}</tbody>
     </table>
   </div>
 
+  ${servicioItems.length > 0 ? `
   <div class="section">
     <div class="section-title">Servicios Adicionales</div>
-    ${servicioItems.length > 0 ? `
     <table>
       <thead>
         <tr>
-          <th>DESCRIPCION</th>
-          <th style="text-align:center;width:80px;">CANT.</th>
-          <th style="text-align:right;width:120px;">P. UNITARIO</th>
-          <th style="text-align:right;width:120px;">IMPORTE</th>
+          <th>DESCRIPCIÓN</th>
+          <th style="text-align:center;width:65px;">CANT.</th>
+          <th style="text-align:right;width:105px;">P. UNITARIO</th>
+          <th style="text-align:right;width:105px;">IMPORTE</th>
         </tr>
       </thead>
       <tbody>
         ${filasServicios}
       </tbody>
     </table>
-    ` : ''}
-    
+  </div>
+  ` : ''}
+
+  <div class="totals-container">
     <div class="totals">
       <div class="total-row"><span>Subtotal:</span><span>$${subtotalMobiliario.toFixed(2)}</span></div>
-      <div class="total-row" style="color:#22c55e;"><span>Abono:</span><span>-$${totalAbono.toFixed(2)}</span></div>
-      <div class="total-row final" style="margin-top:4px;padding-top:4px;"><span>TOTAL:</span><span>$${parseFloat(reserva.total).toFixed(2)}</span></div>
-      <div class="total-row saldo" style="margin-top:4px;"><span>SALDO:</span><span>$${Math.max(0, saldoPendiente).toFixed(2)}</span></div>
+      <div class="total-row" style="color:#16a34a;"><span>Abono:</span><span>-$${totalAbono.toFixed(2)}</span></div>
+      <div class="total-row final"><span>TOTAL:</span><span>$${parseFloat(reserva.total).toFixed(2)}</span></div>
+      <div class="total-row saldo"><span>SALDO PENDIENTE:</span><span>$${Math.max(0, saldoPendiente).toFixed(2)}</span></div>
     </div>
   </div>
 
-  ${pagos.length > 0 ? `
-  <div class="section">
-    <div class="section-title">Historial de Pagos</div>
-    <table>
-      <thead><tr><th>Fecha</th><th>Método</th><th>Nota</th><th style="text-align:right;">Monto</th></tr></thead>
-      <tbody>${filasPagos}</tbody>
-    </table>
-  </div>` : ''}
-
-  <div class="section">
+  <div class="section" style="margin-top:16px;">
     <div class="section-title">Términos y Condiciones</div>
     <div class="terms">${terminos || 'Ver términos en el establecimiento.'}</div>
   </div>
 
   <div class="firma">
     <div class="firma-box">
-      <div style="margin-bottom:40px;">&nbsp;</div>
-      Firma del Cliente<br>${reserva.nombre_cliente || ''}
+      <div style="margin-bottom:34px;">&nbsp;</div>
+      Firma del Cliente<br><strong>${reserva.nombre_cliente || ''}</strong>
     </div>
     <div class="firma-box">
-      <div style="margin-bottom:40px;">&nbsp;</div>
-      Firma Alquila tu Party<br>Representante Autorizado
+      <div style="margin-bottom:34px;">&nbsp;</div>
+      Firma Alquila tu Party<br><strong>Representante Autorizado</strong>
     </div>
   </div>
 
-  <div style="text-align:center;margin-top:40px;font-size:11px;color:#bbb;border-top:1px solid #eee;padding-top:16px;">
-    Contrato generado el ${new Date().toLocaleString('es')} · Alquila tu Party
+  <div style="text-align:center;margin-top:28px;font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:10px;">
+    Documento oficial generado el ${new Date().toLocaleString('es')} · Alquila tu Party
   </div>
 </div>
 </body>
@@ -233,6 +219,230 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 
   const ventana = window.open('', '_blank');
   ventana.document.write(htmlContrato);
+  ventana.document.close();
+  setTimeout(() => ventana.print(), 600);
+}
+
+// ─── Generador de Hoja de Entrega y Control (Sin Precios + Casillas Check) ────
+function generarHojaEntregaPDF(reserva, items, todosLosCombos) {
+  // Limpiar prefijo +507 o 507 del teléfono
+  const cleanPhone = (reserva.telefono_cliente || '').replace(/^\+?507\s*/, '').trim();
+
+  // Clasificar en mobiliario y servicios
+  const esServicio = (nombre) => {
+    const keywords = ['servicio', 'transporte', 'flete', 'montaje', 'armado', 'instalacio', 'envio', 'cargo', 'adicional', 'limpieza', 'deposito', 'garantia', 'decorac'];
+    const n = (nombre || '').toLowerCase();
+    return keywords.some(k => n.includes(k));
+  };
+
+  const mobiliarioItems = items.filter(i => !esServicio(i.nombre || i.mueble));
+  const servicioItems = items.filter(i => esServicio(i.nombre || i.mueble));
+
+  // Generar filas para Mobiliario
+  const filasMobiliarioArray = [];
+  mobiliarioItems.forEach(i => {
+    // Fila principal del mueble o combo
+    filasMobiliarioArray.push(`<tr>
+      <td style="padding:6px;text-align:center;vertical-align:middle;">
+        <div class="chk-box"></div>
+      </td>
+      <td style="padding:6px 10px;text-align:center;vertical-align:middle;font-weight:700;font-size:12.5px;">${i.cantidad}</td>
+      <td style="padding:6px 10px;vertical-align:middle;">
+        <span style="font-weight:700;">${i.nombre || i.mueble || ''}</span>
+      </td>
+      <td style="padding:6px;text-align:center;vertical-align:middle;">
+        <div class="chk-box"></div>
+      </td>
+      <td style="padding:6px 10px;vertical-align:middle;border-bottom:1px dashed #cbd5e1;color:#64748b;font-size:10px;">
+        &nbsp;
+      </td>
+    </tr>`);
+
+    // Si es un combo, agregar los componentes en filas individuales con check
+    if (i.combo_id && todosLosCombos) {
+      const componentesCombo = (i.componentes && i.componentes.length > 0)
+        ? i.componentes
+        : (() => {
+            const comboObj = todosLosCombos.find(c => c.id === i.combo_id);
+            return comboObj ? comboObj.items : [];
+          })();
+
+      componentesCombo.forEach(ci => {
+        const compCant = ci.cantidad * i.cantidad;
+        filasMobiliarioArray.push(`<tr style="background-color:#fafafa;font-size:11px;color:#475569;">
+          <td style="padding:4px;text-align:center;vertical-align:middle;">
+            <div class="chk-box-sm"></div>
+          </td>
+          <td style="padding:4px 10px;text-align:center;vertical-align:middle;font-weight:600;">${compCant}</td>
+          <td style="padding:4px 10px 4px 24px;vertical-align:middle;">└─ ${ci.nombre}</td>
+          <td style="padding:4px;text-align:center;vertical-align:middle;">
+            <div class="chk-box-sm"></div>
+          </td>
+          <td style="padding:4px 10px;border-bottom:1px dashed #e2e8f0;">&nbsp;</td>
+        </tr>`);
+      });
+    }
+  });
+  const filasMuebles = filasMobiliarioArray.join('');
+
+  // Generar filas para Servicios Adicionales
+  const filasServicios = servicioItems.map(i => {
+    return `<tr>
+      <td style="padding:6px;text-align:center;vertical-align:middle;"><div class="chk-box"></div></td>
+      <td style="padding:6px 10px;text-align:center;vertical-align:middle;font-weight:700;">${i.cantidad}</td>
+      <td style="padding:6px 10px;vertical-align:middle;"><span style="font-weight:600;">${i.nombre || i.mueble || ''}</span></td>
+      <td style="padding:6px;text-align:center;vertical-align:middle;"><div class="chk-box"></div></td>
+      <td style="padding:6px 10px;border-bottom:1px dashed #cbd5e1;">&nbsp;</td>
+    </tr>`;
+  }).join('');
+
+  const htmlHojaEntrega = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Hoja de Entrega #${reserva.id.slice(0,8).toUpperCase()}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.4; }
+  .page { max-width: 780px; margin: 0 auto; padding: 32px 40px; box-sizing: border-box; }
+  .header { border-bottom: 2.5px solid #2563eb; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .logo { font-size: 22px; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
+  .logo span { color: #0f172a; }
+  .doc-id { text-align: right; font-size: 11.5px; color: #64748b; }
+  .doc-id strong { display: block; font-size: 15px; color: #0f172a; margin-bottom: 2px; }
+  .section { margin-bottom: 18px; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #2563eb; margin-bottom: 8px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; }
+  .field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 2px; font-weight: 600; }
+  .field span { font-size: 12.5px; font-weight: 600; color: #0f172a; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 14px; }
+  table, th, td { border: 1px solid #cbd5e1; }
+  thead { background: #f8fafc; }
+  th { padding: 6px 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #334155; font-weight: 700; }
+  td { padding: 5px 8px; }
+  .chk-box { width: 16px; height: 16px; border: 2px solid #2563eb; border-radius: 3px; margin: 0 auto; background: #fff; }
+  .chk-box-sm { width: 13px; height: 13px; border: 1.5px solid #64748b; border-radius: 2px; margin: 0 auto; background: #fff; }
+  .obs-box { border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; min-height: 50px; font-size: 11px; color: #64748b; background: #f8fafc; }
+  .clausula { font-size: 10.5px; color: #475569; font-style: italic; line-height: 1.45; margin-top: 14px; padding: 8px 12px; background: #f1f5f9; border-radius: 6px; border-left: 3px solid #2563eb; }
+  .firmas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 28px; }
+  .firma-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; background: #fff; }
+  .firma-card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #2563eb; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px; margin-bottom: 24px; text-align: center; }
+  .firma-linea { border-top: 1.5px solid #94a3b8; padding-top: 4px; text-align: center; font-size: 10.5px; color: #475569; margin-top: 30px; }
+  @media print { 
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { padding: 20px 24px; max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="logo">🎉 Alquila<span> tu Party</span></div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px;">Hoja de Entrega y Control de Mobiliario</div>
+    </div>
+    <div class="doc-id">
+      <strong>Control #${reserva.id.slice(0,8).toUpperCase()}</strong>
+      Emisión: ${new Date().toLocaleDateString('es', { year: 'numeric', month: 'long', day: 'numeric' })}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Datos del Cliente</div>
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div class="field" style="flex: 1.5; min-width: 140px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
+      <div class="field" style="flex: 1; min-width: 90px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
+      <div class="field" style="flex: 2.5; min-width: 180px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Programación de Entrega y Retiro</div>
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div class="field" style="flex: 1.2; min-width: 160px;"><label>Fecha de Entrega</label><span>${formatFecha(reserva.fecha_inicio, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+      <div class="field" style="flex: 1.2; min-width: 160px;"><label>Fecha de Retiro</label><span>${formatFecha(reserva.fecha_fin, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+      ${(reserva.alias_cliente) ? `<div class="field" style="flex: 1; min-width: 100px;"><label>Alias / Evento</label><span>${reserva.alias_cliente}</span></div>` : ''}
+      ${(reserva.notes || reserva.notas) ? `<div class="field" style="flex: 2; min-width: 180px;"><label>Instrucciones de Entrega</label><span style="font-weight:400;font-style:italic;">${reserva.notes || reserva.notas}</span></div>` : ''}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Inventario y Artículos a Entregar</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:center;width:75px;">ENTREGA</th>
+          <th style="text-align:center;width:60px;">CANT.</th>
+          <th>DESCRIPCIÓN DEL MOBILIARIO / EQUIPO</th>
+          <th style="text-align:center;width:80px;">RETIRO</th>
+          <th style="width:160px;">OBSERVACIONES / ESTADO</th>
+        </tr>
+      </thead>
+      <tbody>${filasMuebles}</tbody>
+    </table>
+  </div>
+
+  ${servicioItems.length > 0 ? `
+  <div class="section">
+    <div class="section-title">Servicios a Ejecutar</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:center;width:75px;">CHECK</th>
+          <th style="text-align:center;width:60px;">CANT.</th>
+          <th>DESCRIPCIÓN DEL SERVICIO</th>
+          <th style="text-align:center;width:80px;">CONFORME</th>
+          <th style="width:160px;">OBSERVACIONES</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filasServicios}
+      </tbody>
+    </table>
+  </div>
+  ` : ''}
+
+  <div class="section">
+    <div class="section-title">Observaciones / Novedades en Sitio</div>
+    <div class="obs-box">
+      <em>Espacio para registrar novedades físicas, golpes previos, accesos o cambios en la entrega:</em>
+      <div style="height:32px;"></div>
+    </div>
+  </div>
+
+  <div class="clausula">
+    <strong>Declaración de Conformidad:</strong> El cliente certifica haber recibido a satisfacción la totalidad del mobiliario y equipo detallado en perfectas condiciones y libre de daños, comprometiéndose a su custodia y devolución en la fecha y condiciones pactadas.
+  </div>
+
+  <div class="firmas-grid">
+    <div class="firma-card">
+      <div class="firma-card-title">1. Entrega del Mobiliario</div>
+      <div class="firma-linea">
+        Firma Responsable Entrega (Alquila tu Party)
+      </div>
+      <div class="firma-linea" style="margin-top:22px;">
+        Firma Recibido Conforme (Cliente)
+      </div>
+    </div>
+
+    <div class="firma-card">
+      <div class="firma-card-title">2. Devolución / Retiro</div>
+      <div class="firma-linea">
+        Firma Responsable Retiro (Alquila tu Party)
+      </div>
+      <div class="firma-linea" style="margin-top:22px;">
+        Firma Entrega Conforme (Cliente)
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:24px;font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:8px;">
+    Hoja de control de entrega generada el ${new Date().toLocaleString('es')} · Alquila tu Party
+  </div>
+</div>
+</body>
+</html>`;
+
+  const ventana = window.open('', '_blank');
+  ventana.document.write(htmlHojaEntrega);
   ventana.document.close();
   setTimeout(() => ventana.print(), 600);
 }
@@ -1312,6 +1522,7 @@ export default function AdminPanel() {
                             <button onClick={() => abrirEditarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️</button>
                             <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳</button>
                             <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄</button>
+                            <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚</button>
                             <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️</button>
                             {r.estado !== 'cancelada' && r.estado !== 'completada' && (
                               <button 
@@ -1474,6 +1685,7 @@ export default function AdminPanel() {
                                 <button onClick={() => abrirEditarReserva(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Editar">✏️</button>
                                 <button onClick={() => abrirPagos(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#22c55e', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Pagos">💳</button>
                                 <button onClick={() => abrirContrato(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#f59e0b', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Contrato PDF">📄</button>
+                                <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Hoja de Entrega">🚚</button>
                               </div>
                             </div>
                           ))}
@@ -1687,6 +1899,7 @@ export default function AdminPanel() {
                                 <button onClick={() => abrirEditarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️ Editar</button>
                                 <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳 Pagos</button>
                                 <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄 Contrato</button>
+                                <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚 Entrega</button>
                                 <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️ Eliminar</button>
                               </div>
                             </div>
@@ -2643,16 +2856,27 @@ export default function AdminPanel() {
               <p style={{ fontSize: 12, color: '#888', margin: '6px 0 0 0' }}>Si el cliente va a pagar un abono hoy, ingrésalo aquí para que aparezca en el contrato.</p>
             </div>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setModalContrato(null)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => setModalContrato(null)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Cerrar</button>
+                <button
+                  onClick={() => {
+                    generarContratoPDF(modalContrato, modalContrato.items || [], pagosParaContrato, terminos, contratoAbono, combos);
+                    setModalContrato(null);
+                  }}
+                  style={{ flex: 2, padding: '10px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
+                >
+                  📄 Imprimir Contrato PDF
+                </button>
+              </div>
               <button
                 onClick={() => {
-                  generarContratoPDF(modalContrato, modalContrato.items || [], pagosParaContrato, terminos, contratoAbono, combos);
+                  generarHojaEntregaPDF(modalContrato, modalContrato.items || [], combos);
                   setModalContrato(null);
                 }}
-                style={{ flex: 2, padding: '10px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
+                style={{ width: '100%', padding: '11px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
               >
-                🖨️ Generar e Imprimir PDF
+                🚚 Imprimir Hoja de Entrega (Checklist sin precios)
               </button>
             </div>
           </div>
