@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const estadoColor = { pendiente: '#f59e0b', confirmada: '#3b82f6', activa: '#22c55e', completada: '#6b7280', cancelada: '#ef4444' };
 
@@ -27,9 +27,33 @@ export default function MisReservas() {
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '2rem' }}>
-      <h1>Mis reservas</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <h1 style={{ margin: 0 }}>Mis reservas</h1>
+        <Link 
+          to="/catalogo"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 18px',
+            background: '#4a6cf7',
+            color: '#fff',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontWeight: 600,
+            fontSize: '14px',
+            boxShadow: '0 2px 8px rgba(74, 108, 247, 0.25)',
+            transition: 'background 0.2s'
+          }}
+          onMouseOver={e => e.currentTarget.style.background = '#3b5bdb'}
+          onMouseOut={e => e.currentTarget.style.background = '#4a6cf7'}
+        >
+          <span>➕</span>
+          <span>Nueva Reserva</span>
+        </Link>
+      </div>
       {!reservas.length ? (
-        <p style={{ color: '#666' }}>No tienes reservas aún. <a href="/" style={{ color: '#4a6cf7' }}>Ver catálogo</a></p>
+        <p style={{ color: '#666' }}>No tienes reservas aún. <Link to="/catalogo" style={{ color: '#4a6cf7', fontWeight: 600 }}>Crear nueva reserva</Link></p>
       ) : reservas.map(r => (
         <div key={r.id} style={{ background: '#fff', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>

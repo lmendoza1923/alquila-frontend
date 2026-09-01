@@ -74,15 +74,6 @@ function Navbar({ isMobile }) {
 
       {/* Navigation Links */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, width: '100%', overflowY: 'auto', paddingRight: '4px' }}>
-        <Link to="/catalogo" style={linkStyle(isActive('/catalogo'))}
-          onMouseOver={e => { if (!isActive('/catalogo')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-          onMouseOut={e => { if (!isActive('/catalogo')) e.currentTarget.style.background = 'transparent'; }}
-          title="Catálogo"
-        >
-          <span>🛍️</span>
-          {!isMobile && <span>Catálogo</span>}
-        </Link>
-
         <Link to="/mis-reservas" style={linkStyle(isActive('/mis-reservas'))}
           onMouseOver={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
           onMouseOut={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'transparent'; }}
@@ -231,7 +222,7 @@ function HomeRoute() {
   if (user.rol === 'admin') {
     return <Navigate to="/admin" replace />;
   }
-  return <Navigate to="/catalogo" replace />;
+  return <Navigate to="/mis-reservas" replace />;
 }
 
 function AppContent() {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
 
@@ -967,7 +967,7 @@ export default function AdminPanel() {
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <h1 style={{ margin: 0 }}>
           {tab === 'dashboard' ? 'Panel de administración' : 
            tab === 'reservas' ? 'Gestión de Reservas' : 
@@ -976,6 +976,30 @@ export default function AdminPanel() {
            tab === 'reportes' ? 'Estadísticas e Ingresos' : 
            'Términos del Contrato'}
         </h1>
+        {tab === 'reservas' && (
+          <Link
+            to="/catalogo"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              background: '#4a6cf7',
+              color: '#fff',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 600,
+              fontSize: '14px',
+              boxShadow: '0 2px 8px rgba(74, 108, 247, 0.25)',
+              transition: 'background 0.2s'
+            }}
+            onMouseOver={e => e.currentTarget.style.background = '#3b5bdb'}
+            onMouseOut={e => e.currentTarget.style.background = '#4a6cf7'}
+          >
+            <span>➕</span>
+            <span>Nueva Reserva</span>
+          </Link>
+        )}
       </div>
 
 

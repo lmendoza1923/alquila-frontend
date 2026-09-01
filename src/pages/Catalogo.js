@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -214,8 +214,13 @@ export default function Catalogo() {
         
         {/* Catálogo */}
         <div style={{ flex: isAdmin ? 2 : 1, minWidth: 320, width: '100%' }}>
-          <h1 style={{ marginBottom: '0.25rem' }}>Catálogo de mobiliario</h1>
-          <p style={{ color: '#666', marginBottom: '1.5rem' }}>Selecciona tus fechas y agrega muebles o combos al carrito</p>
+          {isAdmin && (
+            <Link to="/admin?tab=reservas" style={{ color: '#4a6cf7', textDecoration: 'none', fontSize: '14px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+              ← Volver a Gestión de Reservas
+            </Link>
+          )}
+          <h1 style={{ marginBottom: '0.25rem' }}>{isAdmin ? 'Nueva Reserva' : 'Catálogo de mobiliario'}</h1>
+          <p style={{ color: '#666', marginBottom: '1.5rem' }}>Selecciona tus fechas y agrega muebles o combos a la reserva</p>
 
           {/* Rango de fechas */}
           <div style={{ background: '#eef2ff', borderRadius: 12, padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
