@@ -831,7 +831,7 @@ export default function AdminPanel() {
   };
 
   const eliminarMueble = async (id, nombreMueble) => {
-    if (!window.confirm(`¿Eliminar definitivamente el mueble "${nombreMueble}"? Esto lo marcará como inactivo.`)) return;
+    if (!window.confirm(`¿Eliminar definitivamente el mueble "${nombreMueble}" de la base de datos? Esta acción no se puede deshacer.`)) return;
     try {
       await api.delete(`/muebles/${id}`);
       toast.success(`Mueble "${nombreMueble}" eliminado`);
@@ -952,7 +952,7 @@ export default function AdminPanel() {
   };
 
   const eliminarCombo = async (id) => {
-    if (!window.confirm('¿Eliminar este combo?')) return;
+    if (!window.confirm('¿Eliminar definitivamente este combo de la base de datos? Esta acción no se puede deshacer.')) return;
     try {
       await api.delete(`/combos/${id}`);
       setCombos(prev => prev.filter(c => c.id !== id));
