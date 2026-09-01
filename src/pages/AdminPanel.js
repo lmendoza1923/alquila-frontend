@@ -683,6 +683,117 @@ export default function AdminPanel() {
     }
   };
 
+  // Estados para Integración con Google Calendar
+  const [googleStatus, setGoogleStatus] = useState({
+    configured: false,
+    connected: false,
+    email: null,
+    clientId: '',
+    autoSync: true
+  });
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [syncingGoogle, setSyncingGoogle] = useState(false);
+  const [modalGoogleCreds, setModalGoogleCreds] = useState(false);
+  const [googleCredsForm, setGoogleCredsForm] = useState({
+    clientId: '',
+    clientSecret: '',
+    autoSync: true
+  });
+
+  const cargarGoogleStatus = async () => {
+    try {
+      const res = await api.get('/google-calendar/status');
+      setGoogleStatus(res.data);
+      setGoogleCredsForm(prev => ({
+        ...prev,
+        autoSync: res.data.autoSync !== false
+      }));
+    } catch (err) {
+      console.error('Error al cargar status de Google Calendar:', err);
+    }
+  };
+
+  useEffect(() => {
+    // Detectar retorno de Google OAuth2 en URL
+    const googleAuth = searchParams.get('google_auth');
+    if (googleAuth === 'success') {
+      const emailConectado = searchParams.get('email');
+      toast.success(`¡Google Calendar conectado con éxito${emailConectado ? ` (${emailConectado})` : ''}! Las reservas se agendarán automáticamente.`);
+      searchParams.delete('google_auth');
+      searchParams.delete('email');
+      setSearchParams(searchParams);
+      cargarGoogleStatus();
+    } else if (googleAuth === 'error') {
+      const msg = searchParams.get('msg') || 'No se pudo completar la autorización';
+      toast.error(`Error al conectar Google Calendar: ${msg}`);
+      searchParams.delete('google_auth');
+      searchParams.delete('msg');
+      setSearchParams(searchParams);
+      cargarGoogleStatus();
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (tab === 'configuracion') {
+      cargarGoogleStatus();
+    }
+  }, [tab]);
+
+  const handleConectarGoogle = async () => {
+    setLoadingGoogle(true);
+    try {
+      const res = await api.get('/google-calendar/auth-url');
+      if (res.data.url) {
+        window.location.href = res.data.url;
+      }
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Error al obtener enlace de conexión';
+      toast.error(msg);
+      setModalGoogleCreds(true);
+    } finally {
+      setLoadingGoogle(false);
+    }
+  };
+
+  const handleDesconectarGoogle = async () => {
+    if (!window.confirm('¿Desconectar Google Calendar? Las nuevas reservas dejarán de agendarse automáticamente.')) return;
+    setLoadingGoogle(true);
+    try {
+      await api.post('/google-calendar/disconnect');
+      toast.success('Google Calendar desconectado');
+      await cargarGoogleStatus();
+    } catch (err) {
+      toast.error('Error al desconectar');
+    } finally {
+      setLoadingGoogle(false);
+    }
+  };
+
+  const handleSincronizarTodoGoogle = async () => {
+    setSyncingGoogle(true);
+    try {
+      const res = await api.post('/google-calendar/sync-all');
+      toast.success(res.data.mensaje || '¡Reservas sincronizadas con Google Calendar!');
+      await cargarGoogleStatus();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al sincronizar con Google Calendar');
+    } finally {
+      setSyncingGoogle(false);
+    }
+  };
+
+  const handleGuardarCredencialesGoogle = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/google-calendar/credentials', googleCredsForm);
+      toast.success('Credenciales guardadas con éxito. Ya puedes conectar tu cuenta.');
+      setModalGoogleCreds(false);
+      await cargarGoogleStatus();
+    } catch (err) {
+      toast.error('Error al guardar credenciales');
+    }
+  };
+
   // Estados para Reportes
   const [reportesData, setReportesData] = useState(null);
   const [tipoReporte, setTipoReporte] = useState('mes'); // 'mes' o 'personalizado'
@@ -3117,6 +3228,149 @@ export default function AdminPanel() {
                 </div>
               </div>
 
+              {/* Sección 5: Integración con Google Calendar */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    📅 Integración y Agenda en Google Calendar
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setModalGoogleCreds(true)}
+                    style={{ background: 'transparent', border: 'none', color: '#4a6cf7', fontSize: 13, cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+                  >
+                    ⚙️ Configurar Credenciales de Google (Client ID / Secret)
+                  </button>
+                </div>
+
+                <div style={{
+                  background: googleStatus.connected ? '#f0fdf4' : '#f8fafc',
+                  border: `1.5px solid ${googleStatus.connected ? '#86efac' : '#e2e8f0'}`,
+                  borderRadius: 12,
+                  padding: '1.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.25rem',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1, minWidth: '280px' }}>
+                      <div style={{
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: 12,
+                        background: '#fff',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '28px',
+                        flexShrink: 0
+                      }}>
+                        📅
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 800, fontSize: '16px', color: '#1a1a2e' }}>
+                            Google Calendar
+                          </span>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '3px 10px',
+                            borderRadius: 12,
+                            background: googleStatus.connected ? '#dcfce7' : '#f1f5f9',
+                            color: googleStatus.connected ? '#15803d' : '#64748b',
+                            border: `1px solid ${googleStatus.connected ? '#bbf7d0' : '#cbd5e1'}`
+                          }}>
+                            {googleStatus.connected ? `🟢 Conectado: ${googleStatus.email || 'Cuenta de Google'}` : '⚪ No conectado'}
+                          </span>
+                        </div>
+                        <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
+                          {googleStatus.connected
+                            ? '¡Agenda sincronizada! Todas las reservas creadas, editadas o canceladas se reflejan directamente en tu Google Calendar con clientes, artículos y notas.'
+                            : 'Conecta tu cuenta de Google para agendar automáticamente todas las reservas con sus fechas de inicio/fin, artículos, notas y datos de contacto.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Botones de Acción */}
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {!googleStatus.connected ? (
+                        <button
+                          type="button"
+                          onClick={handleConectarGoogle}
+                          disabled={loadingGoogle}
+                          style={{
+                            padding: '10px 20px',
+                            borderRadius: 8,
+                            border: '1px solid #cbd5e1',
+                            background: '#fff',
+                            color: '#1a1a2e',
+                            cursor: loadingGoogle ? 'not-allowed' : 'pointer',
+                            fontWeight: 700,
+                            fontSize: 13,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.07)'
+                          }}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                          </svg>
+                          {loadingGoogle ? 'Cargando enlace...' : 'Conectar con Google Calendar'}
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleSincronizarTodoGoogle}
+                            disabled={syncingGoogle}
+                            style={{
+                              padding: '10px 18px',
+                              borderRadius: 8,
+                              border: 'none',
+                              background: '#10b981',
+                              color: '#fff',
+                              cursor: syncingGoogle ? 'not-allowed' : 'pointer',
+                              fontWeight: 700,
+                              fontSize: 13,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 6px rgba(16,185,129,0.25)'
+                            }}
+                          >
+                            {syncingGoogle ? '⏳ Sincronizando reservas...' : '🔄 Sincronizar Todas las Reservas'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDesconectarGoogle}
+                            disabled={loadingGoogle}
+                            style={{
+                              padding: '10px 14px',
+                              borderRadius: 8,
+                              border: '1px solid #fca5a5',
+                              background: '#fef2f2',
+                              color: '#b91c1c',
+                              cursor: loadingGoogle ? 'not-allowed' : 'pointer',
+                              fontWeight: 600,
+                              fontSize: 13
+                            }}
+                          >
+                            Desconectar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Botón de Guardado al final */}
               <div style={{ display: 'flex', gap: '12px', borderTop: '1px solid #f0f0f0', paddingTop: '1.25rem' }}>
                 <button
@@ -3454,6 +3708,75 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {/* ══════════ MODAL CREDENCIALES GOOGLE CALENDAR ══════════ */}
+      {modalGoogleCreds && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 580, maxHeight: '90vh', overflowY: 'auto', padding: '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
+            <button onClick={() => setModalGoogleCreds(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
+            <h3 style={{ marginTop: 0, marginBottom: '0.75rem', color: '#1a1a2e', fontSize: '1.3rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              ⚙️ Credenciales de Google Cloud OAuth
+            </h3>
+            <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 1.25rem 0', lineHeight: 1.5 }}>
+              Para conectar tu Google Calendar necesitas las credenciales de un proyecto en <strong>Google Cloud Console</strong> con la API de Google Calendar habilitada.
+            </p>
+
+            <form onSubmit={handleGuardarCredencialesGoogle} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                  Google Client ID *
+                </label>
+                <input
+                  type="text"
+                  value={googleCredsForm.clientId}
+                  onChange={e => setGoogleCredsForm({ ...googleCredsForm, clientId: e.target.value })}
+                  placeholder="Ej: 1234567890-abc123xyz.apps.googleusercontent.com"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                  Google Client Secret *
+                </label>
+                <input
+                  type="password"
+                  value={googleCredsForm.clientSecret}
+                  onChange={e => setGoogleCredsForm({ ...googleCredsForm, clientSecret: e.target.value })}
+                  placeholder="GOCSPX-..."
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }}
+                  required
+                />
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, color: '#475569', lineHeight: 1.5 }}>
+                <strong style={{ color: '#1e293b' }}>📌 URI de Redirección Autorizado a registrar en Google Cloud:</strong>
+                <div style={{ background: '#e2e8f0', padding: '6px 10px', borderRadius: 6, fontFamily: 'monospace', fontSize: 12, marginTop: 6, color: '#0f172a', wordBreak: 'break-all' }}>
+                  {window.location.origin.includes('localhost')
+                    ? 'http://localhost:4000/api/google-calendar/callback'
+                    : 'https://alquila-backend.onrender.com/api/google-calendar/callback'}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setModalGoogleCreds(false)}
+                  style={{ flex: 1, padding: '11px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  style={{ flex: 2, padding: '11px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
+                >
+                  Guardar Credenciales
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
