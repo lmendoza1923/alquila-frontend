@@ -74,14 +74,16 @@ function Navbar({ isMobile }) {
 
       {/* Navigation Links */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, width: '100%', overflowY: 'auto', paddingRight: '4px' }}>
-        <Link to="/mis-reservas" style={linkStyle(isActive('/mis-reservas'))}
-          onMouseOver={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-          onMouseOut={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'transparent'; }}
-          title="Mis reservas"
-        >
-          <span>📋</span>
-          {!isMobile && <span>Mis reservas</span>}
-        </Link>
+        {user?.rol !== 'admin' && (
+          <Link to="/mis-reservas" style={linkStyle(isActive('/mis-reservas'))}
+            onMouseOver={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            onMouseOut={e => { if (!isActive('/mis-reservas')) e.currentTarget.style.background = 'transparent'; }}
+            title="Mis reservas"
+          >
+            <span>📋</span>
+            {!isMobile && <span>Mis reservas</span>}
+          </Link>
+        )}
 
         {user?.rol === 'admin' && (
           <>

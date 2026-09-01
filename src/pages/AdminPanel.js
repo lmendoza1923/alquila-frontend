@@ -276,6 +276,69 @@ const formatShortDate = (dateStr) => {
   return `${day} ${month}`;
 };
 
+const monthNamesSpanish = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
+const dayNamesSpanish = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const dayNamesShortSpanish = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+const getDaysOfWeek = (refDate) => {
+  const d = new Date(refDate);
+  const day = d.getDay(); // 0 is Sunday, 1 is Monday ...
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust so week begins on Monday
+  const monday = new Date(d.setDate(diff));
+  monday.setHours(0, 0, 0, 0);
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const nextDay = new Date(monday);
+    nextDay.setDate(monday.getDate() + i);
+    days.push(nextDay);
+  }
+  return days;
+};
+
+const getMonthCalendarMatrix = (year, monthIndex) => {
+  const firstDayOfMonth = new Date(year, monthIndex, 1);
+  const lastDayOfMonth = new Date(year, monthIndex + 1, 0);
+
+  let startDayOfWeek = firstDayOfMonth.getDay(); // 0 = Sun, 1 = Mon ...
+  let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1; // Mon = 0, ..., Sun = 6
+
+  const days = [];
+
+  // Previous month padding
+  const prevMonthLastDay = new Date(year, monthIndex, 0).getDate();
+  for (let i = startOffset - 1; i >= 0; i--) {
+    const d = new Date(year, monthIndex - 1, prevMonthLastDay - i);
+    days.push({ date: d, dateStr: formatYYYYMMDD(d), isCurrentMonth: false });
+  }
+
+  // Current month days
+  for (let dayNum = 1; dayNum <= lastDayOfMonth.getDate(); dayNum++) {
+    const d = new Date(year, monthIndex, dayNum);
+    days.push({ date: d, dateStr: formatYYYYMMDD(d), isCurrentMonth: true });
+  }
+
+  // Next month padding to complete grid rows
+  const remaining = (7 - (days.length % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    const d = new Date(year, monthIndex + 1, i);
+    days.push({ date: d, dateStr: formatYYYYMMDD(d), isCurrentMonth: false });
+  }
+
+  return days;
+};
+
+const isReservaActiveOnDate = (reserva, dateStr) => {
+  if (!reserva.fecha_inicio) return false;
+  const startStr = reserva.fecha_inicio.substring(0, 10);
+  const endStr = reserva.fecha_fin ? reserva.fecha_fin.substring(0, 10) : startStr;
+  return dateStr >= startStr && dateStr <= endStr;
+};
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function AdminPanel() {
   const [stats, setStats] = useState(null);
@@ -284,6 +347,14 @@ export default function AdminPanel() {
   const tab = searchParams.get('tab') || 'dashboard';
   const [muebles, setMuebles] = useState([]);
   const [combos, setCombos] = useState([]);
+
+  // Estados de vista y filtros de Reservas (Lista, Semana, Mes)
+  const [vistaReservas, setVistaReservas] = useState('lista'); // 'lista' | 'semana' | 'mes'
+  const [fechaRefSemana, setFechaRefSemana] = useState(new Date());
+  const [fechaRefMes, setFechaRefMes] = useState(new Date());
+  const [diaSeleccionadoMes, setDiaSeleccionadoMes] = useState(formatYYYYMMDD(new Date()));
+  const [filtroTextoReservas, setFiltroTextoReservas] = useState('');
+  const [filtroEstadoReservas, setFiltroEstadoReservas] = useState('todos');
 
   // Estados formulario mobiliario
   const [nombre, setNombre] = useState('');
@@ -1024,61 +1095,616 @@ export default function AdminPanel() {
       )}
 
       {/* ── Reservas ── */}
-      {tab === 'reservas' && (
-        <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', overflow: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ background: '#f8f9ff' }}>
-                {['Alias', 'Cliente', 'Fechas', 'Total', 'Estado', 'Acciones'].map(h => (
-                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {reservas.map(r => (
-                <tr key={r.id} style={{ borderBottom: '1px solid #f8f8f8' }}>
-                  <td style={{ padding: '12px 16px', fontWeight: 600, color: '#333' }}>{r.alias_cliente || '-'}</td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ fontWeight: 600 }}>{r.nombre_cliente || 'Sin nombre'}</div>
-                    {r.email_cliente && <div style={{ color: '#888', fontSize: 12 }}>{r.email_cliente}</div>}
-                  </td>
-                  <td style={{ padding: '12px 16px', color: '#666', fontSize: 13 }}>
-                    {formatFecha(r.fecha_inicio)} → {formatFecha(r.fecha_fin)}
-                  </td>
-                  <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>${r.total}</td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <span style={{ background: estadoColor[r.estado] + '22', color: estadoColor[r.estado], padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{r.estado}</span>
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <button onClick={() => abrirEditarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️</button>
-                      <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳</button>
-                      <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄</button>
-                      <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️</button>
-                      {r.estado !== 'cancelada' && r.estado !== 'completada' && (
-                        <button 
-                          onClick={() => {
-                            if (window.confirm(`¿Estás seguro de que deseas cancelar la reserva de ${r.nombre_cliente}?`)) {
-                              cambiarEstado(r.id, 'cancelada');
-                            }
+      {tab === 'reservas' && (() => {
+        // Filtrar reservas según texto y estado
+        const reservasFiltradas = reservas.filter(r => {
+          if (filtroEstadoReservas !== 'todos' && r.estado !== filtroEstadoReservas) return false;
+          if (!filtroTextoReservas.trim()) return true;
+          const query = filtroTextoReservas.toLowerCase().trim();
+          const nombre = (r.nombre_cliente || '').toLowerCase();
+          const alias = (r.alias_cliente || '').toLowerCase();
+          const email = (r.email_cliente || '').toLowerCase();
+          const tel = (r.telefono_cliente || '').toLowerCase();
+          const id = String(r.id || '');
+          return nombre.includes(query) || alias.includes(query) || email.includes(query) || tel.includes(query) || id.includes(query);
+        });
+
+        // Días de la semana seleccionada
+        const diasSemana = getDaysOfWeek(fechaRefSemana);
+
+        // Matriz del mes seleccionado
+        const anioMes = fechaRefMes.getFullYear();
+        const mesIdx = fechaRefMes.getMonth();
+        const diasCalendarioMes = getMonthCalendarMatrix(anioMes, mesIdx);
+
+        // Funciones de navegación de semana
+        const navegarSemana = (delta) => {
+          setFechaRefSemana(prev => {
+            const n = new Date(prev);
+            n.setDate(n.getDate() + delta * 7);
+            return n;
+          });
+        };
+
+        // Funciones de navegación de mes
+        const navegarMes = (delta) => {
+          setFechaRefMes(prev => {
+            const n = new Date(prev);
+            n.setMonth(n.getMonth() + delta);
+            return n;
+          });
+        };
+
+        const todayStr = getToday();
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Barra de Filtro de Vistas y Búsqueda */}
+            <div style={{
+              background: '#fff',
+              borderRadius: 12,
+              padding: '14px 20px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              {/* 3 Iconos / Botones de Vista (Lista, Semana, Mes) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f3f9', padding: '4px', borderRadius: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setVistaReservas('lista')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: vistaReservas === 'lista' ? '#4a6cf7' : 'transparent',
+                    color: vistaReservas === 'lista' ? '#fff' : '#4b5563',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: vistaReservas === 'lista' ? '0 2px 8px rgba(74, 108, 247, 0.35)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                  title="Ver en formato Lista"
+                >
+                  <span style={{ fontSize: '17px' }}>📋</span>
+                  <span>Lista</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVistaReservas('semana')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: vistaReservas === 'semana' ? '#4a6cf7' : 'transparent',
+                    color: vistaReservas === 'semana' ? '#fff' : '#4b5563',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: vistaReservas === 'semana' ? '0 2px 8px rgba(74, 108, 247, 0.35)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                  title="Ver en formato Semana"
+                >
+                  <span style={{ fontSize: '17px' }}>📅</span>
+                  <span>Semana</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVistaReservas('mes')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: vistaReservas === 'mes' ? '#4a6cf7' : 'transparent',
+                    color: vistaReservas === 'mes' ? '#fff' : '#4b5563',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: vistaReservas === 'mes' ? '0 2px 8px rgba(74, 108, 247, 0.35)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                  title="Ver en formato Mes"
+                >
+                  <span style={{ fontSize: '17px' }}>🗓️</span>
+                  <span>Mes</span>
+                </button>
+              </div>
+
+              {/* Filtros complementarios de búsqueda y estado */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end' }}>
+                <div style={{ position: 'relative', minWidth: 200, flex: '1 1 200px', maxWidth: 300 }}>
+                  <input
+                    type="text"
+                    placeholder="🔍 Buscar alias, cliente, tel..."
+                    value={filtroTextoReservas}
+                    onChange={e => setFiltroTextoReservas(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: '1px solid #ddd',
+                      fontSize: 13,
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  {filtroTextoReservas && (
+                    <button
+                      onClick={() => setFiltroTextoReservas('')}
+                      style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', color: '#999', fontSize: 12 }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <select
+                  value={filtroEstadoReservas}
+                  onChange={e => setFiltroEstadoReservas(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px solid #ddd',
+                    fontSize: 13,
+                    background: '#fff',
+                    color: '#444',
+                    fontWeight: 500
+                  }}
+                >
+                  <option value="todos">Todos los estados</option>
+                  <option value="pendiente">Pendiente</option>
+                  <option value="confirmada">Confirmada</option>
+                  <option value="activa">Activa</option>
+                  <option value="completada">Completada</option>
+                  <option value="cancelada">Cancelada</option>
+                </select>
+
+                <div style={{ background: '#eef2ff', color: '#4a6cf7', padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+                  {reservasFiltradas.length} {reservasFiltradas.length === 1 ? 'reserva' : 'reservas'}
+                </div>
+              </div>
+            </div>
+
+            {/* ── 1. VISTA LISTA ── */}
+            {vistaReservas === 'lista' && (
+              <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', overflow: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9ff' }}>
+                      {['Alias', 'Cliente', 'Fechas', 'Total', 'Estado', 'Acciones'].map(h => (
+                        <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reservasFiltradas.map(r => (
+                      <tr key={r.id} style={{ borderBottom: '1px solid #f8f8f8' }}>
+                        <td style={{ padding: '12px 16px', fontWeight: 600, color: '#333' }}>{r.alias_cliente || '-'}</td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 600 }}>{r.nombre_cliente || 'Sin nombre'}</div>
+                          {r.email_cliente && <div style={{ color: '#888', fontSize: 12 }}>{r.email_cliente}</div>}
+                          {r.telefono_cliente && <div style={{ color: '#666', fontSize: 11 }}>📞 {r.telefono_cliente}</div>}
+                        </td>
+                        <td style={{ padding: '12px 16px', color: '#666', fontSize: 13 }}>
+                          {formatFecha(r.fecha_inicio)} → {formatFecha(r.fecha_fin)}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>${parseFloat(r.total || 0).toFixed(2)}</td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ background: estadoColor[r.estado] + '22', color: estadoColor[r.estado], padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{r.estado}</span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <button onClick={() => abrirEditarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️</button>
+                            <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳</button>
+                            <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄</button>
+                            <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️</button>
+                            {r.estado !== 'cancelada' && r.estado !== 'completada' && (
+                              <button 
+                                onClick={() => {
+                                  if (window.confirm(`¿Estás seguro de que deseas cancelar la reserva de ${r.nombre_cliente}?`)) {
+                                    cambiarEstado(r.id, 'cancelada');
+                                  }
+                                }}
+                                style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+                                title="Cancelar reserva"
+                              >
+                                Cancelar
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {reservasFiltradas.length === 0 && (
+                      <tr><td colSpan="6" style={{ padding: '2.5rem', textAlign: 'center', color: '#888' }}>No se encontraron reservas con los filtros seleccionados.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* ── 2. VISTA SEMANA ── */}
+            {vistaReservas === 'semana' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Navegador de Semana */}
+                <div style={{
+                  background: '#fff',
+                  borderRadius: 12,
+                  padding: '12px 20px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => navegarSemana(-1)}
+                      style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', color: '#333', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+                    >
+                      ◀ Anterior
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFechaRefSemana(new Date())}
+                      style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #4a6cf7', background: '#eef2ff', color: '#4a6cf7', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+                    >
+                      Hoy / Esta Semana
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navegarSemana(1)}
+                      style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', color: '#333', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+                    >
+                      Siguiente ▶
+                    </button>
+                  </div>
+
+                  <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a1a2e' }}>
+                    Semana del {diasSemana[0].getDate()} de {monthNamesSpanish[diasSemana[0].getMonth()]} al {diasSemana[6].getDate()} de {monthNamesSpanish[diasSemana[6].getMonth()]} {diasSemana[6].getFullYear()}
+                  </div>
+                </div>
+
+                {/* Columnas de los 7 días */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                  gap: '12px'
+                }}>
+                  {diasSemana.map((diaObj) => {
+                    const diaStr = formatYYYYMMDD(diaObj);
+                    const esHoy = diaStr === todayStr;
+                    const reservasDelDia = reservasFiltradas.filter(r => isReservaActiveOnDate(r, diaStr));
+
+                    return (
+                      <div
+                        key={diaStr}
+                        style={{
+                          background: '#fff',
+                          borderRadius: 12,
+                          padding: '12px 10px',
+                          boxShadow: esHoy ? '0 0 0 2px #4a6cf7, 0 4px 12px rgba(74, 108, 247, 0.15)' : '0 2px 8px rgba(0,0,0,0.06)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          minHeight: '280px'
+                        }}
+                      >
+                        {/* Cabecera del día */}
+                        <div style={{
+                          paddingBottom: '8px',
+                          marginBottom: '10px',
+                          borderBottom: '1px solid #f0f0f0',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: esHoy ? '#4a6cf7' : '#888', letterSpacing: '0.5px' }}>
+                            {dayNamesSpanish[diaObj.getDay()]}
+                          </div>
+                          <div style={{
+                            fontSize: '1.3rem',
+                            fontWeight: 800,
+                            color: esHoy ? '#4a6cf7' : '#1a1a2e',
+                            marginTop: '2px'
+                          }}>
+                            {diaObj.getDate()}
+                          </div>
+                          <div style={{ fontSize: '10px', color: '#aaa' }}>
+                            {monthNamesSpanish[diaObj.getMonth()].substring(0, 3)}
+                          </div>
+                          {esHoy && (
+                            <span style={{ display: 'inline-block', background: '#4a6cf7', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '1px 6px', borderRadius: '10px', marginTop: '4px' }}>
+                              HOY
+                            </span>
+                          )}
+                          <div style={{ marginTop: '4px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: reservasDelDia.length > 0 ? '#4a6cf7' : '#bbb' }}>
+                              {reservasDelDia.length} {reservasDelDia.length === 1 ? 'reserva' : 'reservas'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Tarjetas de reservas del día */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
+                          {reservasDelDia.map(r => (
+                            <div
+                              key={`${diaStr}-${r.id}`}
+                              style={{
+                                background: '#f8f9ff',
+                                borderRadius: 8,
+                                padding: '8px',
+                                borderLeft: `4px solid ${estadoColor[r.estado] || '#4a6cf7'}`,
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px'
+                              }}
+                            >
+                              <div style={{ fontWeight: 700, fontSize: '12px', color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.alias_cliente || r.nombre_cliente}>
+                                {r.alias_cliente ? `🏷️ ${r.alias_cliente}` : (r.nombre_cliente || 'Reserva')}
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#555', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                👤 {r.nombre_cliente || '-'}
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#4a6cf7' }}>
+                                  ${parseFloat(r.total || 0).toFixed(0)}
+                                </span>
+                                <span style={{ background: (estadoColor[r.estado] || '#888') + '22', color: estadoColor[r.estado] || '#888', fontSize: '9px', fontWeight: 700, padding: '1px 5px', borderRadius: 4, textTransform: 'capitalize' }}>
+                                  {r.estado}
+                                </span>
+                              </div>
+                              {/* Botones de acción compactos */}
+                              <div style={{ display: 'flex', gap: '4px', marginTop: '4px', justifyContent: 'flex-end', borderTop: '1px solid #eee', paddingTop: '4px' }}>
+                                <button onClick={() => abrirEditarReserva(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Editar">✏️</button>
+                                <button onClick={() => abrirPagos(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#22c55e', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Pagos">💳</button>
+                                <button onClick={() => abrirContrato(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#f59e0b', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Contrato PDF">📄</button>
+                              </div>
+                            </div>
+                          ))}
+                          {reservasDelDia.length === 0 && (
+                            <div style={{ textAlign: 'center', color: '#ccc', fontSize: '11px', margin: 'auto 0', fontStyle: 'italic' }}>
+                              Libre
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── 3. VISTA MES ── */}
+            {vistaReservas === 'mes' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Navegador de Mes */}
+                <div style={{
+                  background: '#fff',
+                  borderRadius: 12,
+                  padding: '12px 20px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => navegarMes(-1)}
+                      style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', color: '#333', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+                    >
+                      ◀ Anterior
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFechaRefMes(new Date())}
+                      style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #4a6cf7', background: '#eef2ff', color: '#4a6cf7', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+                    >
+                      Mes Actual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navegarMes(1)}
+                      style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', color: '#333', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+                    >
+                      Siguiente ▶
+                    </button>
+                  </div>
+
+                  <div style={{ fontWeight: 800, fontSize: '1.25rem', color: '#1a1a2e' }}>
+                    {monthNamesSpanish[mesIdx]} {anioMes}
+                  </div>
+                </div>
+
+                {/* Calendario mensual en cuadrícula */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                  {/* Encabezados de días de la semana */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', marginBottom: '8px', textAlign: 'center' }}>
+                    {dayNamesShortSpanish.map(d => (
+                      <div key={d} style={{ fontWeight: 700, fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', padding: '6px 0' }}>
+                        {d}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Celdas del mes */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+                    {diasCalendarioMes.map((c, cIdx) => {
+                      const esHoy = c.dateStr === todayStr;
+                      const esSeleccionado = c.dateStr === diaSeleccionadoMes;
+                      const reservasDelDia = reservasFiltradas.filter(r => isReservaActiveOnDate(r, c.dateStr));
+
+                      return (
+                        <div
+                          key={cIdx}
+                          onClick={() => setDiaSeleccionadoMes(c.dateStr)}
+                          style={{
+                            minHeight: '90px',
+                            padding: '6px',
+                            borderRadius: 8,
+                            border: esSeleccionado ? '2px solid #4a6cf7' : (esHoy ? '2px solid #93c5fd' : '1px solid #f0f0f0'),
+                            background: esSeleccionado ? '#f0f4ff' : (c.isCurrentMonth ? '#fff' : '#fafafa'),
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            opacity: c.isCurrentMonth ? 1 : 0.45,
+                            transition: 'all 0.15s ease'
                           }}
-                          style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
-                          title="Cancelar reserva"
                         >
-                          Cancelar
-                        </button>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <span style={{
+                              fontWeight: (esHoy || esSeleccionado) ? 800 : 600,
+                              fontSize: '12px',
+                              color: esHoy ? '#4a6cf7' : (c.isCurrentMonth ? '#333' : '#999'),
+                              background: esHoy ? '#eef2ff' : 'transparent',
+                              borderRadius: '50%',
+                              width: '20px',
+                              height: '20px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {c.date.getDate()}
+                            </span>
+                            {reservasDelDia.length > 0 && (
+                              <span style={{ background: '#4a6cf7', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '1px 5px', borderRadius: 10 }}>
+                                {reservasDelDia.length}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Mini lista de reservas en el día */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'hidden', flex: 1 }}>
+                            {reservasDelDia.slice(0, 2).map(r => (
+                              <div
+                                key={r.id}
+                                style={{
+                                  background: (estadoColor[r.estado] || '#4a6cf7') + '1a',
+                                  color: estadoColor[r.estado] || '#4a6cf7',
+                                  borderLeft: `2px solid ${estadoColor[r.estado] || '#4a6cf7'}`,
+                                  borderRadius: '3px',
+                                  padding: '1px 4px',
+                                  fontSize: '9px',
+                                  fontWeight: 600,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}
+                                title={`${r.alias_cliente || r.nombre_cliente} ($${r.total}) - ${r.estado}`}
+                              >
+                                {r.alias_cliente || r.nombre_cliente || 'Reserva'}
+                              </div>
+                            ))}
+                            {reservasDelDia.length > 2 && (
+                              <span style={{ fontSize: '9px', color: '#888', fontStyle: 'italic', paddingLeft: '2px' }}>
+                                +{reservasDelDia.length - 2} más
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Detalle del Día Seleccionado en el Mes */}
+                {diaSeleccionadoMes && (() => {
+                  const reservasDelDiaSeleccionado = reservasFiltradas.filter(r => isReservaActiveOnDate(r, diaSeleccionadoMes));
+                  const [y, m, d] = diaSeleccionadoMes.split('-');
+                  const fechaObj = new Date(Number(y), Number(m) - 1, Number(d));
+
+                  return (
+                    <div style={{ background: '#fff', borderRadius: 12, padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1a1a2e' }}>
+                          Reservas para el {fechaObj.getDate()} de {monthNamesSpanish[fechaObj.getMonth()]} {fechaObj.getFullYear()} ({reservasDelDiaSeleccionado.length})
+                        </h3>
+                        <span style={{ fontSize: '12px', color: '#666' }}>
+                          Día seleccionado en el calendario
+                        </span>
+                      </div>
+
+                      {reservasDelDiaSeleccionado.length > 0 ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px' }}>
+                          {reservasDelDiaSeleccionado.map(r => (
+                            <div
+                              key={r.id}
+                              style={{
+                                background: '#f8f9ff',
+                                borderRadius: 10,
+                                padding: '14px',
+                                borderLeft: `5px solid ${estadoColor[r.estado] || '#4a6cf7'}`,
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div>
+                                  <div style={{ fontWeight: 700, fontSize: '14px', color: '#1a1a2e' }}>
+                                    {r.alias_cliente ? `🏷️ ${r.alias_cliente}` : (r.nombre_cliente || 'Sin nombre')}
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: '#666' }}>
+                                    Cliente: <strong>{r.nombre_cliente || '-'}</strong> {r.telefono_cliente && `(📞 ${r.telefono_cliente})`}
+                                  </div>
+                                </div>
+                                <span style={{ background: (estadoColor[r.estado] || '#888') + '22', color: estadoColor[r.estado] || '#888', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: 12, textTransform: 'capitalize' }}>
+                                  {r.estado}
+                                </span>
+                              </div>
+
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#555', background: '#fff', padding: '6px 10px', borderRadius: 6 }}>
+                                <span>📅 {formatFecha(r.fecha_inicio)} → {formatFecha(r.fecha_fin)}</span>
+                                <span style={{ fontWeight: 700, color: '#4a6cf7' }}>Total: ${parseFloat(r.total || 0).toFixed(2)}</span>
+                              </div>
+
+                              {r.direccion_entrega && (
+                                <div style={{ fontSize: '11px', color: '#777' }}>
+                                  📍 {r.direccion_entrega}
+                                </div>
+                              )}
+
+                              <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                                <button onClick={() => abrirEditarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️ Editar</button>
+                                <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳 Pagos</button>
+                                <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄 Contrato</button>
+                                <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️ Eliminar</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: '#888', background: '#fafafa', borderRadius: 8 }}>
+                          No hay reservas registradas para el {fechaObj.getDate()} de {monthNamesSpanish[fechaObj.getMonth()]}.
+                        </div>
                       )}
                     </div>
-                  </td>
-                </tr>
-              ))}
-              {reservas.length === 0 && (
-                <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay reservas aún.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Mobiliario ── */}
       {tab === 'mobiliario' && (
