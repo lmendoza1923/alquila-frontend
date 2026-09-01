@@ -2340,43 +2340,67 @@ export default function AdminPanel() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                   <thead>
                     <tr style={{ background: '#f8f9ff', borderBottom: '1px solid #f0f0f0' }}>
-                      {['Nombre', 'Precio', 'Componentes', 'Estado', 'Acciones'].map(h => (
+                      {['Nombre', 'Precio', 'Disponibilidad', 'Estado', 'Acciones'].map(h => (
                         <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {combos.map(c => (
-                      <tr key={c.id} style={{ borderBottom: '1px solid #f8f8f8' }}>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ fontWeight: 600, color: '#1a1a2e' }}>🎁 {c.nombre}</div>
-                          <div style={{ color: '#888', fontSize: 12 }}>{c.descripcion || 'Sin descripción'}</div>
-                        </td>
-                        <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>
-                          {c.precio_dia ? `$${parseFloat(c.precio_dia).toFixed(2)}` : '—'}
-                        </td>
-                        <td style={{ padding: '12px 16px', fontSize: 12 }}>
-                          {c.items.map(ci => (
-                            <div key={ci.mueble_id} style={{ color: '#555' }}>
-                              • {ci.cantidad}x {ci.nombre}
+                    {combos.map(c => {
+                      // Calcular disponibilidad máxima en base al stock de los componentes
+                      let minDisp = Infinity;
+                      if (c.items && c.items.length > 0) {
+                        for (const ci of c.items) {
+                          const mb = muebles.find(m => m.id === ci.mueble_id);
+                          const cantPorCombo = ci.cantidad || 1;
+                          const dispMueble = mb ? Math.floor((mb.stock || 0) / cantPorCombo) : 0;
+                          if (dispMueble < minDisp) minDisp = dispMueble;
+                        }
+                      } else {
+                        minDisp = 0;
+                      }
+                      const disponibilidad = minDisp === Infinity ? 0 : minDisp;
+
+                      return (
+                        <tr key={c.id} style={{ borderBottom: '1px solid #f8f8f8' }}>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ fontWeight: 600, color: '#1a1a2e' }}>🎁 {c.nombre}</div>
+                            {c.descripcion && <div style={{ color: '#888', fontSize: 12, marginTop: 2 }}>{c.descripcion}</div>}
+                          </td>
+                          <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>
+                            {c.precio_dia ? `$${parseFloat(c.precio_dia).toFixed(2)}` : '—'}
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{
+                              fontWeight: 700,
+                              color: disponibilidad > 0 ? '#16a34a' : '#dc2626',
+                              background: disponibilidad > 0 ? '#dcfce7' : '#fee2e2',
+                              padding: '3px 10px',
+                              borderRadius: 20,
+                              fontSize: 12,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4
+                            }}>
+                              {disponibilidad > 0 ? `📦 ${disponibilidad} ${disponibilidad === 1 ? 'combo' : 'combos'}` : '❌ Agotado'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ background: c.activo ? '#22c55e22' : '#ef444422', color: c.activo ? '#22c55e' : '#ef4444', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                              {c.activo ? 'Activo' : 'Inactivo'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button onClick={() => iniciarEditarCombo(c)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️</button>
+                              <button onClick={() => eliminarCombo(c.id)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar">🗑️</button>
                             </div>
-                          ))}
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <span style={{ background: c.activo ? '#22c55e22' : '#ef444422', color: c.activo ? '#22c55e' : '#ef4444', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                            {c.activo ? 'Activo' : 'Inactivo'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button onClick={() => iniciarEditarCombo(c)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>✏️</button>
-                            <button onClick={() => eliminarCombo(c.id)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>🗑️</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {combos.length === 0 && (
-                      <tr><td colSpan="4" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay combos registrados aún.</td></tr>
+                      <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay combos registrados aún.</td></tr>
                     )}
                   </tbody>
                 </table>
