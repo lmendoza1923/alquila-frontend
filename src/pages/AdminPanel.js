@@ -32,11 +32,13 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   const empNombre = configEmpresa?.nombre_empresa || 'Alquila tu Party';
   const empLogo = configEmpresa?.logo_url || '🎉';
   const empColor = configEmpresa?.color_primario || '#3b82f6';
-  const empEslogan = configEmpresa?.eslogan || 'Contrato de Alquiler de Mobiliario y Servicios';
+  const empEslogan = configEmpresa?.eslogan && !configEmpresa.eslogan.toLowerCase().includes('contrato')
+    ? configEmpresa.eslogan
+    : '';
   
   const logoHtml = (empLogo.startsWith('http') || empLogo.startsWith('data:'))
-    ? `<img src="${empLogo}" alt="Logo" style="max-height:34px;max-width:140px;vertical-align:middle;margin-right:8px;object-fit:contain;" />`
-    : `<span style="font-size:22px;margin-right:6px;">${empLogo}</span>`;
+    ? `<img src="${empLogo}" alt="Logo" style="max-height:28px;max-width:120px;vertical-align:middle;margin-right:6px;object-fit:contain;" />`
+    : `<span style="font-size:18px;margin-right:6px;">${empLogo}</span>`;
 
   // Limpiar prefijo +507 o 507 del teléfono
   const cleanPhone = (reserva.telefono_cliente || '').replace(/^\+?507\s*/, '').trim();
@@ -58,12 +60,12 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
     
     // Fila principal del mueble o combo
     filasMobiliarioArray.push(`<tr>
-      <td style="padding:6px 10px;vertical-align:top;">
+      <td style="padding:3px 6px;vertical-align:middle;">
         <span style="font-weight:600;">${i.nombre || i.mueble || ''}</span>
       </td>
-      <td style="padding:6px 10px;text-align:center;vertical-align:top;font-weight:600;">${i.cantidad}</td>
-      <td style="padding:6px 10px;text-align:right;vertical-align:top;">$${unitPrice.toFixed(2)}</td>
-      <td style="padding:6px 10px;text-align:right;vertical-align:top;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
+      <td style="padding:3px 6px;text-align:center;vertical-align:middle;font-weight:600;">${i.cantidad}</td>
+      <td style="padding:3px 6px;text-align:right;vertical-align:middle;">$${unitPrice.toFixed(2)}</td>
+      <td style="padding:3px 6px;text-align:right;vertical-align:middle;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
     </tr>`);
 
     // Si es un combo, agregar los componentes en filas individuales
@@ -77,11 +79,11 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 
       componentesCombo.forEach(ci => {
         const compCant = ci.cantidad * i.cantidad;
-        filasMobiliarioArray.push(`<tr style="background-color:#fafafa;font-size:11px;color:#555;">
-          <td style="padding:4px 10px 4px 22px;">└─ ${ci.nombre}</td>
-          <td style="padding:4px 10px;text-align:center;">${compCant}</td>
-          <td style="padding:4px 10px;text-align:right;color:#888;">—</td>
-          <td style="padding:4px 10px;text-align:right;color:#888;">—</td>
+        filasMobiliarioArray.push(`<tr style="background-color:#fafafa;font-size:8px;color:#555;">
+          <td style="padding:2px 6px 2px 16px;">└─ ${ci.nombre}</td>
+          <td style="padding:2px 6px;text-align:center;">${compCant}</td>
+          <td style="padding:2px 6px;text-align:right;color:#888;">—</td>
+          <td style="padding:2px 6px;text-align:right;color:#888;">—</td>
         </tr>`);
       });
     }
@@ -92,12 +94,12 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   const filasServicios = servicioItems.map(i => {
     const unitPrice = i.cantidad > 0 ? (parseFloat(i.subtotal || 0) / i.cantidad) : 0;
     return `<tr>
-      <td style="padding:6px 10px;vertical-align:top;">
+      <td style="padding:3px 6px;vertical-align:middle;">
         <span style="font-weight:600;">${i.nombre || i.mueble || ''}</span>
       </td>
-      <td style="padding:6px 10px;text-align:center;vertical-align:top;font-weight:600;">${i.cantidad}</td>
-      <td style="padding:6px 10px;text-align:right;vertical-align:top;">$${unitPrice.toFixed(2)}</td>
-      <td style="padding:6px 10px;text-align:right;vertical-align:top;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
+      <td style="padding:3px 6px;text-align:center;vertical-align:middle;font-weight:600;">${i.cantidad}</td>
+      <td style="padding:3px 6px;text-align:right;vertical-align:middle;">$${unitPrice.toFixed(2)}</td>
+      <td style="padding:3px 6px;text-align:right;vertical-align:middle;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
     </tr>`;
   }).join('');
 
@@ -105,56 +107,50 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Contrato de Alquiler #${reserva.id.slice(0,8).toUpperCase()}</title>
+<title></title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.4; }
-  .page { max-width: 780px; margin: 0 auto; padding: 32px 40px; box-sizing: border-box; }
-  .header { border-bottom: 2.5px solid ${empColor}; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
-  .logo { font-size: 22px; font-weight: 800; color: ${empColor}; letter-spacing: -0.5px; display: flex; align-items: center; }
-  .contract-id { text-align: right; font-size: 11.5px; color: #64748b; }
-  .contract-id strong { display: block; font-size: 15px; color: #0f172a; margin-bottom: 2px; }
-  .section { margin-bottom: 18px; }
-  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: ${empColor}; margin-bottom: 8px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; }
-  .field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 2px; font-weight: 600; }
-  .field span { font-size: 12.5px; font-weight: 600; color: #0f172a; }
-  table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 14px; }
+  @page { size: auto; margin: 6mm 8mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.3; font-size: 9.5px; }
+  .page { max-width: 760px; margin: 0 auto; padding: 10px 14px; box-sizing: border-box; }
+  .header { border-bottom: 2px solid ${empColor}; padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .logo { font-size: 18px; font-weight: 800; color: ${empColor}; letter-spacing: -0.5px; display: flex; align-items: center; }
+  .section { margin-bottom: 8px; }
+  .section-title { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: ${empColor}; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; }
+  .field label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 1px; font-weight: 600; }
+  .field span { font-size: 10px; font-weight: 600; color: #0f172a; }
+  table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 6px; }
   table, th, td { border: 1px solid #cbd5e1; }
   thead { background: #f8fafc; }
-  th { padding: 6px 10px; text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #334155; font-weight: 700; }
-  td { padding: 6px 10px; }
-  .totals-container { display: flex; justify-content: flex-end; margin-top: 10px; }
-  .totals { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; width: 280px; box-sizing: border-box; }
-  .total-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; }
-  .total-row.final { font-size: 13.5px; font-weight: 800; color: ${empColor}; border-top: 1.5px solid #cbd5e1; margin-top: 5px; padding-top: 6px; }
-  .total-row.saldo { font-size: 13px; font-weight: 800; color: #dc2626; }
-  .terms { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; font-size: 10.5px; color: #475569; line-height: 1.5; white-space: pre-wrap; max-height: 220px; overflow: hidden; }
-  .firma { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; }
-  .firma-box { border-top: 1.5px solid #94a3b8; padding-top: 6px; text-align: center; font-size: 11px; color: #475569; font-weight: 500; }
+  th { padding: 3px 5px; text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #334155; font-weight: 700; }
+  td { padding: 3px 5px; }
+  .totals-container { display: flex; justify-content: flex-end; margin-top: 4px; }
+  .totals { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 5px 8px; width: 220px; box-sizing: border-box; }
+  .total-row { display: flex; justify-content: space-between; padding: 1.5px 0; font-size: 9.5px; }
+  .total-row.final { font-size: 11px; font-weight: 800; color: ${empColor}; border-top: 1px solid #cbd5e1; margin-top: 2px; padding-top: 2px; }
+  .total-row.saldo { font-size: 10.5px; font-weight: 800; color: #dc2626; }
+  .terms { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 8px; font-size: 8px; color: #475569; line-height: 1.3; white-space: pre-wrap; max-height: 90px; overflow: hidden; }
+  .firma { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 14px; }
+  .firma-box { border-top: 1px solid #94a3b8; padding-top: 3px; text-align: center; font-size: 9px; color: #475569; font-weight: 500; }
   @media print { 
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page { padding: 20px 24px; max-width: 100%; }
+    .page { padding: 0; max-width: 100%; }
   }
 </style>
 </head>
 <body>
 <div class="page">
   <div class="header">
-    <div>
-      <div class="logo">${logoHtml}<span>${empNombre}</span></div>
-      <div style="font-size:11px;color:#64748b;margin-top:2px;">${empEslogan}</div>
-    </div>
-    <div class="contract-id">
-      <strong>Contrato #${reserva.id.slice(0,8).toUpperCase()}</strong>
-      Fecha de emisión: ${new Date().toLocaleDateString('es', { year: 'numeric', month: 'long', day: 'numeric' })}
-    </div>
+    <div class="logo">${logoHtml}<span>${empNombre}</span></div>
+    ${empEslogan ? `<div style="font-size:10px;color:#64748b;">${empEslogan}</div>` : ''}
   </div>
 
   <div class="section">
     <div class="section-title">Datos del Cliente</div>
-    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-      <div class="field" style="flex: 1.5; min-width: 140px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
-      <div class="field" style="flex: 1; min-width: 90px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
-      <div class="field" style="flex: 2.5; min-width: 180px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
+    <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+      <div class="field" style="flex: 0.8; min-width: 80px;"><label>Ref / Reserva</label><span>#${reserva.id.slice(0,8).toUpperCase()}</span></div>
+      <div class="field" style="flex: 1.5; min-width: 130px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
+      <div class="field" style="flex: 1; min-width: 85px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
+      <div class="field" style="flex: 2; min-width: 160px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
     </div>
   </div>
 
@@ -164,9 +160,9 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
       <thead>
         <tr>
           <th>DESCRIPCIÓN</th>
-          <th style="text-align:center;width:65px;">CANT.</th>
-          <th style="text-align:right;width:105px;">P. UNITARIO</th>
-          <th style="text-align:right;width:105px;">IMPORTE</th>
+          <th style="text-align:center;width:55px;">CANT.</th>
+          <th style="text-align:right;width:85px;">P. UNITARIO</th>
+          <th style="text-align:right;width:85px;">IMPORTE</th>
         </tr>
       </thead>
       <tbody>${filasMuebles}</tbody>
@@ -180,9 +176,9 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
       <thead>
         <tr>
           <th>DESCRIPCIÓN</th>
-          <th style="text-align:center;width:65px;">CANT.</th>
-          <th style="text-align:right;width:105px;">P. UNITARIO</th>
-          <th style="text-align:right;width:105px;">IMPORTE</th>
+          <th style="text-align:center;width:55px;">CANT.</th>
+          <th style="text-align:right;width:85px;">P. UNITARIO</th>
+          <th style="text-align:right;width:85px;">IMPORTE</th>
         </tr>
       </thead>
       <tbody>
@@ -201,24 +197,20 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
     </div>
   </div>
 
-  <div class="section" style="margin-top:16px;">
+  <div class="section" style="margin-top:10px;">
     <div class="section-title">Términos y Condiciones</div>
     <div class="terms">${terminos || 'Ver términos en el establecimiento.'}</div>
   </div>
 
   <div class="firma">
     <div class="firma-box">
-      <div style="margin-bottom:34px;">&nbsp;</div>
+      <div style="margin-bottom:18px;">&nbsp;</div>
       Firma del Cliente<br><strong>${reserva.nombre_cliente || ''}</strong>
     </div>
     <div class="firma-box">
-      <div style="margin-bottom:34px;">&nbsp;</div>
+      <div style="margin-bottom:18px;">&nbsp;</div>
       Firma ${empNombre}<br><strong>Representante Autorizado</strong>
     </div>
-  </div>
-
-  <div style="text-align:center;margin-top:28px;font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:10px;">
-    Documento oficial generado el ${new Date().toLocaleString('es')} · ${empNombre}
   </div>
 </div>
 </body>
@@ -237,8 +229,8 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
   const empColor = configEmpresa?.color_primario || '#2563eb';
   
   const logoHtml = (empLogo.startsWith('http') || empLogo.startsWith('data:'))
-    ? `<img src="${empLogo}" alt="Logo" style="max-height:34px;max-width:140px;vertical-align:middle;margin-right:8px;object-fit:contain;" />`
-    : `<span style="font-size:22px;margin-right:6px;">${empLogo}</span>`;
+    ? `<img src="${empLogo}" alt="Logo" style="max-height:28px;max-width:120px;vertical-align:middle;margin-right:6px;object-fit:contain;" />`
+    : `<span style="font-size:18px;margin-right:6px;">${empLogo}</span>`;
 
   // Limpiar prefijo +507 o 507 del teléfono
   const cleanPhone = (reserva.telefono_cliente || '').replace(/^\+?507\s*/, '').trim();
@@ -258,17 +250,17 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
   mobiliarioItems.forEach(i => {
     // Fila principal del mueble o combo
     filasMobiliarioArray.push(`<tr>
-      <td style="padding:6px;text-align:center;vertical-align:middle;">
+      <td style="padding:2.5px 4px;text-align:center;vertical-align:middle;">
         <div class="chk-box"></div>
       </td>
-      <td style="padding:6px 10px;text-align:center;vertical-align:middle;font-weight:700;font-size:12.5px;">${i.cantidad}</td>
-      <td style="padding:6px 10px;vertical-align:middle;">
+      <td style="padding:2.5px 4px;text-align:center;vertical-align:middle;font-weight:700;font-size:9.5px;">${i.cantidad}</td>
+      <td style="padding:2.5px 6px;vertical-align:middle;">
         <span style="font-weight:700;">${i.nombre || i.mueble || ''}</span>
       </td>
-      <td style="padding:6px;text-align:center;vertical-align:middle;">
+      <td style="padding:2.5px 4px;text-align:center;vertical-align:middle;">
         <div class="chk-box"></div>
       </td>
-      <td style="padding:6px 10px;vertical-align:middle;border-bottom:1px dashed #cbd5e1;color:#64748b;font-size:10px;">
+      <td style="padding:2.5px 6px;vertical-align:middle;border-bottom:1px dashed #cbd5e1;color:#64748b;font-size:8.5px;">
         &nbsp;
       </td>
     </tr>`);
@@ -284,16 +276,16 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
 
       componentesCombo.forEach(ci => {
         const compCant = ci.cantidad * i.cantidad;
-        filasMobiliarioArray.push(`<tr style="background-color:#fafafa;font-size:11px;color:#475569;">
-          <td style="padding:4px;text-align:center;vertical-align:middle;">
+        filasMobiliarioArray.push(`<tr style="background-color:#fafafa;font-size:8px;color:#475569;">
+          <td style="padding:2px 4px;text-align:center;vertical-align:middle;">
             <div class="chk-box-sm"></div>
           </td>
-          <td style="padding:4px 10px;text-align:center;vertical-align:middle;font-weight:600;">${compCant}</td>
-          <td style="padding:4px 10px 4px 24px;vertical-align:middle;">└─ ${ci.nombre}</td>
-          <td style="padding:4px;text-align:center;vertical-align:middle;">
+          <td style="padding:2px 4px;text-align:center;vertical-align:middle;font-weight:600;">${compCant}</td>
+          <td style="padding:2px 6px 2px 18px;vertical-align:middle;">└─ ${ci.nombre}</td>
+          <td style="padding:2px 4px;text-align:center;vertical-align:middle;">
             <div class="chk-box-sm"></div>
           </td>
-          <td style="padding:4px 10px;border-bottom:1px dashed #e2e8f0;">&nbsp;</td>
+          <td style="padding:2px 6px;border-bottom:1px dashed #e2e8f0;">&nbsp;</td>
         </tr>`);
       });
     }
@@ -303,11 +295,11 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
   // Generar filas para Servicios Adicionales
   const filasServicios = servicioItems.map(i => {
     return `<tr>
-      <td style="padding:6px;text-align:center;vertical-align:middle;"><div class="chk-box"></div></td>
-      <td style="padding:6px 10px;text-align:center;vertical-align:middle;font-weight:700;">${i.cantidad}</td>
-      <td style="padding:6px 10px;vertical-align:middle;"><span style="font-weight:600;">${i.nombre || i.mueble || ''}</span></td>
-      <td style="padding:6px;text-align:center;vertical-align:middle;"><div class="chk-box"></div></td>
-      <td style="padding:6px 10px;border-bottom:1px dashed #cbd5e1;">&nbsp;</td>
+      <td style="padding:2.5px 4px;text-align:center;vertical-align:middle;"><div class="chk-box"></div></td>
+      <td style="padding:2.5px 4px;text-align:center;vertical-align:middle;font-weight:700;">${i.cantidad}</td>
+      <td style="padding:2.5px 6px;vertical-align:middle;"><span style="font-weight:600;">${i.nombre || i.mueble || ''}</span></td>
+      <td style="padding:2.5px 4px;text-align:center;vertical-align:middle;"><div class="chk-box"></div></td>
+      <td style="padding:2.5px 6px;border-bottom:1px dashed #cbd5e1;">&nbsp;</td>
     </tr>`;
   }).join('');
 
@@ -315,66 +307,59 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Hoja de Entrega #${reserva.id.slice(0,8).toUpperCase()}</title>
+<title></title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.4; }
-  .page { max-width: 780px; margin: 0 auto; padding: 32px 40px; box-sizing: border-box; }
-  .header { border-bottom: 2.5px solid ${empColor}; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
-  .logo { font-size: 22px; font-weight: 800; color: ${empColor}; letter-spacing: -0.5px; display: flex; align-items: center; }
-  .doc-id { text-align: right; font-size: 11.5px; color: #64748b; }
-  .doc-id strong { display: block; font-size: 15px; color: #0f172a; margin-bottom: 2px; }
-  .section { margin-bottom: 18px; }
-  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: ${empColor}; margin-bottom: 8px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; }
-  .field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 2px; font-weight: 600; }
-  .field span { font-size: 12.5px; font-weight: 600; color: #0f172a; }
-  table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 14px; }
+  @page { size: auto; margin: 6mm 8mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.3; font-size: 9.5px; }
+  .page { max-width: 760px; margin: 0 auto; padding: 10px 14px; box-sizing: border-box; }
+  .header { border-bottom: 2px solid ${empColor}; padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .logo { font-size: 18px; font-weight: 800; color: ${empColor}; letter-spacing: -0.5px; display: flex; align-items: center; }
+  .section { margin-bottom: 8px; }
+  .section-title { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: ${empColor}; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; }
+  .field label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 1px; font-weight: 600; }
+  .field span { font-size: 10px; font-weight: 600; color: #0f172a; }
+  table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 6px; }
   table, th, td { border: 1px solid #cbd5e1; }
   thead { background: #f8fafc; }
-  th { padding: 6px 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #334155; font-weight: 700; }
-  td { padding: 5px 8px; }
-  .chk-box { width: 16px; height: 16px; border: 2px solid ${empColor}; border-radius: 3px; margin: 0 auto; background: #fff; }
-  .chk-box-sm { width: 13px; height: 13px; border: 1.5px solid #64748b; border-radius: 2px; margin: 0 auto; background: #fff; }
-  .obs-box { border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; min-height: 50px; font-size: 11px; color: #64748b; background: #f8fafc; }
-  .clausula { font-size: 10.5px; color: #475569; font-style: italic; line-height: 1.45; margin-top: 14px; padding: 8px 12px; background: #f1f5f9; border-radius: 6px; border-left: 3px solid ${empColor}; }
-  .firmas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 28px; }
-  .firma-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; background: #fff; }
-  .firma-card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: ${empColor}; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px; margin-bottom: 24px; text-align: center; }
-  .firma-linea { border-top: 1.5px solid #94a3b8; padding-top: 4px; text-align: center; font-size: 10.5px; color: #475569; margin-top: 30px; }
+  th { padding: 3px 5px; text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #334155; font-weight: 700; }
+  td { padding: 2.5px 5px; }
+  .chk-box { width: 12px; height: 12px; border: 1.5px solid ${empColor}; border-radius: 2px; margin: 0 auto; background: #fff; }
+  .chk-box-sm { width: 9px; height: 9px; border: 1px solid #64748b; border-radius: 2px; margin: 0 auto; background: #fff; }
+  .obs-box { border: 1px solid #cbd5e1; border-radius: 4px; padding: 5px 8px; min-height: 24px; font-size: 8.5px; color: #64748b; background: #f8fafc; }
+  .clausula { font-size: 8px; color: #475569; font-style: italic; line-height: 1.25; margin-top: 6px; padding: 4px 8px; background: #f1f5f9; border-radius: 4px; border-left: 2.5px solid ${empColor}; }
+  .firmas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+  .firma-card { border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 8px; background: #fff; }
+  .firma-card-title { font-size: 8.5px; font-weight: 700; text-transform: uppercase; color: ${empColor}; border-bottom: 1px solid #f1f5f9; padding-bottom: 2px; margin-bottom: 10px; text-align: center; }
+  .firma-linea { border-top: 1px solid #94a3b8; padding-top: 2px; text-align: center; font-size: 8.5px; color: #475569; margin-top: 14px; }
   @media print { 
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page { padding: 20px 24px; max-width: 100%; }
+    .page { padding: 0; max-width: 100%; }
   }
 </style>
 </head>
 <body>
 <div class="page">
   <div class="header">
-    <div>
-      <div class="logo">${logoHtml}<span>${empNombre}</span></div>
-      <div style="font-size:11px;color:#64748b;margin-top:2px;">Hoja de Entrega y Control de Mobiliario</div>
-    </div>
-    <div class="doc-id">
-      <strong>Control #${reserva.id.slice(0,8).toUpperCase()}</strong>
-      Emisión: ${new Date().toLocaleDateString('es', { year: 'numeric', month: 'long', day: 'numeric' })}
-    </div>
+    <div class="logo">${logoHtml}<span>${empNombre}</span></div>
   </div>
 
   <div class="section">
     <div class="section-title">Datos del Cliente</div>
-    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-      <div class="field" style="flex: 1.5; min-width: 140px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
-      <div class="field" style="flex: 1; min-width: 90px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
-      <div class="field" style="flex: 2.5; min-width: 180px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
+    <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+      <div class="field" style="flex: 0.8; min-width: 80px;"><label>Ref / Reserva</label><span>#${reserva.id.slice(0,8).toUpperCase()}</span></div>
+      <div class="field" style="flex: 1.5; min-width: 130px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
+      <div class="field" style="flex: 1; min-width: 85px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
+      <div class="field" style="flex: 2; min-width: 160px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
     </div>
   </div>
 
   <div class="section">
     <div class="section-title">Programación de Entrega y Retiro</div>
-    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-      <div class="field" style="flex: 1.2; min-width: 160px;"><label>Fecha de Entrega</label><span>${formatFecha(reserva.fecha_inicio, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-      <div class="field" style="flex: 1.2; min-width: 160px;"><label>Fecha de Retiro</label><span>${formatFecha(reserva.fecha_fin, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-      ${(reserva.alias_cliente) ? `<div class="field" style="flex: 1; min-width: 100px;"><label>Alias / Evento</label><span>${reserva.alias_cliente}</span></div>` : ''}
-      ${(reserva.notes || reserva.notas) ? `<div class="field" style="flex: 2; min-width: 180px;"><label>Instrucciones de Entrega</label><span style="font-weight:400;font-style:italic;">${reserva.notes || reserva.notas}</span></div>` : ''}
+    <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+      <div class="field" style="flex: 1.2; min-width: 140px;"><label>Fecha de Entrega</label><span>${formatFecha(reserva.fecha_inicio, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span></div>
+      <div class="field" style="flex: 1.2; min-width: 140px;"><label>Fecha de Retiro</label><span>${formatFecha(reserva.fecha_fin, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span></div>
+      ${(reserva.alias_cliente) ? `<div class="field" style="flex: 1; min-width: 90px;"><label>Alias / Evento</label><span>${reserva.alias_cliente}</span></div>` : ''}
+      ${(reserva.notes || reserva.notas) ? `<div class="field" style="flex: 2; min-width: 160px;"><label>Instrucciones</label><span style="font-weight:400;font-style:italic;">${reserva.notes || reserva.notas}</span></div>` : ''}
     </div>
   </div>
 
@@ -383,11 +368,11 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
     <table>
       <thead>
         <tr>
-          <th style="text-align:center;width:75px;">ENTREGA</th>
-          <th style="text-align:center;width:60px;">CANT.</th>
+          <th style="text-align:center;width:55px;">ENTREGA</th>
+          <th style="text-align:center;width:48px;">CANT.</th>
           <th>DESCRIPCIÓN DEL MOBILIARIO / EQUIPO</th>
-          <th style="text-align:center;width:80px;">RETIRO</th>
-          <th style="width:160px;">OBSERVACIONES / ESTADO</th>
+          <th style="text-align:center;width:55px;">RETIRO</th>
+          <th style="width:140px;">OBSERVACIONES / ESTADO</th>
         </tr>
       </thead>
       <tbody>${filasMuebles}</tbody>
@@ -400,11 +385,11 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
     <table>
       <thead>
         <tr>
-          <th style="text-align:center;width:75px;">CHECK</th>
-          <th style="text-align:center;width:60px;">CANT.</th>
+          <th style="text-align:center;width:55px;">CHECK</th>
+          <th style="text-align:center;width:48px;">CANT.</th>
           <th>DESCRIPCIÓN DEL SERVICIO</th>
-          <th style="text-align:center;width:80px;">CONFORME</th>
-          <th style="width:160px;">OBSERVACIONES</th>
+          <th style="text-align:center;width:55px;">CONFORME</th>
+          <th style="width:140px;">OBSERVACIONES</th>
         </tr>
       </thead>
       <tbody>
@@ -417,13 +402,13 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
   <div class="section">
     <div class="section-title">Observaciones / Novedades en Sitio</div>
     <div class="obs-box">
-      <em>Espacio para registrar novedades físicas, golpes previos, accesos o cambios en la entrega:</em>
-      <div style="height:32px;"></div>
+      <em>Espacio para registrar novedades físicas, accesos o cambios en la entrega:</em>
+      <div style="height:18px;"></div>
     </div>
   </div>
 
   <div class="clausula">
-    <strong>Declaración de Conformidad:</strong> El cliente certifica haber recibido a satisfacción la totalidad del mobiliario y equipo detallado en perfectas condiciones y libre de daños, comprometiéndose a su custodia y devolución en la fecha y condiciones pactadas.
+    <strong>Declaración de Conformidad:</strong> El cliente certifica haber recibido a satisfacción la totalidad del mobiliario y equipo detallado en perfectas condiciones y libre de daños, comprometiéndose a su custodia y devolución en la fecha pactada.
   </div>
 
   <div class="firmas-grid">
@@ -432,7 +417,7 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
       <div class="firma-linea">
         Firma Responsable Entrega (${empNombre})
       </div>
-      <div class="firma-linea" style="margin-top:22px;">
+      <div class="firma-linea" style="margin-top:14px;">
         Firma Recibido Conforme (Cliente)
       </div>
     </div>
@@ -442,14 +427,10 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
       <div class="firma-linea">
         Firma Responsable Retiro (${empNombre})
       </div>
-      <div class="firma-linea" style="margin-top:22px;">
+      <div class="firma-linea" style="margin-top:14px;">
         Firma Entrega Conforme (Cliente)
       </div>
     </div>
-  </div>
-
-  <div style="text-align:center;margin-top:24px;font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:8px;">
-    Hoja de control de entrega generada el ${new Date().toLocaleString('es')} · ${empNombre}
   </div>
 </div>
 </body>
