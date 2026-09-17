@@ -1172,6 +1172,35 @@ export default function AdminPanel() {
     }
   };
 
+  const pagarSaldoCompleto = async () => {
+    if (saldoPendiente <= 0) {
+      return toast.info('Esta reserva ya no tiene saldo adeudado');
+    }
+    const monto = parseFloat(saldoPendiente.toFixed(2));
+    setLoadingPago(true);
+    try {
+      const res = await api.post('/pagos', {
+        reserva_id: modalPagos.id,
+        monto: monto,
+        metodo: nuevoPagoMetodo || 'efectivo',
+        notas: nuevoPagoNotas.trim() ? nuevoPagoNotas : 'Saldo cancelado / Pagado en su totalidad'
+      });
+      const nuevosPagos = [...pagosReserva, res.data];
+      setPagosReserva(nuevosPagos);
+      const nuevoTotal = nuevosPagos.reduce((s, p) => s + parseFloat(p.monto), 0);
+      setTotalPagado(nuevoTotal);
+      setSaldoPendiente(parseFloat(modalPagos.total) - nuevoTotal);
+      setNuevoPagoMonto('');
+      setNuevoPagoNotas('');
+      api.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
+      toast.success(`¡Saldo completado! Pago de $${monto.toFixed(2)} registrado.`);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al registrar pago');
+    } finally {
+      setLoadingPago(false);
+    }
+  };
+
   const eliminarPago = async (pagoId) => {
     if (!window.confirm('¿Eliminar este pago?')) return;
     try {
@@ -3563,7 +3592,7 @@ export default function AdminPanel() {
             <p style={{ color: '#888', fontSize: 13, margin: '0 0 1.5rem 0' }}>{modalPagos.nombre_cliente}</p>
 
             {/* Resumen de saldo */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: '1rem' }}>
               {[
                 { label: 'Total reserva', value: `$${parseFloat(modalPagos.total).toFixed(2)}`, color: '#1a1a2e' },
                 { label: 'Total pagado', value: `$${totalPagado.toFixed(2)}`, color: '#22c55e' },
@@ -3575,6 +3604,46 @@ export default function AdminPanel() {
                 </div>
               ))}
             </div>
+
+            {/* Botón directo de Liquidación / Pagado si hay saldo pendiente */}
+            {saldoPendiente > 0 ? (
+              <div style={{ marginBottom: '1.5rem', background: '#ecfdf5', border: '1.5px solid #10b981', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#065f46', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>💵 Saldo adeudado:</span>
+                    <span style={{ fontSize: 16, color: '#047857' }}>${saldoPendiente.toFixed(2)}</span>
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#047857', marginTop: 2 }}>Completa el saldo adeudado con un solo clic</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={pagarSaldoCompleto}
+                  disabled={loadingPago}
+                  style={{
+                    background: loadingPago ? '#a7f3d0' : '#10b981',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '9px 16px',
+                    fontWeight: 700,
+                    fontSize: 13.5,
+                    cursor: loadingPago ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 3px 8px rgba(16,185,129,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    whiteSpace: 'nowrap'
+                  }}
+                  title="Completar todo el saldo adeudado"
+                >
+                  {loadingPago ? 'Procesando...' : `✓ Pagado ($${saldoPendiente.toFixed(2)})`}
+                </button>
+              </div>
+            ) : (
+              <div style={{ marginBottom: '1.5rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, color: '#16a34a', fontSize: 12.5, fontWeight: 600 }}>
+                <span>✓ Reserva completamente pagada (saldo pendiente $0.00).</span>
+              </div>
+            )}
 
             {/* Historial de pagos */}
             <h4 style={{ margin: '0 0 10px 0', fontSize: 14, color: '#555' }}>Historial</h4>
@@ -3598,7 +3667,19 @@ export default function AdminPanel() {
               <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: '#1a1a2e' }}>Registrar pago / abono</h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Monto ($) *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#555' }}>Monto ($) *</label>
+                    {saldoPendiente > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setNuevoPagoMonto(saldoPendiente.toFixed(2))}
+                        style={{ background: 'none', border: 'none', color: '#4a6cf7', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                        title="Rellenar con saldo adeudado"
+                      >
+                        Auto-llenar (${saldoPendiente.toFixed(2)})
+                      </button>
+                    )}
+                  </div>
                   <input type="number" step="0.01" min="0.01" value={nuevoPagoMonto} onChange={e => setNuevoPagoMonto(e.target.value)} placeholder="0.00" style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
                 </div>
                 <div>
@@ -3608,13 +3689,20 @@ export default function AdminPanel() {
                   </select>
                 </div>
               </div>
-              <div style={{ marginBottom: 10 }}>
+              <div style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Nota (opcional)</label>
                 <input type="text" value={nuevoPagoNotas} onChange={e => setNuevoPagoNotas(e.target.value)} placeholder="Ej. Abono inicial, pago final..." style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
               </div>
-              <button onClick={registrarPago} disabled={loadingPago} style={{ width: '100%', padding: '10px', background: loadingPago ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingPago ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 14 }}>
-                {loadingPago ? 'Registrando...' : '✓ Registrar pago'}
-              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: saldoPendiente > 0 ? '1fr 1fr' : '1fr', gap: 10 }}>
+                <button onClick={registrarPago} disabled={loadingPago} style={{ width: '100%', padding: '10px', background: loadingPago ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingPago ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13.5 }}>
+                  {loadingPago ? 'Registrando...' : '✓ Registrar abono/pago'}
+                </button>
+                {saldoPendiente > 0 && (
+                  <button onClick={pagarSaldoCompleto} disabled={loadingPago} style={{ width: '100%', padding: '10px', background: loadingPago ? '#6ee7b7' : '#10b981', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingPago ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 13.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    {loadingPago ? 'Procesando...' : `✓ Pagado ($${saldoPendiente.toFixed(2)})`}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
