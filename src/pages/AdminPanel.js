@@ -149,6 +149,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
     <div style="display: flex; gap: 14px; flex-wrap: wrap;">
       <div class="field" style="flex: 0.8; min-width: 80px;"><label>Ref / Reserva</label><span>#${reserva.id.slice(0,8).toUpperCase()}</span></div>
       <div class="field" style="flex: 1.5; min-width: 130px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
+      ${reserva.cedula_cliente ? `<div class="field" style="flex: 1; min-width: 90px;"><label>Cédula</label><span>${reserva.cedula_cliente}</span></div>` : ''}
       <div class="field" style="flex: 1; min-width: 85px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
       <div class="field" style="flex: 2; min-width: 160px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
     </div>
@@ -205,7 +206,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   <div class="firma">
     <div class="firma-box">
       <div style="margin-bottom:18px;">&nbsp;</div>
-      Firma del Cliente<br><strong>${reserva.nombre_cliente || ''}</strong>
+      Firma del Cliente<br><strong>${reserva.nombre_cliente || ''}</strong>${reserva.cedula_cliente ? `<br><span style="font-size:8px;color:#64748b;">Céd: ${reserva.cedula_cliente}</span>` : ''}
     </div>
     <div class="firma-box">
       <div style="margin-bottom:18px;">&nbsp;</div>
@@ -348,6 +349,7 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
     <div style="display: flex; gap: 14px; flex-wrap: wrap;">
       <div class="field" style="flex: 0.8; min-width: 80px;"><label>Ref / Reserva</label><span>#${reserva.id.slice(0,8).toUpperCase()}</span></div>
       <div class="field" style="flex: 1.5; min-width: 130px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
+      ${reserva.cedula_cliente ? `<div class="field" style="flex: 1; min-width: 90px;"><label>Cédula</label><span>${reserva.cedula_cliente}</span></div>` : ''}
       <div class="field" style="flex: 1; min-width: 85px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
       <div class="field" style="flex: 2; min-width: 160px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
     </div>
@@ -586,6 +588,7 @@ export default function AdminPanel() {
   // Estados edición de reservas
   const [reservaEditando, setReservaEditando] = useState(null);
   const [editNombre, setEditNombre] = useState('');
+  const [editCedula, setEditCedula] = useState('');
   const [editAlias, setEditAlias] = useState('');
   const [editTelefono, setEditTelefono] = useState('');
   const [editDireccion, setEditDireccion] = useState('');
@@ -842,7 +845,7 @@ export default function AdminPanel() {
     setReservaEditando(r);
     setEditAlias(r.alias_cliente || '');
     setEditNombre(r.nombre_cliente || '');
-
+    setEditCedula(r.cedula_cliente || '');
     setEditTelefono(r.telefono_cliente || '');
     setEditDireccion(r.direccion_entrega || '');
     setEditNotas(r.notes || r.notas || '');
@@ -1066,6 +1069,7 @@ export default function AdminPanel() {
       const payload = {
         alias_cliente: editAlias.trim(),
         nombre_cliente: editNombre.trim(),
+        cedula_cliente: editCedula.trim() || null,
         email_cliente: null,
         telefono_cliente: editTelefono.trim(),
         direccion_entrega: editDireccion.trim(),
@@ -1702,6 +1706,7 @@ export default function AdminPanel() {
                         <td style={{ padding: '12px 16px', fontWeight: 600, color: '#333' }}>{r.alias_cliente || '-'}</td>
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ fontWeight: 600 }}>{r.nombre_cliente || 'Sin nombre'}</div>
+                          {r.cedula_cliente && <div style={{ color: '#64748b', fontSize: 11 }}>🆔 {r.cedula_cliente}</div>}
                           {r.email_cliente && <div style={{ color: '#888', fontSize: 12 }}>{r.email_cliente}</div>}
                           {r.telefono_cliente && <div style={{ color: '#666', fontSize: 11 }}>📞 {r.telefono_cliente}</div>}
                         </td>
@@ -3411,11 +3416,13 @@ export default function AdminPanel() {
               Editar Reserva #{reservaEditando.id.slice(0, 8).toUpperCase()}
             </h3>
             <form onSubmit={guardarEdicionReserva}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Alias del Cliente</label>
                   <input type="text" value={editAlias} onChange={e => setEditAlias(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} placeholder="Ej: Boda Juan / Fiesta Maria" /></div>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Nombre del Cliente</label>
                   <input type="text" value={editNombre} onChange={e => setEditNombre(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} /></div>
+                <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Cédula</label>
+                  <input type="text" value={editCedula} onChange={e => setEditCedula(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} placeholder="Opcional (Ej: 8-888-8888)" /></div>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Teléfono</label>
                   <input type="text" value={editTelefono} onChange={e => setEditTelefono(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} /></div>
               </div>

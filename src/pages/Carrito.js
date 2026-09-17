@@ -19,7 +19,7 @@ const s = {
 export default function Carrito() {
   const { items, fechas, actualizar, quitar, calcularTotal, diasSeleccionados, vaciar } = useCart();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ alias: '', nombre: '', telefono: '', direccion: '', notas: '' });
+  const [form, setForm] = useState({ alias: '', nombre: '', cedula: '', telefono: '', direccion: '', notas: '' });
   const [loading, setLoading] = useState(false);
   const [servicios, setServicios] = useState([]);
   const [requiereTransporte, setRequiereTransporte] = useState(false);
@@ -86,6 +86,7 @@ export default function Carrito() {
         fecha_fin: fechas.fin.toISOString().split('T')[0],
         alias_cliente: form.alias || null,
         nombre_cliente: form.nombre || null,
+        cedula_cliente: form.cedula ? form.cedula.trim() : null,
         email_cliente: null,
         telefono_cliente: form.telefono || null,
         direccion_entrega: form.direccion || null,
@@ -273,6 +274,8 @@ export default function Carrito() {
             <input style={s.input} value={form.alias} onChange={e => set('alias', e.target.value)} placeholder="Ej: Juan Boda / Fiesta de María" />
             <label style={s.label}>Nombre completo</label>
             <input style={s.input} value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Ej: Juan Pérez" />
+            <label style={s.label}>Cédula (opcional)</label>
+            <input style={s.input} value={form.cedula} onChange={e => set('cedula', e.target.value)} placeholder="Ej: 8-888-8888" />
             <label style={s.label}>Teléfono / WhatsApp</label>
             <input style={s.input} value={form.telefono} onChange={e => set('telefono', e.target.value)} placeholder="6000-0000" />
             <label style={s.label}>Dirección de entrega</label>
