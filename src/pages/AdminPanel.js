@@ -643,17 +643,64 @@ export default function AdminPanel() {
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('La imagen debe pesar menos de 2MB');
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('La imagen no debe exceder 10MB');
       return;
     }
+
+    if (file.type === 'image/svg+xml') {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setConfigForm(prev => ({ ...prev, logo_url: ev.target.result }));
+        setLogoTipo('url');
+        toast.success('Logo cargado correctamente');
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      setConfigForm(prev => ({ ...prev, logo_url: ev.target.result }));
-      setLogoTipo('url');
-      toast.success('Imagen cargada como logo');
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 600;
+        const MAX_HEIGHT = 300;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round(height * (MAX_WIDTH / width));
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round(width * (MAX_HEIGHT / height));
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const isPng = file.type === 'image/png';
+        const dataUrl = isPng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.85);
+
+        setConfigForm(prev => ({ ...prev, logo_url: dataUrl }));
+        setLogoTipo('url');
+        toast.success('Logo cargado y optimizado con éxito');
+      };
+      img.onerror = () => {
+        toast.error('No se pudo procesar la imagen seleccionada');
+      };
+      img.src = event.target.result;
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleGuardarConfiguracion = async (e) => {
@@ -663,7 +710,9 @@ export default function AdminPanel() {
       await saveConfig(configForm);
       toast.success('¡Configuración de la empresa y diseño guardados con éxito!');
     } catch (err) {
-      toast.error('Error al guardar la configuración');
+      console.error('Error al guardar configuración:', err);
+      const msg = err.response?.data?.error || err.response?.data?.message || err.message || 'Error al guardar la configuración';
+      toast.error(`Error al guardar: ${msg}`);
     } finally {
       setGuardandoConfig(false);
     }
@@ -2914,20 +2963,21 @@ export default function AdminPanel() {
                       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                         <input
                           type="text"
-                          value={configForm.logo_url || ''}
+                          value={configForm.logo_url?.startsWith('data:') ? '(Imagen cargada desde el equipo)' : (configForm.logo_url || '')}
                           onChange={e => setConfigForm({ ...configForm, logo_url: e.target.value })}
-                          placeholder="https://ejemplo.com/logo.png o pega Data URL"
-                          style={{ flex: 1, minWidth: '220px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13 }}
+                          placeholder="https://ejemplo.com/logo.png o pega URL"
+                          style={{ flex: 1, minWidth: '220px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, background: configForm.logo_url?.startsWith('data:') ? '#f1f5f9' : '#fff' }}
+                          disabled={configForm.logo_url?.startsWith('data:')}
                         />
                         <label style={{
                           padding: '8px 16px',
-                          background: '#fff',
-                          border: '1px solid #cbd5e1',
+                          background: '#4a6cf7',
+                          border: '1px solid #4a6cf7',
                           borderRadius: 8,
                           fontSize: 13,
                           fontWeight: 600,
                           cursor: 'pointer',
-                          color: '#334155',
+                          color: '#fff',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px'
@@ -2940,8 +2990,27 @@ export default function AdminPanel() {
                             style={{ display: 'none' }}
                           />
                         </label>
+                        {configForm.logo_url && (
+                          <button
+                            type="button"
+                            onClick={() => setConfigForm(prev => ({ ...prev, logo_url: '' }))}
+                            style={{
+                              padding: '8px 14px',
+                              background: '#fee2e2',
+                              border: '1px solid #fca5a5',
+                              borderRadius: 8,
+                              fontSize: 13,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              color: '#dc2626'
+                            }}
+                            title="Quitar logo"
+                          >
+                            🗑️ Quitar
+                          </button>
+                        )}
                       </div>
-                      <span style={{ fontSize: 11, color: '#94a3b8' }}>Formatos recomendados: PNG o SVG transparente. Tamaño máximo: 2MB.</span>
+                      <span style={{ fontSize: 11, color: '#94a3b8' }}>Formatos recomendados: PNG (con fondo transparente), JPG o SVG. Se optimiza y adapta automáticamente.</span>
                     </div>
                   )}
 

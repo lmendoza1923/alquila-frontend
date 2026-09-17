@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api';
 
 export const DEFAULT_CONFIG = {
@@ -53,7 +53,11 @@ export function ConfigProvider({ children }) {
       const merged = { ...config, ...newConfigValues };
       await api.put('/configuracion', merged);
       setConfig(merged);
-      localStorage.setItem('app_config', JSON.stringify(merged));
+      try {
+        localStorage.setItem('app_config', JSON.stringify(merged));
+      } catch (storageErr) {
+        console.warn('No se pudo guardar en localStorage (cuota excedida?):', storageErr);
+      }
       return { ok: true };
     } catch (err) {
       console.error('Error al guardar configuración:', err);
