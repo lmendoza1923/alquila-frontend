@@ -47,7 +47,7 @@ export default function Catalogo() {
   } = useCart();
 
   // Checkout states for Admin
-  const [form, setForm] = useState({ alias: '', nombre: '', telefono: '', direccion: '', notas: '' });
+  const [form, setForm] = useState({ alias: '', nombre: '', cedula: '', telefono: '', direccion: '', notas: '' });
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [servicios, setServicios] = useState([]);
   const [requiereTransporte, setRequiereTransporte] = useState(false);
@@ -114,6 +114,7 @@ export default function Catalogo() {
         fecha_fin: fechas.fin.toISOString().split('T')[0],
         alias_cliente: form.alias || null,
         nombre_cliente: form.nombre || null,
+        cedula_cliente: form.cedula ? form.cedula.trim() : null,
         email_cliente: null,
         telefono_cliente: form.telefono || null,
         direccion_entrega: form.direccion || null,
@@ -126,7 +127,7 @@ export default function Catalogo() {
       setCostoTransporte('');
       setRequiereDecoracion(false);
       setCostoDecoracion('');
-      setForm({ alias: '', nombre: '', telefono: '', direccion: '', notas: '' });
+      setForm({ alias: '', nombre: '', cedula: '', telefono: '', direccion: '', notas: '' });
       toast.success('Reserva creada exitosamente');
       navigate(`/confirmacion/${data.reserva.id}`);
     } catch (err) {
@@ -526,6 +527,10 @@ export default function Catalogo() {
                 <div>
                   <label style={s.label}>Nombre completo</label>
                   <input style={{ ...s.input, padding: '6px 10px', fontSize: 12, marginBottom: 0, width: '100%', boxSizing: 'border-box' }} value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Juan Pérez" />
+                </div>
+                <div>
+                  <label style={s.label}>Cédula (opcional)</label>
+                  <input style={{ ...s.input, padding: '6px 10px', fontSize: 12, marginBottom: 0, width: '100%', boxSizing: 'border-box' }} value={form.cedula} onChange={e => set('cedula', e.target.value)} placeholder="Opcional (Ej: 8-888-8888)" />
                 </div>
                 <div>
                   <label style={s.label}>Teléfono / WhatsApp</label>

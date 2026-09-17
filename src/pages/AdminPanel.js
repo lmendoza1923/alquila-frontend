@@ -1304,6 +1304,8 @@ export default function AdminPanel() {
       await api.patch(`/reservas/${id}/estado`, { estado });
       setReservas(prev => prev.map(r => r.id === id ? { ...r, estado } : r));
       toast.success('Estado actualizado');
+      api.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
+      api.get('/muebles?todos=true').then(r => setMuebles(r.data)).catch(() => {});
     } catch { toast.error('Error al actualizar'); }
   };
 
@@ -1572,6 +1574,10 @@ export default function AdminPanel() {
       {tab === 'reservas' && (() => {
         // Filtrar reservas según texto y estado
         const reservasFiltradas = reservas.filter(r => {
+          // En la pestaña de lista, no mostrar completadas a menos que se filtre explícitamente por 'completada'
+          if (vistaReservas === 'lista' && filtroEstadoReservas === 'todos' && r.estado === 'completada') {
+            return false;
+          }
           if (filtroEstadoReservas !== 'todos' && r.estado !== filtroEstadoReservas) return false;
           if (!filtroTextoReservas.trim()) return true;
           const query = filtroTextoReservas.toLowerCase().trim();
@@ -1740,11 +1746,11 @@ export default function AdminPanel() {
                     fontWeight: 500
                   }}
                 >
-                  <option value="todos">Todos los estados</option>
+                  <option value="todos">{vistaReservas === 'lista' ? 'Todos los estados (sin completadas)' : 'Todos los estados'}</option>
                   <option value="pendiente">Pendiente</option>
                   <option value="confirmada">Confirmada</option>
                   <option value="activa">Activa</option>
-                  <option value="completada">Completada</option>
+                  <option value="completada">Completada (historial)</option>
                   <option value="cancelada">Cancelada</option>
                 </select>
 
@@ -1790,17 +1796,30 @@ export default function AdminPanel() {
                             <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚</button>
                             <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️</button>
                             {r.estado !== 'cancelada' && r.estado !== 'completada' && (
-                              <button 
-                                onClick={() => {
-                                  if (window.confirm(`¿Estás seguro de que deseas cancelar la reserva de ${r.nombre_cliente}?`)) {
-                                    cambiarEstado(r.id, 'cancelada');
-                                  }
-                                }}
-                                style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
-                                title="Cancelar reserva"
-                              >
-                                Cancelar
-                              </button>
+                              <>
+                                <button 
+                                  onClick={() => {
+                                    if (window.confirm(`¿Marcar la reserva de ${r.nombre_cliente} como completada?`)) {
+                                      cambiarEstado(r.id, 'completada');
+                                    }
+                                  }}
+                                  style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#10b981', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+                                  title="Marcar como completada"
+                                >
+                                  ✓ Completar
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    if (window.confirm(`¿Estás seguro de que deseas cancelar la reserva de ${r.nombre_cliente}?`)) {
+                                      cambiarEstado(r.id, 'cancelada');
+                                    }
+                                  }}
+                                  style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+                                  title="Cancelar reserva"
+                                >
+                                  Cancelar
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -3521,9 +3540,18 @@ export default function AdminPanel() {
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Fin *</label>
                   <input type="date" value={editFechaFin} onChange={e => { const val = e.target.value; setEditFechaFin(val); setItemsEditando(prev => recalcularTotal(prev, null, val)); }} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required /></div>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Estado</label>
-                  <div style={{ padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, background: '#f8f9fa', color: '#555', fontWeight: 600, textTransform: 'uppercase', boxSizing: 'border-box', textAlign: 'center' }}>
-                    {editEstado}
-                  </div></div>
+                  <select 
+                    value={editEstado} 
+                    onChange={e => setEditEstado(e.target.value)} 
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, background: '#fff', color: '#333', fontWeight: 600, boxSizing: 'border-box' }}
+                  >
+                    <option value="pendiente">Pendiente</option>
+                    <option value="confirmada">Confirmada</option>
+                    <option value="activa">Activa</option>
+                    <option value="completada">Completada</option>
+                    <option value="cancelada">Cancelada</option>
+                  </select>
+                </div>
               </div>
 
               <div style={{ background: '#f8f9ff', borderRadius: 10, padding: '1.25rem', marginBottom: '1.25rem', border: '1px solid #eef2ff' }}>
