@@ -131,13 +131,22 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   .terms { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 8px; font-size: 8px; color: #475569; line-height: 1.3; white-space: pre-wrap; max-height: 90px; overflow: hidden; }
   .firma { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 14px; }
   .firma-box { border-top: 1px solid #94a3b8; padding-top: 3px; text-align: center; font-size: 9px; color: #475569; font-weight: 500; }
+  .no-print { display: flex; }
   @media print { 
+    .no-print { display: none !important; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .page { padding: 0; max-width: 100%; }
   }
 </style>
 </head>
 <body>
+<div class="no-print" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <span style="font-size:12px;font-weight:600;color:#475569;">Vista previa: Contrato de Alquiler</span>
+  <div style="display:flex;gap:8px;">
+    <button onclick="window.print()" style="padding:5px 12px;background:${empColor};color:#fff;border:none;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;">🖨️ Imprimir / Guardar PDF</button>
+    <button onclick="window.close()" style="padding:5px 10px;background:#e2e8f0;color:#334155;border:none;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;">✕ Cerrar</button>
+  </div>
+</div>
 <div class="page">
   <div class="header">
     <div class="logo">${logoHtml}<span>${empNombre}</span></div>
@@ -220,7 +229,6 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   const ventana = window.open('', '_blank');
   ventana.document.write(htmlContrato);
   ventana.document.close();
-  setTimeout(() => ventana.print(), 600);
 }
 
 // ─── Generador de Hoja de Entrega y Control (Sin Precios + Casillas Check) ────
@@ -332,13 +340,22 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
   .firma-card { border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 8px; background: #fff; }
   .firma-card-title { font-size: 8.5px; font-weight: 700; text-transform: uppercase; color: ${empColor}; border-bottom: 1px solid #f1f5f9; padding-bottom: 2px; margin-bottom: 10px; text-align: center; }
   .firma-linea { border-top: 1px solid #94a3b8; padding-top: 2px; text-align: center; font-size: 8.5px; color: #475569; margin-top: 14px; }
+  .no-print { display: flex; }
   @media print { 
+    .no-print { display: none !important; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .page { padding: 0; max-width: 100%; }
   }
 </style>
 </head>
 <body>
+<div class="no-print" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <span style="font-size:12px;font-weight:600;color:#475569;">Vista previa: Hoja de Entrega y Control de Mobiliario</span>
+  <div style="display:flex;gap:8px;">
+    <button onclick="window.print()" style="padding:5px 12px;background:${empColor};color:#fff;border:none;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;">🖨️ Imprimir / Guardar PDF</button>
+    <button onclick="window.close()" style="padding:5px 10px;background:#e2e8f0;color:#334155;border:none;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;">✕ Cerrar</button>
+  </div>
+</div>
 <div class="page">
   <div class="header">
     <div class="logo">${logoHtml}<span>${empNombre}</span></div>
@@ -441,7 +458,6 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
   const ventana = window.open('', '_blank');
   ventana.document.write(htmlHojaEntrega);
   ventana.document.close();
-  setTimeout(() => ventana.print(), 600);
 }
 
 // Helper dates for reports
