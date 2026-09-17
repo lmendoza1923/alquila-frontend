@@ -13,6 +13,14 @@ const formatFecha = (fechaStr, options) => {
   return date.toLocaleDateString('es', options);
 };
 
+const getFechaHoy = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // ─── Generador de Contrato PDF ───────────────────────────────────────────────
 function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosCombos, configEmpresa) {
   const totalPagado = pagos.reduce((s, p) => s + parseFloat(p.monto), 0);
@@ -619,6 +627,7 @@ export default function AdminPanel() {
   const [nuevoPagoMonto, setNuevoPagoMonto] = useState('');
   const [nuevoPagoMetodo, setNuevoPagoMetodo] = useState('efectivo');
   const [nuevoPagoNotas, setNuevoPagoNotas] = useState('');
+  const [nuevoPagoFecha, setNuevoPagoFecha] = useState(getFechaHoy());
   const [loadingPago, setLoadingPago] = useState(false);
 
   // Estados contrato PDF
@@ -1139,6 +1148,7 @@ export default function AdminPanel() {
     setNuevoPagoMonto('');
     setNuevoPagoMetodo('efectivo');
     setNuevoPagoNotas('');
+    setNuevoPagoFecha(getFechaHoy());
     try {
       const res = await api.get(`/pagos/reserva/${r.id}`);
       setPagosReserva(res.data.pagos);
@@ -1155,7 +1165,8 @@ export default function AdminPanel() {
         reserva_id: modalPagos.id,
         monto: parseFloat(nuevoPagoMonto),
         metodo: nuevoPagoMetodo,
-        notas: nuevoPagoNotas
+        notas: nuevoPagoNotas,
+        fecha: nuevoPagoFecha || getFechaHoy()
       });
       const nuevosPagos = [...pagosReserva, res.data];
       setPagosReserva(nuevosPagos);
@@ -1164,6 +1175,7 @@ export default function AdminPanel() {
       setSaldoPendiente(parseFloat(modalPagos.total) - nuevoTotal);
       setNuevoPagoMonto('');
       setNuevoPagoNotas('');
+      setNuevoPagoFecha(getFechaHoy());
       toast.success('Pago registrado');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error al registrar pago');
@@ -1183,7 +1195,8 @@ export default function AdminPanel() {
         reserva_id: modalPagos.id,
         monto: monto,
         metodo: nuevoPagoMetodo || 'efectivo',
-        notas: nuevoPagoNotas.trim() ? nuevoPagoNotas : 'Saldo cancelado / Pagado en su totalidad'
+        notas: nuevoPagoNotas.trim() ? nuevoPagoNotas : 'Saldo cancelado / Pagado en su totalidad',
+        fecha: nuevoPagoFecha || getFechaHoy()
       });
       const nuevosPagos = [...pagosReserva, res.data];
       setPagosReserva(nuevosPagos);
@@ -1192,6 +1205,7 @@ export default function AdminPanel() {
       setSaldoPendiente(parseFloat(modalPagos.total) - nuevoTotal);
       setNuevoPagoMonto('');
       setNuevoPagoNotas('');
+      setNuevoPagoFecha(getFechaHoy());
       api.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
       toast.success(`¡Saldo completado! Pago de $${monto.toFixed(2)} registrado.`);
     } catch (err) {
@@ -3653,7 +3667,7 @@ export default function AdminPanel() {
                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, color: '#22c55e' }}>+${parseFloat(p.monto).toFixed(2)}</div>
-                      <div style={{ fontSize: 12, color: '#888', textTransform: 'capitalize' }}>{p.metodo} · {new Date(p.creado_en).toLocaleDateString('es')}</div>
+                      <div style={{ fontSize: 12, color: '#888', textTransform: 'capitalize' }}>{p.metodo} · {formatFecha(p.creado_en)}</div>
                       {p.notes && <div style={{ fontSize: 12, color: '#aaa', fontStyle: 'italic' }}>{p.notes}</div>}
                     </div>
                     <button onClick={() => eliminarPago(p.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 16 }} title="Eliminar pago">🗑️</button>
@@ -3665,7 +3679,16 @@ export default function AdminPanel() {
             {/* Registrar nuevo pago */}
             <div style={{ background: '#f8f9ff', borderRadius: 10, padding: '1rem', border: '1px solid #eef2ff' }}>
               <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: '#1a1a2e' }}>Registrar pago / abono</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Fecha de pago *</label>
+                  <input
+                    type="date"
+                    value={nuevoPagoFecha}
+                    onChange={e => setNuevoPagoFecha(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13.5, background: '#fff', boxSizing: 'border-box' }}
+                  />
+                </div>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: '#555' }}>Monto ($) *</label>
@@ -3680,11 +3703,11 @@ export default function AdminPanel() {
                       </button>
                     )}
                   </div>
-                  <input type="number" step="0.01" min="0.01" value={nuevoPagoMonto} onChange={e => setNuevoPagoMonto(e.target.value)} placeholder="0.00" style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                  <input type="number" step="0.01" min="0.01" value={nuevoPagoMonto} onChange={e => setNuevoPagoMonto(e.target.value)} placeholder="0.00" style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }} />
                 </div>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Método</label>
-                  <select value={nuevoPagoMetodo} onChange={e => setNuevoPagoMetodo(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, background: '#fff', cursor: 'pointer' }}>
+                  <select value={nuevoPagoMetodo} onChange={e => setNuevoPagoMetodo(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13.5, background: '#fff', cursor: 'pointer' }}>
                     {['efectivo','transferencia','tarjeta','yappy','otro'].map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
