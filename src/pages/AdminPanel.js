@@ -3773,16 +3773,9 @@ export default function AdminPanel() {
                 <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Nota (opcional)</label>
                 <input type="text" value={nuevoPagoNotas} onChange={e => setNuevoPagoNotas(e.target.value)} placeholder="Ej. Abono inicial, pago final..." style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: saldoPendiente > 0 ? '1fr 1fr' : '1fr', gap: 10 }}>
-                <button onClick={registrarPago} disabled={loadingPago} style={{ width: '100%', padding: '10px', background: loadingPago ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingPago ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13.5 }}>
-                  {loadingPago ? 'Registrando...' : '✓ Registrar abono/pago'}
-                </button>
-                {saldoPendiente > 0 && (
-                  <button onClick={pagarSaldoCompleto} disabled={loadingPago} style={{ width: '100%', padding: '10px', background: loadingPago ? '#6ee7b7' : '#10b981', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingPago ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 13.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    {loadingPago ? 'Procesando...' : `✓ Pagado ($${saldoPendiente.toFixed(2)})`}
-                  </button>
-                )}
-              </div>
+              <button onClick={registrarPago} disabled={loadingPago} style={{ width: '100%', padding: '10px', background: loadingPago ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingPago ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13.5 }}>
+                {loadingPago ? 'Registrando...' : '✓ Registrar abono/pago'}
+              </button>
             </div>
           </div>
         </div>
