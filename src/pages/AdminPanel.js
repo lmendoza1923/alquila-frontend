@@ -945,19 +945,64 @@ export default function AdminPanel() {
     setMuebleSeleccionado('');
     setCantidadAgregar(1);
     setTipoArticuloAgregar('mueble');
+
+    // Carga diferida de componentes de combos si alguno no los tenía en memoria
+    items.forEach(async (it, index) => {
+      if (it.combo_id && (!it.componentes || it.componentes.length === 0)) {
+        try {
+          const res = await api.get(`/combos/${it.combo_id}`);
+          if (res.data && res.data.items && res.data.items.length > 0) {
+            const fetchedComps = res.data.items.map(ci => ({
+              mueble_id: ci.mueble_id,
+              nombre: ci.nombre,
+              cantidad: parseInt(ci.cantidad) || 1
+            }));
+            setItemsEditando(prev => prev.map((p, pIdx) => pIdx === index ? { ...p, componentes: fetchedComps } : p));
+          }
+        } catch (e) {
+          console.error('Error al cargar componentes del combo:', e);
+        }
+      }
+    });
   };
 
-  const agregarMuebleAReserva = () => {
+  const agregarMuebleAReserva = async () => {
     if (!muebleSeleccionado) return toast.error('Selecciona un artículo');
 
     if (tipoArticuloAgregar === 'combo') {
       const combo = combos.find(c => c.id === muebleSeleccionado);
       if (!combo) return;
+
+      // Obtener o derivar componentes del combo automáticamente
+      let rawItems = combo.items || [];
+      if (!rawItems.length) {
+        try {
+          const res = await api.get(`/combos/${combo.id}`);
+          if (res.data && res.data.items) {
+            rawItems = res.data.items;
+          }
+        } catch (e) {
+          console.error('Error cargando componentes del combo:', e);
+        }
+      }
+
+      const comboComps = rawItems.map(ci => ({
+        mueble_id: ci.mueble_id,
+        nombre: ci.nombre,
+        cantidad: parseInt(ci.cantidad) || 1
+      }));
+
       const yaExiste = itemsEditando.find(i => i.combo_id === muebleSeleccionado);
       let nuevosItems;
       if (yaExiste) {
         nuevosItems = itemsEditando.map(i =>
-          i.combo_id === muebleSeleccionado ? { ...i, cantidad: i.cantidad + cantidadAgregar } : i
+          i.combo_id === muebleSeleccionado 
+            ? { 
+                ...i, 
+                cantidad: i.cantidad + cantidadAgregar,
+                componentes: (i.componentes && i.componentes.length > 0) ? i.componentes : comboComps
+              } 
+            : i
         );
       } else {
         nuevosItems = [...itemsEditando, {
@@ -966,14 +1011,15 @@ export default function AdminPanel() {
           nombre: combo.nombre,
           cantidad: cantidadAgregar,
           precio_unitario: parseFloat(combo.precio_dia || 0),
-          subtotal: parseFloat(combo.precio_dia || 0) * cantidadAgregar
+          subtotal: parseFloat(combo.precio_dia || 0) * cantidadAgregar,
+          componentes: comboComps
         }];
       }
       setItemsEditando(nuevosItems);
       recalcularTotal(nuevosItems);
       setMuebleSeleccionado('');
       setCantidadAgregar(1);
-      toast.success(`Combo "${combo.nombre}" agregado`);
+      toast.success(`Combo "${combo.nombre}" agregado con todo su mobiliario`);
     } else {
       const mueble = muebles.find(m => m.id === muebleSeleccionado);
       if (!mueble) return;
@@ -1131,6 +1177,15 @@ export default function AdminPanel() {
     if (itemsEditando.length === 0) return toast.error('La reserva debe tener al menos un artículo');
     setLoadingEdit(true);
     try {
+      const formattedItems = itemsEditando.map(i => ({ 
+        mueble_id: i.mueble_id || null, 
+        combo_id: i.combo_id || null, 
+        cantidad: i.cantidad,
+        nombre: (!i.mueble_id && !i.combo_id) ? i.nombre : null,
+        precio_unitario: i.precio_unitario !== undefined && i.precio_unitario !== null ? parseFloat(i.precio_unitario) : null,
+        componentes: i.combo_id ? (i.componentes || []) : null
+      }));
+
       const payload = {
         alias_cliente: editAlias.trim(),
         nombre_cliente: editNombre.trim(),
@@ -1143,32 +1198,13 @@ export default function AdminPanel() {
         fecha_inicio: editFechaInicio,
         fecha_fin: editFechaFin,
         total: parseFloat(editTotal) || 0,
-        estado: editEstado
+        estado: editEstado,
+        items: formattedItems
       };
       await api.put(`/reservas/${reservaEditando.id}`, payload);
-      await api.put(`/reservas/${reservaEditando.id}/items`, {
-        items: itemsEditando.map(i => ({ 
-          mueble_id: i.mueble_id || null, 
-          combo_id: i.combo_id || null, 
-          cantidad: i.cantidad,
-          nombre: (!i.mueble_id && !i.combo_id) ? i.nombre : null,
-          precio_unitario: i.precio_unitario !== undefined && i.precio_unitario !== null ? parseFloat(i.precio_unitario) : null,
-          componentes: i.combo_id ? i.componentes : null
-        }))
-      });
       toast.success('Reserva actualizada correctamente');
-      setReservas(prev => prev.map(r => r.id === reservaEditando.id ? {
-        ...r, ...payload,
-        items: itemsEditando.map(i => ({ 
-          mueble_id: i.mueble_id, 
-          combo_id: i.combo_id, 
-          mueble: i.nombre, 
-          cantidad: i.cantidad, 
-          precio_unitario: i.precio_unitario,
-          subtotal: i.subtotal,
-          componentes: i.componentes || []
-        }))
-      } : r));
+      const resReservas = await api.get('/reservas');
+      setReservas(resReservas.data);
       setReservaEditando(null);
       api.get('/admin/stats').then(r => setStats(r.data));
       api.get('/muebles?todos=true').then(r => setMuebles(r.data));
