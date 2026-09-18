@@ -2606,74 +2606,254 @@ export default function AdminPanel() {
           ) : reportesData ? (
             <>
               {/* Tarjetas de Métricas Clave */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
-                <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                  <div style={{ fontSize: '2.5rem', background: '#eef2ff', padding: '10px', borderRadius: 12 }}>📋</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+                {/* Total Bruto en Reservas */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.25rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid #4a6cf7' }}>
+                  <div style={{ fontSize: '2.2rem', background: '#eef2ff', padding: '10px', borderRadius: 12 }}>💼</div>
                   <div>
-                    <div style={{ color: '#888', fontSize: 13, fontWeight: 600 }}>Reservas del Período</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1a1a2e', marginTop: 4 }}>{reportesData.total_reservas}</div>
+                    <div style={{ color: '#64748b', fontSize: 12, fontWeight: 600 }}>Total Bruto Reservas</div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#1a1a2e', marginTop: 2 }}>
+                      ${(reportesData.total_bruto_reservas ?? reportesData.total_ingresos ?? 0).toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#4a6cf7', fontWeight: 500, marginTop: 2 }}>Valor total contratado</div>
                   </div>
                 </div>
-                <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                  <div style={{ fontSize: '2.5rem', background: '#ecfdf5', padding: '10px', borderRadius: 12 }}>💰</div>
+
+                {/* Ingresos Recibidos */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.25rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid #10b981' }}>
+                  <div style={{ fontSize: '2.2rem', background: '#ecfdf5', padding: '10px', borderRadius: 12 }}>💰</div>
                   <div>
-                    <div style={{ color: '#888', fontSize: 13, fontWeight: 600 }}>Ingresos Recibidos</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#10b981', marginTop: 4 }}>${reportesData.total_ingresos.toFixed(2)}</div>
+                    <div style={{ color: '#64748b', fontSize: 12, fontWeight: 600 }}>Ingresos Recibidos</div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#10b981', marginTop: 2 }}>
+                      ${(reportesData.total_ingresos || 0).toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#059669', fontWeight: 500, marginTop: 2 }}>
+                      {((reportesData.porcentaje_recaudado ?? (reportesData.total_bruto_reservas > 0 ? (reportesData.total_ingresos / reportesData.total_bruto_reservas) * 100 : 0)) || 0).toFixed(1)}% recaudado
+                    </div>
                   </div>
                 </div>
-                <div style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                  <div style={{ fontSize: '2.5rem', background: '#fff7ed', padding: '10px', borderRadius: 12 }}>🪑</div>
+
+                {/* Saldo Pendiente */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.25rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid #f59e0b' }}>
+                  <div style={{ fontSize: '2.2rem', background: '#fffbeb', padding: '10px', borderRadius: 12 }}>⏳</div>
                   <div>
-                    <div style={{ color: '#888', fontSize: 13, fontWeight: 600 }}>Artículos Alquilados</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#f97316', marginTop: 4 }}>{reportesData.total_articulos} <span style={{ fontSize: 12, fontWeight: 400, color: '#666' }}>unidades</span></div>
+                    <div style={{ color: '#64748b', fontSize: 12, fontWeight: 600 }}>Saldo Pendiente</div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#d97706', marginTop: 2 }}>
+                      ${(reportesData.saldo_pendiente ?? Math.max(0, (reportesData.total_bruto_reservas || 0) - (reportesData.total_ingresos || 0))).toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#b45309', fontWeight: 500, marginTop: 2 }}>Por cobrar en eventos</div>
+                  </div>
+                </div>
+
+                {/* Reservas del Período */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.25rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid #8b5cf6' }}>
+                  <div style={{ fontSize: '2.2rem', background: '#f5f3ff', padding: '10px', borderRadius: 12 }}>📋</div>
+                  <div>
+                    <div style={{ color: '#64748b', fontSize: 12, fontWeight: 600 }}>Reservas del Período</div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#6d28d9', marginTop: 2 }}>{reportesData.total_reservas}</div>
+                    <div style={{ fontSize: 11, color: '#8b5cf6', fontWeight: 500, marginTop: 2 }}>Eventos contratados</div>
+                  </div>
+                </div>
+
+                {/* Artículos Alquilados */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: '1.25rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid #f97316' }}>
+                  <div style={{ fontSize: '2.2rem', background: '#fff7ed', padding: '10px', borderRadius: 12 }}>🪑</div>
+                  <div>
+                    <div style={{ color: '#64748b', fontSize: 12, fontWeight: 600 }}>Artículos Alquilados</div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#ea580c', marginTop: 2 }}>
+                      {reportesData.total_articulos} <span style={{ fontSize: 12, fontWeight: 400, color: '#666' }}>uds</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#f97316', fontWeight: 500, marginTop: 2 }}>Mobiliario solicitado</div>
                   </div>
                 </div>
               </div>
 
-              {/* Desglose de Facturación / Ingresos por Categoría */}
+              {/* Desglose de Facturación y Comparativa de Reservas */}
               {reportesData.desglose && (
                 <div style={{ marginTop: '1.5rem', background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '1.5rem' }}>
-                  <h3 style={{ marginTop: 0, marginBottom: '1.25rem', color: '#1a1a2e', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    📊 Desglose de Ingresos Reservados (Ganancias por Categoría)
-                  </h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
-                    <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                      <div style={{ color: '#64748b', fontSize: 12, fontWeight: 600 }}>Total Reservado</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#4a6cf7', marginTop: 6 }}>
-                        ${reportesData.desglose.total_reservado.toFixed(2)}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Valor total contratado</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+                    <div>
+                      <h3 style={{ marginTop: 0, marginBottom: '4px', color: '#1a1a2e', fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        📊 Comparativa: Total Bruto de Reservas vs. Ingresos Recibidos
+                      </h3>
+                      <p style={{ margin: 0, color: '#64748b', fontSize: 13 }}>
+                        Compara el monto total contratado en reservas contra lo cobrado efectivamente y cómo se distribuye entre Mobiliario, Transporte y Decoración.
+                      </p>
                     </div>
-                    <div style={{ background: '#f0fdf4', padding: '1.25rem', borderRadius: 10, border: '1px solid #bbf7d0' }}>
-                      <div style={{ color: '#166534', fontSize: 12, fontWeight: 600 }}>Mobiliario Reservado</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#15803d', marginTop: 6 }}>
-                        ${reportesData.desglose.mobiliario.toFixed(2)}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#16a34a', marginTop: 4 }}>Mobiliario y combos</div>
-                    </div>
-                    <div style={{ background: '#fef2f2', padding: '1.25rem', borderRadius: 10, border: '1px solid #fecaca' }}>
-                      <div style={{ color: '#991b1b', fontSize: 12, fontWeight: 600 }}>Fletes / Transporte</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#b91c1c', marginTop: 6 }}>
-                        ${reportesData.desglose.transporte.toFixed(2)}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>Envíos y retornos</div>
-                    </div>
-                    <div style={{ background: '#fffbeb', padding: '1.25rem', borderRadius: 10, border: '1px solid #fef3c7' }}>
-                      <div style={{ color: '#92400e', fontSize: 12, fontWeight: 600 }}>Decoración</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#b45309', marginTop: 6 }}>
-                        ${reportesData.desglose.decoracion.toFixed(2)}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#d97706', marginTop: 4 }}>Servicios de decoración</div>
-                    </div>
-                    {reportesData.desglose.otros > 0 && (
-                      <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                        <div style={{ color: '#475569', fontSize: 12, fontWeight: 600 }}>Otros Servicios</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#334155', marginTop: 6 }}>
-                          ${reportesData.desglose.otros.toFixed(2)}
+
+                    {/* Resumen con barra de progreso */}
+                    {(() => {
+                      const totalBruto = reportesData.total_bruto_reservas ?? reportesData.total_ingresos ?? 0;
+                      const totalRecibido = reportesData.total_ingresos ?? 0;
+                      const pct = totalBruto > 0 ? Math.min(100, (totalRecibido / totalBruto) * 100) : 0;
+                      return (
+                        <div style={{ background: '#f8fafc', padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', minWidth: 240 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 4 }}>
+                            <span>Progreso de Recaudación</span>
+                            <span style={{ color: '#10b981' }}>{pct.toFixed(1)}%</span>
+                          </div>
+                          <div style={{ background: '#e2e8f0', borderRadius: 99, height: 8, overflow: 'hidden' }}>
+                            <div style={{ background: 'linear-gradient(90deg, #4a6cf7 0%, #10b981 100%)', width: `${pct}%`, height: '100%', borderRadius: 99 }} />
+                          </div>
                         </div>
-                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Servicios no clasificados</div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Tarjetas Comparativas por Categoría */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                    {/* Total General */}
+                    <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: 10, border: '1px solid #cbd5e1' }}>
+                      <div style={{ color: '#475569', fontSize: 12, fontWeight: 700 }}>💼 Total Reservado (Bruto)</div>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#1e293b', marginTop: 6 }}>
+                        ${(reportesData.total_bruto_reservas ?? reportesData.total_ingresos ?? 0).toFixed(2)}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#64748b', marginTop: 8, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
+                        <span>Recibido: <strong style={{ color: '#10b981' }}>${(reportesData.total_ingresos || 0).toFixed(2)}</strong></span>
+                        <span>Pendiente: <strong style={{ color: '#d97706' }}>${(reportesData.saldo_pendiente ?? Math.max(0, (reportesData.total_bruto_reservas || 0) - (reportesData.total_ingresos || 0))).toFixed(2)}</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Mobiliario */}
+                    <div style={{ background: '#f0fdf4', padding: '1.25rem', borderRadius: 10, border: '1px solid #bbf7d0' }}>
+                      <div style={{ color: '#166534', fontSize: 12, fontWeight: 700 }}>🪑 Mobiliario y Combos</div>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#15803d', marginTop: 6 }}>
+                        ${(reportesData.desglose.mobiliario || 0).toFixed(2)}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#166534', marginTop: 8, paddingTop: 8, borderTop: '1px solid #bbf7d0' }}>
+                        <span>Cobrado</span>
+                        <span>En reservas: <strong>${(reportesData.desglose_bruto?.mobiliario ?? reportesData.desglose.mobiliario).toFixed(2)}</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Fletes / Transporte */}
+                    <div style={{ background: '#fef2f2', padding: '1.25rem', borderRadius: 10, border: '1px solid #fecaca' }}>
+                      <div style={{ color: '#991b1b', fontSize: 12, fontWeight: 700 }}>🚚 Fletes / Transporte</div>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#b91c1c', marginTop: 6 }}>
+                        ${(reportesData.desglose.transporte || 0).toFixed(2)}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#991b1b', marginTop: 8, paddingTop: 8, borderTop: '1px solid #fecaca' }}>
+                        <span>Cobrado</span>
+                        <span>En reservas: <strong>${(reportesData.desglose_bruto?.transporte ?? reportesData.desglose.transporte).toFixed(2)}</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Decoración */}
+                    <div style={{ background: '#fffbeb', padding: '1.25rem', borderRadius: 10, border: '1px solid #fef3c7' }}>
+                      <div style={{ color: '#92400e', fontSize: 12, fontWeight: 700 }}>✨ Decoración</div>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#b45309', marginTop: 6 }}>
+                        ${(reportesData.desglose.decoracion || 0).toFixed(2)}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#92400e', marginTop: 8, paddingTop: 8, borderTop: '1px solid #fef3c7' }}>
+                        <span>Cobrado</span>
+                        <span>En reservas: <strong>${(reportesData.desglose_bruto?.decoracion ?? reportesData.desglose.decoracion).toFixed(2)}</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Otros (si existen) */}
+                    {((reportesData.desglose.otros > 0) || (reportesData.desglose_bruto?.otros > 0)) && (
+                      <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                        <div style={{ color: '#475569', fontSize: 12, fontWeight: 700 }}>📦 Otros Servicios</div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#334155', marginTop: 6 }}>
+                          ${(reportesData.desglose.otros || 0).toFixed(2)}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569', marginTop: 8, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
+                          <span>Cobrado</span>
+                          <span>En reservas: <strong>${(reportesData.desglose_bruto?.otros ?? reportesData.desglose.otros).toFixed(2)}</strong></span>
+                        </div>
                       </div>
                     )}
+                  </div>
+
+                  {/* Tabla Comparativa Detallada */}
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', color: '#475569', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                          <th style={{ padding: '10px 14px', fontWeight: 600 }}>Categoría / Concepto</th>
+                          <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>Total en Reservas (Bruto)</th>
+                          <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>Ingresos Recibidos (Cobrado)</th>
+                          <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>Saldo Pendiente</th>
+                          <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>% Cobrado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const desgBruto = reportesData.desglose_bruto || {
+                            mobiliario: reportesData.desglose.mobiliario,
+                            transporte: reportesData.desglose.transporte,
+                            decoracion: reportesData.desglose.decoracion,
+                            otros: reportesData.desglose.otros || 0
+                          };
+                          const rows = [
+                            {
+                              nombre: '🪑 Mobiliario y Combos',
+                              bruto: desgBruto.mobiliario,
+                              recibido: reportesData.desglose.mobiliario,
+                              color: '#15803d'
+                            },
+                            {
+                              nombre: '🚚 Fletes / Transporte',
+                              bruto: desgBruto.transporte,
+                              recibido: reportesData.desglose.transporte,
+                              color: '#b91c1c'
+                            },
+                            {
+                              nombre: '✨ Servicios de Decoración',
+                              bruto: desgBruto.decoracion,
+                              recibido: reportesData.desglose.decoracion,
+                              color: '#b45309'
+                            }
+                          ];
+                          if (desgBruto.otros > 0 || (reportesData.desglose.otros && reportesData.desglose.otros > 0)) {
+                            rows.push({
+                              nombre: '📦 Otros Servicios',
+                              bruto: desgBruto.otros || 0,
+                              recibido: reportesData.desglose.otros || 0,
+                              color: '#334155'
+                            });
+                          }
+
+                          const totalBrutoGen = reportesData.total_bruto_reservas ?? reportesData.total_ingresos ?? 0;
+                          const totalRecibidoGen = reportesData.total_ingresos ?? 0;
+                          const saldoPendienteGen = reportesData.saldo_pendiente ?? Math.max(0, totalBrutoGen - totalRecibidoGen);
+                          const pctGen = totalBrutoGen > 0 ? (totalRecibidoGen / totalBrutoGen) * 100 : 0;
+
+                          return (
+                            <>
+                              {rows.map((r, i) => {
+                                const pendiente = Math.max(0, r.bruto - r.recibido);
+                                const pct = r.bruto > 0 ? (r.recibido / r.bruto) * 100 : 0;
+                                return (
+                                  <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={{ padding: '10px 14px', fontWeight: 600, color: '#1e293b' }}>{r.nombre}</td>
+                                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#1e293b' }}>${r.bruto.toFixed(2)}</td>
+                                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 600, color: r.color }}>${r.recibido.toFixed(2)}</td>
+                                    <td style={{ padding: '10px 14px', textAlign: 'right', color: pendiente > 0 ? '#d97706' : '#10b981', fontWeight: pendiente > 0 ? 600 : 400 }}>
+                                      ${pendiente.toFixed(2)}
+                                    </td>
+                                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b' }}>
+                                      {pct.toFixed(1)}%
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              <tr style={{ background: '#f8fafc', borderTop: '2px solid #cbd5e1', fontWeight: 700 }}>
+                                <td style={{ padding: '12px 14px', color: '#1e293b' }}>Total General</td>
+                                <td style={{ padding: '12px 14px', textAlign: 'right', color: '#4a6cf7' }}>${totalBrutoGen.toFixed(2)}</td>
+                                <td style={{ padding: '12px 14px', textAlign: 'right', color: '#10b981' }}>${totalRecibidoGen.toFixed(2)}</td>
+                                <td style={{ padding: '12px 14px', textAlign: 'right', color: saldoPendienteGen > 0 ? '#d97706' : '#10b981' }}>
+                                  ${saldoPendienteGen.toFixed(2)}
+                                </td>
+                                <td style={{ padding: '12px 14px', textAlign: 'right', color: '#1e293b' }}>
+                                  {pctGen.toFixed(1)}%
+                                </td>
+                              </tr>
+                            </>
+                          );
+                        })()}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
