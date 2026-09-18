@@ -46,6 +46,14 @@ export default function Carrito() {
   const totalServicios = servicios.reduce((sum, s) => sum + (parseFloat(s.precio_unitario || 0) * (parseInt(s.cantidad) || 1)), 0);
   const totalReserva = parseFloat(calcularTotal()) + totalServicios + totalTransporte + totalDecoracion;
 
+  const formatearFecha = (d) => {
+    if (!d) return null;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const confirmar = async () => {
     if (!fechas.inicio || !fechas.fin) { toast.error('Selecciona fechas en el catálogo'); return; }
     if (!items.length) { toast.error('El carrito está vacío'); return; }
@@ -82,8 +90,8 @@ export default function Carrito() {
       }
 
       const { data } = await api.post('/reservas', {
-        fecha_inicio: fechas.inicio.toISOString().split('T')[0],
-        fecha_fin: fechas.fin.toISOString().split('T')[0],
+        fecha_inicio: formatearFecha(fechas.inicio),
+        fecha_fin: formatearFecha(fechas.fin),
         alias_cliente: form.alias || null,
         nombre_cliente: form.nombre || null,
         cedula_cliente: form.cedula ? form.cedula.trim() : null,

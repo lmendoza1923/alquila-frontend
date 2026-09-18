@@ -74,6 +74,14 @@ export default function Catalogo() {
   const totalServicios = servicios.reduce((sum, s) => sum + (parseFloat(s.precio_unitario || 0) * (parseInt(s.cantidad) || 1)), 0);
   const totalReserva = parseFloat(calcularTotal()) + totalServicios + totalTransporte + totalDecoracion;
 
+  const formatearFecha = (d) => {
+    if (!d) return null;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const confirmarReservaAdmin = async () => {
     if (!fechas.inicio || !fechas.fin) { toast.error('Selecciona fechas en el calendario primero'); return; }
     if (!items.length) { toast.error('Agrega al menos un artículo a la reserva'); return; }
@@ -110,8 +118,8 @@ export default function Catalogo() {
       }
 
       const { data } = await api.post('/reservas', {
-        fecha_inicio: fechas.inicio.toISOString().split('T')[0],
-        fecha_fin: fechas.fin.toISOString().split('T')[0],
+        fecha_inicio: formatearFecha(fechas.inicio),
+        fecha_fin: formatearFecha(fechas.fin),
         alias_cliente: form.alias || null,
         nombre_cliente: form.nombre || null,
         cedula_cliente: form.cedula ? form.cedula.trim() : null,
@@ -138,18 +146,28 @@ export default function Catalogo() {
   };
 
   useEffect(() => {
-    cargar();
-  }, []);
+    cargar(busqueda, fechas.inicio, fechas.fin);
+  }, [fechas.inicio, fechas.fin]);
 
-  const cargar = async (bus = '') => {
+  const cargar = async (bus = '', inicio = fechas.inicio, fin = fechas.fin) => {
     setLoading(true);
     try {
-      const params = {};
-      if (bus) params.busqueda = bus;
+      const paramsMuebles = {};
+      const paramsCombos = {};
+      if (bus) paramsMuebles.busqueda = bus;
       
+      if (inicio && fin) {
+        const fIni = formatearFecha(inicio);
+        const fFin = formatearFecha(fin);
+        paramsMuebles.fecha_inicio = fIni;
+        paramsMuebles.fecha_fin = fFin;
+        paramsCombos.fecha_inicio = fIni;
+        paramsCombos.fecha_fin = fFin;
+      }
+
       const [mueblesRes, combosRes] = await Promise.all([
-        api.get('/muebles', { params }),
-        api.get('/combos')
+        api.get('/muebles', { params: paramsMuebles }),
+        api.get('/combos', { params: paramsCombos })
       ]);
 
       setMuebles(mueblesRes.data);
@@ -165,7 +183,7 @@ export default function Catalogo() {
 
   const filtrar = (e) => {
     e.preventDefault();
-    cargar(busqueda);
+    cargar(busqueda, fechas.inicio, fechas.fin);
   };
 
   const calcularStockCombo = (combo) => {
@@ -252,6 +270,17 @@ export default function Catalogo() {
                 {Math.ceil((fechas.fin - fechas.inicio) / 86400000) + 1} días
               </div>
             )}
+            <div style={{ width: '100%', marginTop: 6 }}>
+              {fechas.inicio && fechas.fin ? (
+                <div style={{ fontSize: 13, color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>✓</span> Mostrando disponibilidad exacta para {fechas.inicio.toLocaleDateString()} al {fechas.fin.toLocaleDateString()}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: '#4338ca', background: '#e0e7ff', padding: '6px 12px', borderRadius: 6, display: 'inline-block' }}>
+                  💡 Selecciona fechas para consultar la disponibilidad en tiempo real para tu evento.
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Selector de Vistas / Pestañas */}
