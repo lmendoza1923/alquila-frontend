@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
-import { useConfig, DEFAULT_CONFIG } from '../context/ConfigContext';
+import { useConfig, DEFAULT_CONFIG, normalizarMetodosPago, formatearMetodosPagoTexto } from '../context/ConfigContext';
 
 const estadoColor = { pendiente: '#f59e0b', confirmada: '#3b82f6', activa: '#22c55e', completada: '#6b7280', cancelada: '#ef4444' };
 
@@ -73,7 +73,8 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   const empTelefono = configEmpresa?.telefono_contacto?.trim() || '';
   const empEmail = configEmpresa?.email_contacto?.trim() || '';
   const empInstagram = configEmpresa?.instagram_empresa?.trim() || '';
-  const empMetodosPago = configEmpresa?.metodos_pago?.trim() || '';
+  const metodosPagoTexto = formatearMetodosPagoTexto(configEmpresa?.metodos_pago);
+  const empMetodosPago = metodosPagoTexto || (typeof configEmpresa?.metodos_pago === 'string' ? configEmpresa.metodos_pago.trim() : '');
   const empSitioWeb = configEmpresa?.sitio_web?.trim() || '';
 
   const lineasEmpresa = [];
@@ -745,6 +746,218 @@ const isReservaActiveOnDate = (reserva, dateStr) => {
   const endStr = reserva.fecha_fin ? reserva.fecha_fin.substring(0, 10) : startStr;
   return dateStr >= startStr && dateStr <= endStr;
 };
+
+// ─── Editor de Métodos de Pago Dinámicos ──────────────────────────────────────
+function MetodosPagoEditor({ metodos, onChange, colorPrimario }) {
+  const lista = normalizarMetodosPago(metodos);
+
+  const presets = [
+    { nombre: 'Yappy', detallePlaceholder: 'Ej: +507 6778-7190 (Directorio Comercial)', icon: '📱' },
+    { nombre: 'Banco General', detallePlaceholder: 'Ej: Cta. Ahorros #04-72-98-... Titular: Juan Pérez', icon: '🏦' },
+    { nombre: 'BAC Credomatic', detallePlaceholder: 'Ej: Cta. Corriente #... Titular: Empresa S.A.', icon: '🏛️' },
+    { nombre: 'Efectivo', detallePlaceholder: 'Ej: Contra entrega o en tienda física', icon: '💵' },
+    { nombre: 'Tarjeta de Crédito / Clave', detallePlaceholder: 'Ej: Punto de venta / Link de pago', icon: '💳' },
+  ];
+
+  const handleAgregar = (nombre = '', detallePlaceholder = '') => {
+    const nuevo = {
+      id: 'mp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      nombre,
+      detalle: ''
+    };
+    onChange([...lista, nuevo]);
+  };
+
+  const handleModificar = (id, campo, valor) => {
+    const updated = lista.map(m => m.id === id ? { ...m, [campo]: valor } : m);
+    onChange(updated);
+  };
+
+  const handleEliminar = (id) => {
+    const updated = lista.filter(m => m.id !== id);
+    onChange(updated);
+  };
+
+  const getIcon = (nombre = '') => {
+    const n = nombre.toLowerCase();
+    if (n.includes('yappy') || n.includes('nequi')) return '📱';
+    if (n.includes('banco') || n.includes('general') || n.includes('bac') || n.includes('banistmo') || n.includes('transferencia') || n.includes('ach')) return '🏦';
+    if (n.includes('efectivo')) return '💵';
+    if (n.includes('tarjeta') || n.includes('visa') || n.includes('mastercard') || n.includes('clave')) return '💳';
+    return '💳';
+  };
+
+  return (
+    <div style={{
+      gridColumn: '1 / -1',
+      background: '#f8fafc',
+      border: '1px solid #cbd5e1',
+      borderRadius: 10,
+      padding: '16px',
+      marginTop: '4px'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13.5, color: '#1e293b' }}>
+            <span>💳</span> Métodos de Pago Aceptados
+          </label>
+          <span style={{ fontSize: 12, color: '#64748b' }}>
+            Agrega una o más opciones de pago. Aparecerán en el contrato y en la lista de abonos.
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => handleAgregar()}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '7px 14px',
+            background: colorPrimario || '#4a6cf7',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 7,
+            fontSize: 12.5,
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}
+        >
+          <span>➕</span> Agregar método
+        </button>
+      </div>
+
+      {/* Botones de atajos rápidos */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: '#64748b' }}>Atajos rápidos:</span>
+        {presets.map(p => (
+          <button
+            key={p.nombre}
+            type="button"
+            onClick={() => handleAgregar(p.nombre, p.detallePlaceholder)}
+            style={{
+              padding: '4px 10px',
+              fontSize: 11.5,
+              fontWeight: 600,
+              background: '#fff',
+              border: '1px solid #cbd5e1',
+              borderRadius: 6,
+              color: '#334155',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              transition: 'background 0.15s ease'
+            }}
+            title={`Agregar método ${p.nombre}`}
+          >
+            <span>{p.icon}</span>
+            <span>+ {p.nombre}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Lista de métodos */}
+      {lista.length === 0 ? (
+        <div style={{
+          textAlign: 'center',
+          padding: '20px 16px',
+          background: '#fff',
+          border: '1px dashed #cbd5e1',
+          borderRadius: 8,
+          color: '#64748b',
+          fontSize: 12.5
+        }}>
+          <div>💳 No has agregado métodos de pago aún.</div>
+          <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 4 }}>
+            Usa los atajos de arriba o haz clic en <strong>➕ Agregar método</strong> para registrar tus cuentas o formas de cobro.
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {lista.map((item, idx) => (
+            <div
+              key={item.id || idx}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(140px, 200px) 1fr 36px',
+                gap: 8,
+                alignItems: 'center',
+                background: '#fff',
+                padding: '8px 10px',
+                borderRadius: 8,
+                border: '1px solid #cbd5e1',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+              }}
+            >
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 14 }}>
+                  {getIcon(item.nombre)}
+                </span>
+                <input
+                  type="text"
+                  value={item.nombre}
+                  onChange={e => handleModificar(item.id, 'nombre', e.target.value)}
+                  placeholder="Método (ej: Yappy)"
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px 8px 30px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    boxSizing: 'border-box',
+                    fontWeight: 600,
+                    color: '#1e293b'
+                  }}
+                />
+              </div>
+
+              <div>
+                <input
+                  type="text"
+                  value={item.detalle}
+                  onChange={e => handleModificar(item.id, 'detalle', e.target.value)}
+                  placeholder="Detalles / Número / Cuenta (ej: +507 6778-7190 o No. de cuenta y titular)"
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    boxSizing: 'border-box',
+                    color: '#334155'
+                  }}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleEliminar(item.id)}
+                title="Eliminar método"
+                style={{
+                  height: 34,
+                  width: 34,
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: 6,
+                  color: '#ef4444',
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0
+                }}
+              >
+                🗑️
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function AdminPanel() {
@@ -1880,19 +2093,6 @@ export default function AdminPanel() {
 
               <div>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 5 }}>
-                  💳 Métodos de Pago
-                </label>
-                <input
-                  type="text"
-                  value={configForm.metodos_pago || ''}
-                  onChange={e => setConfigForm({ ...configForm, metodos_pago: e.target.value })}
-                  placeholder="Ej: Yappy / Efectivo / Banco General"
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 5 }}>
                   🌐 Sitio Web / Enlace (Opcional)
                 </label>
                 <input
@@ -1903,6 +2103,12 @@ export default function AdminPanel() {
                   style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }}
                 />
               </div>
+
+              <MetodosPagoEditor
+                metodos={configForm.metodos_pago}
+                onChange={(nuevosMetodos) => setConfigForm({ ...configForm, metodos_pago: nuevosMetodos })}
+                colorPrimario={configForm.color_primario}
+              />
             </div>
 
             {/* Vista Previa del Membrete */}
@@ -1924,11 +2130,11 @@ export default function AdminPanel() {
                 {configForm.instagram_empresa?.trim() && (
                   <div>{configForm.instagram_empresa.toLowerCase().startsWith('instagram') ? configForm.instagram_empresa : `Instagram: ${configForm.instagram_empresa}`}</div>
                 )}
-                {configForm.metodos_pago?.trim() && (
-                  <div>{configForm.metodos_pago.toLowerCase().includes('pago') ? configForm.metodos_pago : `Métodos de pago: ${configForm.metodos_pago}`}</div>
+                {formatearMetodosPagoTexto(configForm.metodos_pago) && (
+                  <div>{formatearMetodosPagoTexto(configForm.metodos_pago).toLowerCase().includes('pago') ? formatearMetodosPagoTexto(configForm.metodos_pago) : `Métodos de pago: ${formatearMetodosPagoTexto(configForm.metodos_pago)}`}</div>
                 )}
                 {configForm.sitio_web?.trim() && <div>{configForm.sitio_web.trim()}</div>}
-                {!configForm.direccion_empresa?.trim() && !configForm.telefono_contacto?.trim() && !configForm.email_contacto?.trim() && !configForm.instagram_empresa?.trim() && !configForm.metodos_pago?.trim() && !configForm.sitio_web?.trim() && (
+                {!configForm.direccion_empresa?.trim() && !configForm.telefono_contacto?.trim() && !configForm.email_contacto?.trim() && !configForm.instagram_empresa?.trim() && !formatearMetodosPagoTexto(configForm.metodos_pago) && !configForm.sitio_web?.trim() && (
                   <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>Sin datos adicionales ingresados (no se mostrarán espacios vacíos)</div>
                 )}
               </div>
@@ -3803,19 +4009,6 @@ export default function AdminPanel() {
 
                   <div>
                     <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
-                      Métodos de Pago
-                    </label>
-                    <input
-                      type="text"
-                      value={configForm.metodos_pago || ''}
-                      onChange={e => setConfigForm({ ...configForm, metodos_pago: e.target.value })}
-                      placeholder="Yappy / Efectivo / Banco General"
-                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
                       Sitio Web / Link (Opcional)
                     </label>
                     <input
@@ -3826,6 +4019,12 @@ export default function AdminPanel() {
                       style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
                     />
                   </div>
+
+                  <MetodosPagoEditor
+                    metodos={configForm.metodos_pago}
+                    onChange={(nuevosMetodos) => setConfigForm({ ...configForm, metodos_pago: nuevosMetodos })}
+                    colorPrimario={configForm.color_primario}
+                  />
                 </div>
               </div>
 
@@ -4398,7 +4597,12 @@ export default function AdminPanel() {
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 4 }}>Método</label>
                   <select value={nuevoPagoMetodo} onChange={e => setNuevoPagoMetodo(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13.5, background: '#fff', cursor: 'pointer' }}>
-                    {['efectivo','transferencia','tarjeta','yappy','otro'].map(m => <option key={m} value={m}>{m}</option>)}
+                    {(() => {
+                      const base = ['efectivo', 'transferencia', 'tarjeta', 'yappy', 'otro'];
+                      const configMetodos = normalizarMetodosPago(config?.metodos_pago).map(m => m.nombre?.trim()).filter(Boolean);
+                      const opciones = Array.from(new Set([...configMetodos, ...base]));
+                      return opciones.map(m => <option key={m} value={m}>{m}</option>);
+                    })()}
                   </select>
                 </div>
               </div>

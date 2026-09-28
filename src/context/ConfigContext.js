@@ -1,6 +1,51 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api';
 
+export const normalizarMetodosPago = (raw) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((m, idx) => {
+      if (typeof m === 'string') return { id: `m-${idx}`, nombre: m, detalle: '' };
+      return {
+        id: m.id || `m-${idx}`,
+        nombre: m.nombre || m.metodo || '',
+        detalle: m.detalle || ''
+      };
+    }).filter(m => (m.nombre && m.nombre.trim().length > 0) || (m.detalle && m.detalle.trim().length > 0));
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return normalizarMetodosPago(parsed);
+      } catch (e) {}
+    }
+    // Soporte para formato legacy ej: "Yappy / Efectivo / Banco General"
+    let pieces = [trimmed];
+    const splitters = ['\n', '·', '/', ','];
+    for (const s of splitters) {
+      if (pieces.some(p => p.includes(s))) {
+        pieces = pieces.flatMap(p => p.split(s));
+      }
+    }
+    return pieces
+      .map((p, idx) => ({ id: `m-${idx}`, nombre: p.trim(), detalle: '' }))
+      .filter(p => p.nombre.length > 0);
+  }
+  return [];
+};
+
+export const formatearMetodosPagoTexto = (metodos) => {
+  const arr = normalizarMetodosPago(metodos);
+  if (!arr.length) return '';
+  return arr.map(m => {
+    if (m.nombre && m.detalle) return `${m.nombre}: ${m.detalle}`;
+    return m.nombre || m.detalle;
+  }).join(' · ');
+};
+
 export const DEFAULT_CONFIG = {
   nombre_empresa: 'Alquila tu Party',
   logo_url: '🎉',
@@ -11,7 +56,7 @@ export const DEFAULT_CONFIG = {
   email_contacto: '',
   direccion_empresa: '',
   instagram_empresa: '',
-  metodos_pago: '',
+  metodos_pago: [],
   sitio_web: '',
   moneda_simbolo: '$',
 };
@@ -23,7 +68,9 @@ export function ConfigProvider({ children }) {
     const cached = localStorage.getItem('app_config');
     if (cached) {
       try {
-        return { ...DEFAULT_CONFIG, ...JSON.parse(cached) };
+        const parsed = { ...DEFAULT_CONFIG, ...JSON.parse(cached) };
+        parsed.metodos_pago = normalizarMetodosPago(parsed.metodos_pago);
+        return parsed;
       } catch (e) {
         return DEFAULT_CONFIG;
       }
@@ -38,6 +85,7 @@ export function ConfigProvider({ children }) {
       const { data } = await api.get('/configuracion');
       if (data && typeof data === 'object') {
         const merged = { ...DEFAULT_CONFIG, ...data };
+        merged.metodos_pago = normalizarMetodosPago(merged.metodos_pago);
         setConfig(merged);
         localStorage.setItem('app_config', JSON.stringify(merged));
       }
