@@ -7,9 +7,12 @@ export const DEFAULT_CONFIG = {
   eslogan: 'Alquiler de Mobiliario y Eventos',
   color_primario: '#4a6cf7',
   color_sidebar: '#1a1a2e',
-  telefono_contacto: '+507 6000-0000',
-  email_contacto: 'contacto@alquilatuparty.com',
-  direccion_empresa: 'Ciudad de Panamá, Panamá',
+  telefono_contacto: '',
+  email_contacto: '',
+  direccion_empresa: '',
+  instagram_empresa: '',
+  metodos_pago: '',
+  sitio_web: '',
   moneda_simbolo: '$',
 };
 

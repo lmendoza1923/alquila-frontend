@@ -25,27 +25,85 @@ const getFechaHoy = () => {
 function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosCombos, configEmpresa) {
   const totalPagado = pagos.reduce((s, p) => s + parseFloat(p.monto), 0);
   const abonoExtra = parseFloat(abono) || 0;
-  const saldoPendiente = parseFloat(reserva.total) - totalPagado - abonoExtra;
-  const subtotalMobiliario = items.reduce((s, i) => s + parseFloat(i.subtotal || 0), 0);
   const totalAbono = totalPagado + abonoExtra;
+  const saldoPendiente = Math.max(0, parseFloat(reserva.total) - totalAbono);
 
-  const empNombre = configEmpresa?.nombre_empresa || 'Alquila tu Party';
-  const empLogo = configEmpresa?.logo_url || '🎉';
-  const empColor = configEmpresa?.color_primario || '#3b82f6';
-  const empEslogan = configEmpresa?.eslogan && !configEmpresa.eslogan.toLowerCase().includes('contrato')
-    ? configEmpresa.eslogan
-    : '';
+  const empNombre = configEmpresa?.nombre_empresa || 'Alquila Tu Party';
+  const empColor = configEmpresa?.color_primario || '#2563eb';
   
-  const logoHtml = (empLogo.startsWith('http') || empLogo.startsWith('data:'))
-    ? `<img src="${empLogo}" alt="Logo" style="max-height:28px;max-width:120px;vertical-align:middle;margin-right:6px;object-fit:contain;" />`
-    : `<span style="font-size:18px;margin-right:6px;">${empLogo}</span>`;
-
   // Limpiar prefijo +507 o 507 del teléfono
   const cleanPhone = (reserva.telefono_cliente || '').replace(/^\+?507\s*/, '').trim();
 
+  // Fecha del contrato y número de contrato
+  const formatearFechaDDMMYYYY = (fStr) => {
+    if (!fStr) return '';
+    try {
+      const parts = fStr.substring(0, 10).split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      const dObj = new Date(fStr);
+      if (!isNaN(dObj.getTime())) {
+        return `${String(dObj.getDate()).padStart(2, '0')}/${String(dObj.getMonth() + 1).padStart(2, '0')}/${dObj.getFullYear()}`;
+      }
+      return fStr;
+    } catch {
+      return fStr;
+    }
+  };
+
+  const hoyD = new Date();
+  const diaHoy = String(hoyD.getDate()).padStart(2, '0');
+  const mesHoy = String(hoyD.getMonth() + 1).padStart(2, '0');
+  const anioHoy = hoyD.getFullYear();
+  const fechaContratoStr = `${diaHoy}/${mesHoy}/${anioHoy}`;
+
+  // Número de contrato similar al ejemplo (ej: 07072026-0006)
+  const numIdRaw = String(reserva.id || '').replace(/\D/g, '');
+  const idPart = (numIdRaw.slice(-4) || reserva.id?.slice(0, 4) || '0001').padStart(4, '0').toUpperCase();
+  const numeroContrato = `${diaHoy}${mesHoy}${anioHoy}-${idPart}`;
+
+  // Detalles del evento
+  const fechaEntregaStr = formatearFechaDDMMYYYY(reserva.fecha_inicio) || '____/____/________';
+  const fechaRecoleccionStr = formatearFechaDDMMYYYY(reserva.fecha_fin) || fechaEntregaStr;
+
+  // Datos opcionales de la empresa (debajo del nombre Alquila Tu Party)
+  // Solo se plasman las opciones que fueron rellenadas sin dejar espacios vacíos
+  const empDireccion = configEmpresa?.direccion_empresa?.trim() || '';
+  const empTelefono = configEmpresa?.telefono_contacto?.trim() || '';
+  const empEmail = configEmpresa?.email_contacto?.trim() || '';
+  const empInstagram = configEmpresa?.instagram_empresa?.trim() || '';
+  const empMetodosPago = configEmpresa?.metodos_pago?.trim() || '';
+  const empSitioWeb = configEmpresa?.sitio_web?.trim() || '';
+
+  const lineasEmpresa = [];
+  if (empDireccion) {
+    lineasEmpresa.push(`<div style="line-height:1.2;margin-bottom:1.5px;">${empDireccion}</div>`);
+  }
+  if (empTelefono) {
+    const celText = (empTelefono.toLowerCase().startsWith('cel') || empTelefono.toLowerCase().startsWith('tel')) ? empTelefono : `Cel: ${empTelefono}`;
+    lineasEmpresa.push(`<div style="line-height:1.2;margin-bottom:1.5px;">${celText}</div>`);
+  }
+  if (empEmail) {
+    const emailText = (empEmail.toLowerCase().startsWith('email') || empEmail.toLowerCase().startsWith('correo')) ? empEmail : `Email: ${empEmail}`;
+    lineasEmpresa.push(`<div style="line-height:1.2;margin-bottom:1.5px;">${emailText}</div>`);
+  }
+  if (empInstagram) {
+    const instaText = (empInstagram.toLowerCase().startsWith('instagram') || empInstagram.toLowerCase().startsWith('ig')) ? empInstagram : `Instagram: ${empInstagram}`;
+    lineasEmpresa.push(`<div style="line-height:1.2;margin-bottom:1.5px;">${instaText}</div>`);
+  }
+  if (empMetodosPago) {
+    const pagoText = (empMetodosPago.toLowerCase().includes('pago') || empMetodosPago.toLowerCase().includes('método') || empMetodosPago.toLowerCase().includes('metodo')) ? empMetodosPago : `Métodos de pago: ${empMetodosPago}`;
+    lineasEmpresa.push(`<div style="line-height:1.2;margin-bottom:1.5px;">${pagoText}</div>`);
+  }
+  if (empSitioWeb) {
+    lineasEmpresa.push(`<div style="line-height:1.2;margin-bottom:1.5px;">${empSitioWeb}</div>`);
+  }
+  const infoEmpresaHtml = lineasEmpresa.join('');
+
   // Clasificar en mobiliario y servicios
   const esServicio = (nombre) => {
-    const keywords = ['servicio', 'transporte', 'flete', 'montaje', 'armado', 'instalacio', 'envio', 'cargo', 'adicional', 'limpieza', 'deposito', 'garantia', 'decorac'];
+    const keywords = ['servicio', 'transporte', 'flete', 'montaje', 'armado', 'instalacio', 'envio', 'cargo', 'adicional', 'limpieza', 'deposito', 'depósito', 'garantia', 'garantía', 'decorac'];
     const n = (nombre || '').toLowerCase();
     return keywords.some(k => n.includes(k));
   };
@@ -53,22 +111,33 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   const mobiliarioItems = items.filter(i => !esServicio(i.nombre || i.mueble));
   const servicioItems = items.filter(i => esServicio(i.nombre || i.mueble));
 
+  const subtotalMobiliario = mobiliarioItems.reduce((s, i) => s + parseFloat(i.subtotal || 0), 0);
+  const subtotalServicios = servicioItems.reduce((s, i) => s + parseFloat(i.subtotal || 0), 0);
+
+  const obtenerCodigo = (nombre, esServ = false) => {
+    if (esServ) return 'N/A';
+    const limpio = (nombre || '')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+    return limpio.slice(0, 8) || 'ART01';
+  };
+
   // Generar filas para Mobiliario
   const filasMobiliarioArray = [];
   mobiliarioItems.forEach(i => {
     const unitPrice = i.cantidad > 0 ? (parseFloat(i.subtotal || 0) / i.cantidad) : 0;
+    const cod = i.codigo || obtenerCodigo(i.nombre || i.mueble, false);
     
-    // Fila principal del mueble o combo
     filasMobiliarioArray.push(`<tr>
-      <td style="padding:3px 6px;vertical-align:middle;">
-        <span style="font-weight:600;">${i.nombre || i.mueble || ''}</span>
-      </td>
-      <td style="padding:3px 6px;text-align:center;vertical-align:middle;font-weight:600;">${i.cantidad}</td>
-      <td style="padding:3px 6px;text-align:right;vertical-align:middle;">$${unitPrice.toFixed(2)}</td>
-      <td style="padding:3px 6px;text-align:right;vertical-align:middle;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
+      <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;font-weight:600;">${i.cantidad}</td>
+      <td style="padding:2.5px 6px;border:1px solid #000;font-weight:700;text-transform:uppercase;">${i.nombre || i.mueble || ''}</td>
+      <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;font-weight:600;">${cod}</td>
+      <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;">$${unitPrice.toFixed(2)}</td>
+      <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
     </tr>`);
 
-    // Si es un combo, agregar los componentes en filas individuales
     if (i.combo_id && todosLosCombos) {
       const componentesCombo = (i.componentes && i.componentes.length > 0)
         ? i.componentes
@@ -79,58 +148,80 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 
       componentesCombo.forEach(ci => {
         const compCant = ci.cantidad * i.cantidad;
-        filasMobiliarioArray.push(`<tr style="background-color:#fafafa;font-size:8px;color:#555;">
-          <td style="padding:2px 6px 2px 16px;">└─ ${ci.nombre}</td>
-          <td style="padding:2px 6px;text-align:center;">${compCant}</td>
-          <td style="padding:2px 6px;text-align:right;color:#888;">—</td>
-          <td style="padding:2px 6px;text-align:right;color:#888;">—</td>
+        const compCod = obtenerCodigo(ci.nombre, false);
+        filasMobiliarioArray.push(`<tr style="font-size:7.5px;color:#475569;">
+          <td style="padding:1.5px 4px;text-align:center;border:1px solid #000;">${compCant}</td>
+          <td style="padding:1.5px 6px 1.5px 14px;border:1px solid #000;">└─ ${ci.nombre}</td>
+          <td style="padding:1.5px 4px;text-align:center;border:1px solid #000;">${compCod}</td>
+          <td style="padding:1.5px 6px;text-align:right;border:1px solid #000;color:#888;">—</td>
+          <td style="padding:1.5px 6px;text-align:right;border:1px solid #000;color:#888;">—</td>
         </tr>`);
       });
     }
   });
-  const filasMuebles = filasMobiliarioArray.join('');
+
+  const filasMuebles = filasMobiliarioArray.length > 0 ? filasMobiliarioArray.join('') : `<tr>
+    <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;">-</td>
+    <td style="padding:2.5px 6px;border:1px solid #000;color:#64748b;font-style:italic;">Sin artículos</td>
+    <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;">N/A</td>
+    <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;">$0.00</td>
+    <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;">$0.00</td>
+  </tr>`;
 
   // Generar filas para Servicios Adicionales
-  const filasServicios = servicioItems.map(i => {
+  const filasServicios = servicioItems.length > 0 ? servicioItems.map(i => {
     const unitPrice = i.cantidad > 0 ? (parseFloat(i.subtotal || 0) / i.cantidad) : 0;
+    const cod = i.codigo || obtenerCodigo(i.nombre || i.mueble, true);
     return `<tr>
-      <td style="padding:3px 6px;vertical-align:middle;">
-        <span style="font-weight:600;">${i.nombre || i.mueble || ''}</span>
-      </td>
-      <td style="padding:3px 6px;text-align:center;vertical-align:middle;font-weight:600;">${i.cantidad}</td>
-      <td style="padding:3px 6px;text-align:right;vertical-align:middle;">$${unitPrice.toFixed(2)}</td>
-      <td style="padding:3px 6px;text-align:right;vertical-align:middle;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
+      <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;font-weight:600;">${i.cantidad}</td>
+      <td style="padding:2.5px 6px;border:1px solid #000;font-weight:700;text-transform:uppercase;">${i.nombre || i.mueble || ''}</td>
+      <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;font-weight:600;">${cod}</td>
+      <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;">$${unitPrice.toFixed(2)}</td>
+      <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
     </tr>`;
-  }).join('');
+  }).join('') : `<tr>
+    <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;color:#64748b;">-</td>
+    <td style="padding:2.5px 6px;border:1px solid #000;color:#64748b;font-style:italic;">Sin servicios adicionales</td>
+    <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;color:#64748b;">N/A</td>
+    <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;color:#64748b;">$0.00</td>
+    <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;color:#64748b;">$0.00</td>
+  </tr>`;
+
+  // Términos y condiciones numerados como en la imagen
+  const terminosPredeterminados = [
+    'El equipo se alquila con un horario definido entre el cliente y la empresa.',
+    'El equipo rentado debe permanecer en la ubicación especificada en el contrato. Cualquier traslado no autorizado puede resultar en cargos adicionales y el cliente será responsable por cualquier daño durante el traslado.',
+    'No se permite realizar modificaciones al equipo rentado. Cualquier decoración debe ser removible y no debe causar daños. No se permite el uso de clavos, grapas, pegamentos o cualquier material que pueda dañar el equipo.',
+    'El cliente es responsable por cualquier daño, pérdida o robo del equipo durante el período de renta. Los costos de reparación o reemplazo serán evaluados por la empresa y deberán ser cubiertos por el cliente.',
+    'Los anticipos realizados no son reembolsables bajo ninguna circunstancia.'
+  ];
+
+  let terminosHtml = '';
+  if (terminos && terminos.trim()) {
+    const lineasT = terminos.split('\n').filter(l => l.trim().length > 0);
+    terminosHtml = lineasT.map((l, idx) => {
+      const sinNumero = l.replace(/^\d+[\.\-\)]\s*/, '');
+      return `<div style="margin-bottom:2px;"><b>${idx + 1}.</b> ${sinNumero}</div>`;
+    }).join('');
+  } else {
+    terminosHtml = terminosPredeterminados.map((t, idx) => `
+      <div style="margin-bottom:2px;"><b>${idx + 1}.</b> ${t}</div>
+    `).join('');
+  }
 
   const htmlContrato = `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title></title>
+<title>Contrato ${numeroContrato}</title>
 <style>
-  @page { size: auto; margin: 6mm 8mm; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.3; font-size: 9.5px; }
-  .page { max-width: 760px; margin: 0 auto; padding: 10px 14px; box-sizing: border-box; }
-  .header { border-bottom: 2px solid ${empColor}; padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-  .logo { font-size: 18px; font-weight: 800; color: ${empColor}; letter-spacing: -0.5px; display: flex; align-items: center; }
-  .section { margin-bottom: 8px; }
-  .section-title { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: ${empColor}; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; }
-  .field label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 1px; font-weight: 600; }
-  .field span { font-size: 10px; font-weight: 600; color: #0f172a; }
-  table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 6px; }
-  table, th, td { border: 1px solid #cbd5e1; }
-  thead { background: #f8fafc; }
-  th { padding: 3px 5px; text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #334155; font-weight: 700; }
-  td { padding: 3px 5px; }
-  .totals-container { display: flex; justify-content: flex-end; margin-top: 4px; }
-  .totals { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 5px 8px; width: 220px; box-sizing: border-box; }
-  .total-row { display: flex; justify-content: space-between; padding: 1.5px 0; font-size: 9.5px; }
-  .total-row.final { font-size: 11px; font-weight: 800; color: ${empColor}; border-top: 1px solid #cbd5e1; margin-top: 2px; padding-top: 2px; }
-  .total-row.saldo { font-size: 10.5px; font-weight: 800; color: #dc2626; }
-  .terms { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 8px; font-size: 8px; color: #475569; line-height: 1.3; white-space: pre-wrap; max-height: 90px; overflow: hidden; }
-  .firma { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 14px; }
-  .firma-box { border-top: 1px solid #94a3b8; padding-top: 3px; text-align: center; font-size: 9px; color: #475569; font-weight: 500; }
+  @page { size: portrait; margin: 8mm 10mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 0; background: #fff; line-height: 1.25; font-size: 9px; }
+  .page { max-width: 740px; margin: 0 auto; padding: 6px 12px; box-sizing: border-box; }
+  .section-bar { background-color: ${empColor}; color: #ffffff; font-weight: 800; font-size: 9.5px; padding: 3px 6px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; margin-bottom: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5px; margin-bottom: 0; border: 1px solid #000; }
+  th { padding: 3px 4px; text-align: center; border-right: 1px solid #000; font-weight: 800; text-transform: uppercase; font-size: 8.5px; background: #fff; }
+  td { padding: 2.5px 5px; }
   .no-print { display: flex; }
   @media print { 
     .no-print { display: none !important; }
@@ -141,85 +232,178 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 </head>
 <body>
 <div class="no-print" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <span style="font-size:12px;font-weight:600;color:#475569;">Vista previa: Contrato de Alquiler</span>
+  <span style="font-size:12px;font-weight:600;color:#475569;">Vista previa: Contrato de Arrendamiento</span>
   <div style="display:flex;gap:8px;">
-    <button onclick="window.print()" style="padding:5px 12px;background:${empColor};color:#fff;border:none;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;">🖨️ Imprimir / Guardar PDF</button>
-    <button onclick="window.close()" style="padding:5px 10px;background:#e2e8f0;color:#334155;border:none;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;">✕ Cerrar</button>
+    <button onclick="window.print()" style="padding:6px 14px;background:${empColor};color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">🖨️ Imprimir / Guardar PDF</button>
+    <button onclick="window.close()" style="padding:6px 12px;background:#e2e8f0;color:#334155;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">✕ Cerrar</button>
   </div>
 </div>
+
 <div class="page">
-  <div class="header">
-    <div class="logo">${logoHtml}<span>${empNombre}</span></div>
-    ${empEslogan ? `<div style="font-size:10px;color:#64748b;">${empEslogan}</div>` : ''}
-  </div>
+  <!-- ENCABEZADO -->
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 8px;">
+    <!-- Izquierda: Nombre de la empresa y datos opcionales -->
+    <div style="max-width: 62%;">
+      <div style="font-size: 22px; font-weight: 900; color: ${empColor}; letter-spacing: -0.5px; margin-bottom: 4px;">
+        ${empNombre}
+      </div>
+      ${infoEmpresaHtml ? `
+        <div style="font-size: 8.5px; color: #475569; font-weight: 500;">
+          ${infoEmpresaHtml}
+        </div>
+      ` : ''}
+    </div>
 
-  <div class="section">
-    <div class="section-title">Datos del Cliente</div>
-    <div style="display: flex; gap: 14px; flex-wrap: wrap;">
-      <div class="field" style="flex: 0.8; min-width: 80px;"><label>Ref / Reserva</label><span>#${reserva.id.slice(0,8).toUpperCase()}</span></div>
-      <div class="field" style="flex: 1.5; min-width: 130px;"><label>Nombre completo</label><span>${reserva.nombre_cliente || '—'}</span></div>
-      ${reserva.cedula_cliente ? `<div class="field" style="flex: 1; min-width: 90px;"><label>Cédula</label><span>${reserva.cedula_cliente}</span></div>` : ''}
-      <div class="field" style="flex: 1; min-width: 85px;"><label>Teléfono</label><span>${cleanPhone || '—'}</span></div>
-      <div class="field" style="flex: 2; min-width: 160px;"><label>Dirección de entrega</label><span>${reserva.direccion_entrega || '—'}</span></div>
+    <!-- Derecha: Recuadro Contrato de Arrendamiento -->
+    <div style="border: 2px solid ${empColor}; border-radius: 4px; padding: 6px 14px; text-align: center; min-width: 175px; box-sizing: border-box;">
+      <div style="color: ${empColor}; font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">
+        CONTRATO DE ARRENDAMIENTO
+      </div>
+      <div style="color: #1e3a8a; font-weight: 900; font-size: 15px; letter-spacing: 0.5px; margin-bottom: 2px;">
+        ${numeroContrato}
+      </div>
+      <div style="color: #334155; font-size: 10px; font-weight: 600;">
+        ${fechaContratoStr}
+      </div>
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-title">Mobiliario Reservado</div>
-    <table>
-      <thead>
-        <tr>
-          <th>DESCRIPCIÓN</th>
-          <th style="text-align:center;width:55px;">CANT.</th>
-          <th style="text-align:right;width:85px;">P. UNITARIO</th>
-          <th style="text-align:right;width:85px;">IMPORTE</th>
-        </tr>
-      </thead>
-      <tbody>${filasMuebles}</tbody>
-    </table>
-  </div>
-
-  ${servicioItems.length > 0 ? `
-  <div class="section">
-    <div class="section-title">Servicios Adicionales</div>
-    <table>
-      <thead>
-        <tr>
-          <th>DESCRIPCIÓN</th>
-          <th style="text-align:center;width:55px;">CANT.</th>
-          <th style="text-align:right;width:85px;">P. UNITARIO</th>
-          <th style="text-align:right;width:85px;">IMPORTE</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${filasServicios}
-      </tbody>
-    </table>
-  </div>
-  ` : ''}
-
-  <div class="totals-container">
-    <div class="totals">
-      <div class="total-row"><span>Subtotal:</span><span>$${subtotalMobiliario.toFixed(2)}</span></div>
-      <div class="total-row" style="color:#16a34a;"><span>Abono:</span><span>-$${totalAbono.toFixed(2)}</span></div>
-      <div class="total-row final"><span>TOTAL:</span><span>$${parseFloat(reserva.total).toFixed(2)}</span></div>
-      <div class="total-row saldo"><span>SALDO PENDIENTE:</span><span>$${Math.max(0, saldoPendiente).toFixed(2)}</span></div>
+  <!-- INFORMACIÓN DEL CLIENTE -->
+  <div class="section-bar">INFORMACIÓN DEL CLIENTE</div>
+  <div style="border: 1px solid #cbd5e1; border-top: none; padding: 5px 8px 6px 8px; font-size: 9px; line-height: 1.45;">
+    <div style="display: flex; margin-bottom: 2px;">
+      <span style="font-weight: 800; min-width: 85px; color: #0f172a;">Nombre:</span>
+      <span style="font-weight: 600; color: #1e293b;">${reserva.nombre_cliente || '—'}</span>
+    </div>
+    <div style="display: flex; margin-bottom: 2px;">
+      <span style="font-weight: 800; min-width: 85px; color: #0f172a;">Teléfono:</span>
+      <span style="font-weight: 600; color: #1e293b;">${cleanPhone || '—'}</span>
+    </div>
+    <div style="display: flex; margin-bottom: 2px; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px;">
+      <span style="font-weight: 800; min-width: 85px; color: #0f172a;">Dirección:</span>
+      <span style="font-weight: 600; color: #1e293b;">${reserva.direccion_entrega || '—'}</span>
+    </div>
+    <div style="display: flex; align-items: center; padding-top: 2px;">
+      <span style="font-weight: 800; min-width: 85px; color: #0f172a;">Identificación:</span>
+      <span style="font-weight: 600; flex: 1; border-bottom: 1px solid #94a3b8; min-height: 13px; color: #1e293b;">
+        ${reserva.cedula_cliente || ''}
+      </span>
     </div>
   </div>
 
-  <div class="section" style="margin-top:10px;">
-    <div class="section-title">Términos y Condiciones</div>
-    <div class="terms">${terminos || 'Ver términos en el establecimiento.'}</div>
+  <!-- DETALLES DEL EVENTO -->
+  <div class="section-bar">DETALLES DEL EVENTO</div>
+  <div style="border: 1px solid #cbd5e1; border-top: none; padding: 5px 8px; font-size: 9px; line-height: 1.45;">
+    <div style="display: flex; margin-bottom: 2px;">
+      <span style="font-weight: 800; min-width: 85px; color: #0f172a;">Entrega:</span>
+      <span>${fechaEntregaStr} <span style="display:inline-block; border-bottom:1px solid #94a3b8; width: 60px;">&nbsp;</span></span>
+    </div>
+    <div style="display: flex;">
+      <span style="font-weight: 800; min-width: 85px; color: #0f172a;">Recolección:</span>
+      <span>${fechaRecoleccionStr} <span style="display:inline-block; border-bottom:1px solid #94a3b8; width: 60px;">&nbsp;</span></span>
+    </div>
   </div>
 
-  <div class="firma">
-    <div class="firma-box">
-      <div style="margin-bottom:18px;">&nbsp;</div>
-      Firma del Cliente<br><strong>${reserva.nombre_cliente || ''}</strong>${reserva.cedula_cliente ? `<br><span style="font-size:8px;color:#64748b;">Céd: ${reserva.cedula_cliente}</span>` : ''}
+  <!-- BIENES ARRENDADOS -->
+  <div class="section-bar">BIENES ARRENDADOS</div>
+  <table>
+    <thead>
+      <tr style="border-bottom: 1px solid #000;">
+        <th style="width: 45px;">CANT.</th>
+        <th style="text-align: left; padding-left: 6px;">DESCRIPCIÓN</th>
+        <th style="width: 95px;">CÓDIGO</th>
+        <th style="text-align: right; width: 75px; padding-right: 6px;">P. UNIT.</th>
+        <th style="text-align: right; width: 75px; padding-right: 6px; border-right: none;">IMPORTE</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${filasMuebles}
+      <tr style="border-top: 1px solid #000; background: #fff;">
+        <td colspan="4" style="padding: 3px 8px; text-align: right; font-weight: 800; border-right: 1px solid #000; font-size: 8.5px; text-transform: uppercase;">
+          SUBTOTAL MERCANCÍA:
+        </td>
+        <td style="padding: 3px 6px; text-align: right; font-weight: 800; font-size: 8.5px;">
+          $${subtotalMobiliario.toFixed(2)}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SERVICIOS ADICIONALES -->
+  <div class="section-bar">SERVICIOS ADICIONALES</div>
+  <table>
+    <thead>
+      <tr style="border-bottom: 1px solid #000;">
+        <th style="width: 45px;">CANT.</th>
+        <th style="text-align: left; padding-left: 6px;">DESCRIPCIÓN</th>
+        <th style="width: 95px;">CÓDIGO</th>
+        <th style="text-align: right; width: 75px; padding-right: 6px;">P. UNIT.</th>
+        <th style="text-align: right; width: 75px; padding-right: 6px; border-right: none;">IMPORTE</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${filasServicios}
+      <tr style="border-top: 1px solid #000; background: #fff;">
+        <td colspan="4" style="padding: 3px 8px; text-align: right; font-weight: 800; border-right: 1px solid #000; font-size: 8.5px; text-transform: uppercase;">
+          SUBTOTAL SERVICIOS:
+        </td>
+        <td style="padding: 3px 6px; text-align: right; font-weight: 800; font-size: 8.5px;">
+          $${subtotalServicios.toFixed(2)}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- TOTALES -->
+  <div style="display: flex; justify-content: flex-end; margin-top: 6px; margin-bottom: 4px;">
+    <div style="width: 220px; font-size: 9px;">
+      <div style="display: flex; justify-content: space-between; padding: 1.5px 0;">
+        <span style="font-weight: 600; color: #334155;">Subtotal:</span>
+        <span style="font-weight: 700; color: #0f172a;">$${parseFloat(reserva.total).toFixed(2)}</span>
+      </div>
+      ${totalAbono > 0 ? `
+      <div style="display: flex; justify-content: space-between; padding: 1.5px 0; color: #16a34a;">
+        <span style="font-weight: 600;">Abono:</span>
+        <span style="font-weight: 700;">-$${totalAbono.toFixed(2)}</span>
+      </div>` : ''}
+      ${saldoPendiente > 0 ? `
+      <div style="display: flex; justify-content: space-between; padding: 1.5px 0; color: #dc2626;">
+        <span style="font-weight: 600;">Saldo pendiente:</span>
+        <span style="font-weight: 700;">$${saldoPendiente.toFixed(2)}</span>
+      </div>` : ''}
+      <div style="display: flex; justify-content: space-between; padding: 2px 0; margin-top: 1px;">
+        <span style="font-weight: 900; font-size: 13px; color: ${empColor}; text-transform: uppercase;">TOTAL:</span>
+        <span style="font-weight: 900; font-size: 13px; color: ${empColor};">$${parseFloat(reserva.total).toFixed(2)}</span>
+      </div>
     </div>
-    <div class="firma-box">
-      <div style="margin-bottom:18px;">&nbsp;</div>
-      Firma ${empNombre}<br><strong>Representante Autorizado</strong>
+  </div>
+
+  <!-- AVISO DE NO DEVOLUCIONES -->
+  <div style="border: 1px solid #ef4444; border-radius: 2px; padding: 3px 8px; text-align: center; color: #dc2626; font-weight: 800; font-size: 9.5px; margin: 4px 0 6px 0; letter-spacing: 0.5px;">
+    ⚠ NO HAY DEVOLUCIONES EN ANTICIPOS
+  </div>
+
+  <!-- TÉRMINOS Y CONDICIONES -->
+  <div style="border: 1px solid #475569; border-radius: 2px; padding: 5px 8px; margin-bottom: 6px;">
+    <div style="color: ${empColor}; font-weight: 800; font-size: 10px; text-align: center; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;">
+      TÉRMINOS Y CONDICIONES
+    </div>
+    <div style="font-size: 7.5px; line-height: 1.35; color: #1e293b; text-align: justify;">
+      ${terminosHtml}
+    </div>
+  </div>
+
+  <!-- SECCIÓN DE FIRMAS -->
+  <div style="border: 1px solid #94a3b8; border-radius: 2px;">
+    <div style="padding: 8px 16px 6px 16px; text-align: center; border-bottom: 1px solid #cbd5e1;">
+      <div style="width: 70%; margin: 0 auto 3px auto; border-bottom: 1px solid #475569;"></div>
+      <div style="font-size: 8.5px; font-weight: 700; color: #1e293b;">${reserva.nombre_cliente || ''}</div>
+      <div style="font-size: 8px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">ACEPTO TÉRMINOS Y CONDICIONES</div>
+    </div>
+    <div style="padding: 8px 16px 6px 16px; text-align: center;">
+      <div style="width: 70%; margin: 0 auto 3px auto; border-bottom: 1px solid #475569;"></div>
+      <div style="font-size: 8.5px; font-weight: 700; color: #1e293b;">${empNombre}</div>
+      <div style="font-size: 8px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">ENTREGA CONFORME</div>
     </div>
   </div>
 </div>
@@ -1589,20 +1773,167 @@ export default function AdminPanel() {
 
       {/* ── Dashboard ── */}
       {tab === 'dashboard' && stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          {[
-            { label: 'Total reservas', value: stats.total_reservas, icon: '📋' },
-            { label: 'Ingresos totales', value: `$${stats.ingresos_total?.toFixed(2)}`, icon: '💰' },
-            { label: 'Muebles activos', value: stats.total_muebles, icon: '🪑' },
-            { label: 'Combos activos', value: stats.total_combos || 0, icon: '🎁' },
-            { label: 'Pendientes', value: stats.reservas_pendientes, icon: '⏳' },
-          ].map(s => (
-            <div key={s.label} style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', textAlign: 'center' }}>
-              <div style={{ fontSize: 36 }}>{s.icon}</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#1a1a2e' }}>{s.value}</div>
-              <div style={{ color: '#888', fontSize: 13 }}>{s.label}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+            {[
+              { label: 'Total reservas', value: stats.total_reservas, icon: '📋' },
+              { label: 'Ingresos totales', value: `$${stats.ingresos_total?.toFixed(2)}`, icon: '💰' },
+              { label: 'Muebles activos', value: stats.total_muebles, icon: '🪑' },
+              { label: 'Combos activos', value: stats.total_combos || 0, icon: '🎁' },
+              { label: 'Pendientes', value: stats.reservas_pendientes, icon: '⏳' },
+            ].map(s => (
+              <div key={s.label} style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', textAlign: 'center' }}>
+                <div style={{ fontSize: 36 }}>{s.icon}</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#1a1a2e' }}>{s.value}</div>
+                <div style={{ color: '#888', fontSize: 13 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tarjeta de Datos de la Empresa para Contratos */}
+          <div style={{ background: '#fff', borderRadius: 12, padding: '1.75rem', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  🏢 Datos de la Empresa (Membrete de Contratos)
+                </h3>
+                <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '13px' }}>
+                  Estos datos aparecerán debajo de <strong>{configForm.nombre_empresa || 'Alquila Tu Party'}</strong> en la hoja de contrato. Todos son opcionales y solo se plasmarán los que estén rellenados, sin dejar espacios vacíos.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleGuardarConfiguracion}
+                disabled={guardandoConfig}
+                style={{
+                  padding: '9px 18px',
+                  background: configForm.color_primario || '#2563eb',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  fontSize: 13.5,
+                  cursor: guardandoConfig ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(37,99,235,0.25)'
+                }}
+              >
+                <span>💾</span>
+                <span>{guardandoConfig ? 'Guardando...' : 'Guardar Datos'}</span>
+              </button>
             </div>
-          ))}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 5 }}>
+                  📍 Dirección de la Empresa
+                </label>
+                <input
+                  type="text"
+                  value={configForm.direccion_empresa || ''}
+                  onChange={e => setConfigForm({ ...configForm, direccion_empresa: e.target.value })}
+                  placeholder="Ej: Nuevo Arraiján, Juan Demóstenes Arosemena, Panamá"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 5 }}>
+                  📱 Teléfono / Celular
+                </label>
+                <input
+                  type="text"
+                  value={configForm.telefono_contacto || ''}
+                  onChange={e => setConfigForm({ ...configForm, telefono_contacto: e.target.value })}
+                  placeholder="Ej: +50767787190"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 5 }}>
+                  ✉️ Correo Electrónico (Email)
+                </label>
+                <input
+                  type="email"
+                  value={configForm.email_contacto || ''}
+                  onChange={e => setConfigForm({ ...configForm, email_contacto: e.target.value })}
+                  placeholder="Ej: alquilatuparty@gmail.com"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 5 }}>
+                  📸 Instagram
+                </label>
+                <input
+                  type="text"
+                  value={configForm.instagram_empresa || ''}
+                  onChange={e => setConfigForm({ ...configForm, instagram_empresa: e.target.value })}
+                  placeholder="Ej: @alquilatuparty"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 5 }}>
+                  💳 Métodos de Pago
+                </label>
+                <input
+                  type="text"
+                  value={configForm.metodos_pago || ''}
+                  onChange={e => setConfigForm({ ...configForm, metodos_pago: e.target.value })}
+                  placeholder="Ej: Yappy / Efectivo / Banco General"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 5 }}>
+                  🌐 Sitio Web / Enlace (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={configForm.sitio_web || ''}
+                  onChange={e => setConfigForm({ ...configForm, sitio_web: e.target.value })}
+                  placeholder="Ej: https://alquila-tu-party.alquilame.io"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            {/* Vista Previa del Membrete */}
+            <div style={{ marginTop: '1.25rem', background: '#f8fafc', padding: '1rem', borderRadius: 8, border: '1px dashed #cbd5e1' }}>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>
+                Vista previa del membrete en el contrato:
+              </span>
+              <div style={{ fontSize: 16, fontWeight: 800, color: configForm.color_primario || '#2563eb', marginBottom: 2 }}>
+                {configForm.nombre_empresa || 'Alquila Tu Party'}
+              </div>
+              <div style={{ fontSize: 11, color: '#475569', lineHeight: 1.35 }}>
+                {configForm.direccion_empresa?.trim() && <div>{configForm.direccion_empresa.trim()}</div>}
+                {configForm.telefono_contacto?.trim() && (
+                  <div>{configForm.telefono_contacto.toLowerCase().startsWith('cel') ? configForm.telefono_contacto : `Cel: ${configForm.telefono_contacto}`}</div>
+                )}
+                {configForm.email_contacto?.trim() && (
+                  <div>{configForm.email_contacto.toLowerCase().startsWith('email') ? configForm.email_contacto : `Email: ${configForm.email_contacto}`}</div>
+                )}
+                {configForm.instagram_empresa?.trim() && (
+                  <div>{configForm.instagram_empresa.toLowerCase().startsWith('instagram') ? configForm.instagram_empresa : `Instagram: ${configForm.instagram_empresa}`}</div>
+                )}
+                {configForm.metodos_pago?.trim() && (
+                  <div>{configForm.metodos_pago.toLowerCase().includes('pago') ? configForm.metodos_pago : `Métodos de pago: ${configForm.metodos_pago}`}</div>
+                )}
+                {configForm.sitio_web?.trim() && <div>{configForm.sitio_web.trim()}</div>}
+                {!configForm.direccion_empresa?.trim() && !configForm.telefono_contacto?.trim() && !configForm.email_contacto?.trim() && !configForm.instagram_empresa?.trim() && !configForm.metodos_pago?.trim() && !configForm.sitio_web?.trim() && (
+                  <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>Sin datos adicionales ingresados (no se mostrarán espacios vacíos)</div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -3409,11 +3740,14 @@ export default function AdminPanel() {
                 </div>
               </div>
 
-              {/* Sección 3: Datos de Contacto */}
+              {/* Sección 3: Datos de Contacto y Membrete de Contrato */}
               <div>
-                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  📞 Información de Contacto
+                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.05rem', color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  📞 Información de Contacto y Datos para el Contrato
                 </h3>
+                <p style={{ margin: '0 0 1rem 0', fontSize: 12, color: '#64748b' }}>
+                  Estos datos se plasman debajo del nombre de la empresa en la hoja de contrato PDF. Solo se acomodarán los datos que rellenes (sin espacios vacíos).
+                </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
                   <div>
                     <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
@@ -3430,7 +3764,7 @@ export default function AdminPanel() {
 
                   <div>
                     <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
-                      Correo Electrónico
+                      Correo Electrónico (Email)
                     </label>
                     <input
                       type="email"
@@ -3450,6 +3784,45 @@ export default function AdminPanel() {
                       value={configForm.direccion_empresa || ''}
                       onChange={e => setConfigForm({ ...configForm, direccion_empresa: e.target.value })}
                       placeholder="Ciudad de Panamá, Panamá"
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                      Instagram
+                    </label>
+                    <input
+                      type="text"
+                      value={configForm.instagram_empresa || ''}
+                      onChange={e => setConfigForm({ ...configForm, instagram_empresa: e.target.value })}
+                      placeholder="@alquilatuparty"
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                      Métodos de Pago
+                    </label>
+                    <input
+                      type="text"
+                      value={configForm.metodos_pago || ''}
+                      onChange={e => setConfigForm({ ...configForm, metodos_pago: e.target.value })}
+                      placeholder="Yappy / Efectivo / Banco General"
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                      Sitio Web / Link (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={configForm.sitio_web || ''}
+                      onChange={e => setConfigForm({ ...configForm, sitio_web: e.target.value })}
+                      placeholder="https://alquila-tu-party.alquilame.io"
                       style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
                     />
                   </div>
