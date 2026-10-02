@@ -93,7 +93,21 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
     const instaText = (empInstagram.toLowerCase().startsWith('instagram') || empInstagram.toLowerCase().startsWith('ig')) ? empInstagram : `Instagram: ${empInstagram}`;
     lineasEmpresa.push(`<div style="line-height:1.2;margin-bottom:1.5px;">${instaText}</div>`);
   }
-  if (empMetodosPago) {
+  const metodosArr = normalizarMetodosPago(configEmpresa?.metodos_pago);
+  if (metodosArr.length > 0) {
+    lineasEmpresa.push(`<div style="line-height:1.2;margin-top:2px;margin-bottom:1px;font-weight:700;color:#334155;">Métodos de pago:</div>`);
+    metodosArr.forEach(m => {
+      let nombreLimpio = (m.nombre || '').trim();
+      const detalleLimpio = (m.detalle || '').trim();
+      nombreLimpio = nombreLimpio.replace(/^(métodos?\s+de\s+pago\s*[:\-]?\s*)/i, '').trim();
+      if (nombreLimpio && detalleLimpio) {
+        const label = nombreLimpio.endsWith(':') ? nombreLimpio : `${nombreLimpio}:`;
+        lineasEmpresa.push(`<div style="line-height:1.2;margin-bottom:1.5px;padding-left:4px;">• <strong>${label}</strong> ${detalleLimpio}</div>`);
+      } else if (nombreLimpio || detalleLimpio) {
+        lineasEmpresa.push(`<div style="line-height:1.2;margin-bottom:1.5px;padding-left:4px;">• ${nombreLimpio || detalleLimpio}</div>`);
+      }
+    });
+  } else if (empMetodosPago) {
     const pagoText = (empMetodosPago.toLowerCase().includes('pago') || empMetodosPago.toLowerCase().includes('método') || empMetodosPago.toLowerCase().includes('metodo')) ? empMetodosPago : `Métodos de pago: ${empMetodosPago}`;
     lineasEmpresa.push(`<div style="line-height:1.2;margin-bottom:1.5px;">${pagoText}</div>`);
   }
@@ -2125,9 +2139,24 @@ export default function AdminPanel() {
                 {configForm.instagram_empresa?.trim() && (
                   <div>{configForm.instagram_empresa.toLowerCase().startsWith('instagram') ? configForm.instagram_empresa : `Instagram: ${configForm.instagram_empresa}`}</div>
                 )}
-                {formatearMetodosPagoTexto(configForm.metodos_pago) && (
+                {normalizarMetodosPago(configForm.metodos_pago).length > 0 ? (
+                  <div style={{ marginTop: 2 }}>
+                    <div style={{ fontWeight: 700, color: '#334155' }}>Métodos de pago:</div>
+                    {normalizarMetodosPago(configForm.metodos_pago).map((m, idx) => {
+                      let nombreLimpio = (m.nombre || '').trim();
+                      const detalleLimpio = (m.detalle || '').trim();
+                      nombreLimpio = nombreLimpio.replace(/^(métodos?\s+de\s+pago\s*[:\-]?\s*)/i, '').trim();
+                      const label = nombreLimpio ? (detalleLimpio ? (nombreLimpio.endsWith(':') ? nombreLimpio : `${nombreLimpio}:`) : nombreLimpio) : '';
+                      return (
+                        <div key={idx} style={{ paddingLeft: 6, marginBottom: 1 }}>
+                          • {label ? <strong>{label} </strong> : ''}{detalleLimpio || ''}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : formatearMetodosPagoTexto(configForm.metodos_pago) ? (
                   <div>{formatearMetodosPagoTexto(configForm.metodos_pago).toLowerCase().includes('pago') ? formatearMetodosPagoTexto(configForm.metodos_pago) : `Métodos de pago: ${formatearMetodosPagoTexto(configForm.metodos_pago)}`}</div>
-                )}
+                ) : null}
                 {configForm.sitio_web?.trim() && <div>{configForm.sitio_web.trim()}</div>}
                 {!configForm.direccion_empresa?.trim() && !configForm.telefono_contacto?.trim() && !configForm.email_contacto?.trim() && !configForm.instagram_empresa?.trim() && !formatearMetodosPagoTexto(configForm.metodos_pago) && !configForm.sitio_web?.trim() && (
                   <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>Sin datos adicionales ingresados (no se mostrarán espacios vacíos)</div>
