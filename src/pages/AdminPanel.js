@@ -359,7 +359,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   <div style="display: flex; justify-content: flex-end; margin-top: 6px; margin-bottom: 4px;">
     <div style="width: 220px; font-size: 9px;">
       <div style="display: flex; justify-content: space-between; padding: 1.5px 0;">
-        <span style="font-weight: 600; color: #334155;">Subtotal:</span>
+        <span style="font-weight: 600; color: #334155;">Total:</span>
         <span style="font-weight: 700; color: #0f172a;">$${parseFloat(reserva.total).toFixed(2)}</span>
       </div>
       ${totalAbono > 0 ? `
@@ -367,14 +367,9 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
         <span style="font-weight: 600;">Abono:</span>
         <span style="font-weight: 700;">-$${totalAbono.toFixed(2)}</span>
       </div>` : ''}
-      ${saldoPendiente > 0 ? `
-      <div style="display: flex; justify-content: space-between; padding: 1.5px 0; color: #dc2626;">
-        <span style="font-weight: 600;">Saldo pendiente:</span>
-        <span style="font-weight: 700;">$${saldoPendiente.toFixed(2)}</span>
-      </div>` : ''}
-      <div style="display: flex; justify-content: space-between; padding: 2px 0; margin-top: 1px;">
-        <span style="font-weight: 900; font-size: 13px; color: ${empColor}; text-transform: uppercase;">TOTAL:</span>
-        <span style="font-weight: 900; font-size: 13px; color: ${empColor};">$${parseFloat(reserva.total).toFixed(2)}</span>
+      <div style="display: flex; justify-content: space-between; padding: 2px 0; margin-top: 1px; color: ${saldoPendiente > 0 ? '#dc2626' : '#16a34a'};">
+        <span style="font-weight: 900; font-size: 13px; text-transform: uppercase;">Saldo pendiente:</span>
+        <span style="font-weight: 900; font-size: 13px;">$${saldoPendiente.toFixed(2)}</span>
       </div>
     </div>
   </div>
