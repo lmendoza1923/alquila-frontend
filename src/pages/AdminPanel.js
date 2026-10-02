@@ -2186,6 +2186,28 @@ export default function AdminPanel() {
           return nombre.includes(query) || alias.includes(query) || email.includes(query) || tel.includes(query) || id.includes(query);
         });
 
+        // En la opción de lista: ordenar las reservas más cercanas al inicio y las más lejanas al final
+        const reservasLista = [...reservasFiltradas].sort((a, b) => {
+          if (filtroEstadoReservas === 'completada') {
+            const fA = (a.fecha_inicio || '').substring(0, 10);
+            const fB = (b.fecha_inicio || '').substring(0, 10);
+            return fB.localeCompare(fA);
+          }
+          const fA = (a.fecha_inicio || '').substring(0, 10);
+          const fB = (b.fecha_inicio || '').substring(0, 10);
+          if (fA !== fB) {
+            if (!fA) return 1;
+            if (!fB) return -1;
+            return fA.localeCompare(fB);
+          }
+          const finA = (a.fecha_fin || '').substring(0, 10);
+          const finB = (b.fecha_fin || '').substring(0, 10);
+          if (finA !== finB) {
+            return finA.localeCompare(finB);
+          }
+          return (a.nombre_cliente || '').localeCompare(b.nombre_cliente || '');
+        });
+
         // Días de la semana seleccionada
         const diasSemana = getDaysOfWeek(fechaRefSemana);
 
@@ -2369,7 +2391,7 @@ export default function AdminPanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {reservasFiltradas.map(r => (
+                    {reservasLista.map(r => (
                       <tr key={r.id} style={{ borderBottom: '1px solid #f8f8f8' }}>
                         <td style={{ padding: '12px 16px', fontWeight: 600, color: '#333' }}>{r.alias_cliente || '-'}</td>
                         <td style={{ padding: '12px 16px' }}>
@@ -2422,7 +2444,7 @@ export default function AdminPanel() {
                         </td>
                       </tr>
                     ))}
-                    {reservasFiltradas.length === 0 && (
+                    {reservasLista.length === 0 && (
                       <tr><td colSpan="6" style={{ padding: '2.5rem', textAlign: 'center', color: '#888' }}>No se encontraron reservas con los filtros seleccionados.</td></tr>
                     )}
                   </tbody>
