@@ -21,6 +21,12 @@ const getFechaHoy = () => {
   return `${year}-${month}-${day}`;
 };
 
+const normalizarBusqueda = (txt) =>
+  (txt || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
 // ─── Generador de Contrato PDF ───────────────────────────────────────────────
 function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosCombos, configEmpresa) {
   const totalPagado = pagos.reduce((s, p) => s + parseFloat(p.monto), 0);
@@ -995,6 +1001,8 @@ export default function AdminPanel() {
   const [loadingForm, setLoadingForm] = useState(false);
   const [muebleEditando, setMuebleEditando] = useState(null);
   const [activo, setActivo] = useState(true);
+  const [busquedaMuebles, setBusquedaMuebles] = useState('');
+  const [filtroEstadoMuebles, setFiltroEstadoMuebles] = useState('todos');
 
   // Estados formulario combos
   const [comboNombre, setComboNombre] = useState('');
@@ -2823,112 +2831,238 @@ export default function AdminPanel() {
       })()}
 
       {/* ── Mobiliario ── */}
-      {tab === 'mobiliario' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
-            <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-              <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.25rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.5rem' }}>
-                {muebleEditando ? `Editar Mueble: ${muebleEditando.nombre}` : 'Registrar nuevo mueble'}
-              </h3>
-              <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Nombre del Mueble *</label>
-                  <input type="text" placeholder="Ej. Silla Tiffany Dorada" value={nombre} onChange={e => setNombre(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Stock disponible *</label>
-                    <input type="number" min="0" value={stock} onChange={e => setStock(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio (Opcional)</label>
-                    <input type="number" step="0.01" min="0" placeholder="0.00" value={precioDia} onChange={e => setPrecioDia(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
-                  </div>
-                </div>
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Descripción</label>
-                  <textarea rows="3" placeholder="Detalles sobre el mueble..." value={descripcion} onChange={e => setDescripcion(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
-                </div>
-                {muebleEditando && (
-                  <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input 
-                      type="checkbox" 
-                      id="mueble-activo"
-                      checked={activo} 
-                      onChange={e => setActivo(e.target.checked)} 
-                      style={{ width: 18, height: 18, cursor: 'pointer' }}
-                    />
-                    <label htmlFor="mueble-activo" style={{ fontWeight: 600, fontSize: 13, color: '#444', cursor: 'pointer' }}>Mueble Activo / Disponible para alquilar</label>
-                  </div>
-                )}
+      {tab === 'mobiliario' && (() => {
+        const mueblesFiltrados = muebles.filter(m => {
+          if (filtroEstadoMuebles === 'activos' && !m.activo) return false;
+          if (filtroEstadoMuebles === 'inactivos' && m.activo) return false;
 
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button type="submit" disabled={loadingForm} style={{ flex: 2, padding: '12px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
-                    {loadingForm ? 'Guardando...' : (muebleEditando ? '✓ Guardar Cambios' : '✓ Registrar Mueble')}
-                  </button>
+          if (!busquedaMuebles.trim()) return true;
+          const term = normalizarBusqueda(busquedaMuebles);
+          const enNombre = normalizarBusqueda(m.nombre).includes(term);
+          const enDesc = normalizarBusqueda(m.descripcion).includes(term);
+          const enPrecio = m.precio_dia ? String(m.precio_dia).includes(term) : false;
+          const enStock = m.stock ? String(m.stock).includes(term) : false;
+          return enNombre || enDesc || enPrecio || enStock;
+        });
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
+              <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.25rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.5rem' }}>
+                  {muebleEditando ? `Editar Mueble: ${muebleEditando.nombre}` : 'Registrar nuevo mueble'}
+                </h3>
+                <form onSubmit={handleSubmit}>
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Nombre del Mueble *</label>
+                    <input type="text" placeholder="Ej. Silla Tiffany Dorada" value={nombre} onChange={e => setNombre(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Stock disponible *</label>
+                      <input type="number" min="0" value={stock} onChange={e => setStock(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} required />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Precio (Opcional)</label>
+                      <input type="number" step="0.01" min="0" placeholder="0.00" value={precioDia} onChange={e => setPrecioDia(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Descripción</label>
+                    <textarea rows="3" placeholder="Detalles sobre el mueble..." value={descripcion} onChange={e => setDescripcion(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
+                  </div>
                   {muebleEditando && (
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        setNombre(''); setDescripcion(''); setPrecioDia('');
-                        setStock('1'); setImagenes([]); setNuevaImagenUrl('');
-                        setActivo(true);
-                        setMuebleEditando(null);
-                      }} 
-                      style={{ flex: 1, padding: '12px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
-                    >
-                      Cancelar
+                    <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <input 
+                        type="checkbox" 
+                        id="mueble-activo"
+                        checked={activo} 
+                        onChange={e => setActivo(e.target.checked)} 
+                        style={{ width: 18, height: 18, cursor: 'pointer' }}
+                      />
+                      <label htmlFor="mueble-activo" style={{ fontWeight: 600, fontSize: 13, color: '#444', cursor: 'pointer' }}>Mueble Activo / Disponible para alquilar</label>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button type="submit" disabled={loadingForm} style={{ flex: 2, padding: '12px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
+                      {loadingForm ? 'Guardando...' : (muebleEditando ? '✓ Guardar Cambios' : '✓ Registrar Mueble')}
                     </button>
+                    {muebleEditando && (
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setNombre(''); setDescripcion(''); setPrecioDia('');
+                          setStock('1'); setImagenes([]); setNuevaImagenUrl('');
+                          setActivo(true);
+                          setMuebleEditando(null);
+                        }} 
+                        style={{ flex: 1, padding: '12px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.85rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, color: '#1a1a2e', fontSize: '1.25rem' }}>
+                    Muebles Registrados ({mueblesFiltrados.length}{busquedaMuebles.trim() || filtroEstadoMuebles !== 'todos' ? ` de ${muebles.length}` : ''})
+                  </h3>
+                  {(busquedaMuebles.trim() || filtroEstadoMuebles !== 'todos') && (
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                      {busquedaMuebles.trim() && <span>Filtrado por: "<strong>{busquedaMuebles.trim()}</strong>"</span>}
+                      {busquedaMuebles.trim() && filtroEstadoMuebles !== 'todos' && <span> • </span>}
+                      {filtroEstadoMuebles !== 'todos' && <span>Estado: <strong>{filtroEstadoMuebles === 'activos' ? 'Solo Activos' : 'Solo Inactivos'}</strong></span>}
+                    </div>
                   )}
                 </div>
-              </form>
-            </div>
-          </div>
 
-          <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.25rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.5rem' }}>Muebles Registrados ({muebles.length})</h3>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                <thead>
-                  <tr style={{ background: '#f8f9ff', borderBottom: '1px solid #f0f0f0' }}>
-                    {['Nombre', 'Precio', 'Stock', 'Estado', 'Acciones'].map(h => (
-                      <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {muebles.map(m => (
-                    <tr key={m.id} style={{ borderBottom: '1px solid #f8f8f8' }}>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontWeight: 600, color: '#1a1a2e' }}>🪑 {m.nombre}</div>
-                        {m.descripcion && <div style={{ color: '#888', fontSize: 12, marginTop: 2 }}>{m.descripcion}</div>}
-                      </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>
-                        {m.precio_dia ? `$${parseFloat(m.precio_dia).toFixed(2)}` : '—'}
-                      </td>
-                      <td style={{ padding: '12px 16px', color: '#666' }}>{m.stock} uds</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ background: m.activo ? '#22c55e22' : '#ef444422', color: m.activo ? '#22c55e' : '#ef4444', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                          {m.activo ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => iniciarEditarMueble(m)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️</button>
-                          <button onClick={() => eliminarMueble(m.id, m.nombre)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar">🗑️</button>
-                        </div>
-                      </td>
+                {/* Recuadro de búsqueda y filtro de estado */}
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', flex: '1 1 280px', justifyContent: 'flex-end' }}>
+                  <div style={{ position: 'relative', width: 280, maxWidth: '100%' }}>
+                    <input
+                      type="text"
+                      placeholder="🔍 Buscar mueble..."
+                      value={busquedaMuebles}
+                      onChange={e => setBusquedaMuebles(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 32px 9px 12px',
+                        borderRadius: 8,
+                        border: '1px solid #ddd',
+                        fontSize: 14,
+                        boxSizing: 'border-box',
+                        outline: 'none',
+                        transition: 'border-color 0.2s',
+                      }}
+                      onFocus={e => e.target.style.borderColor = '#4a6cf7'}
+                      onBlur={e => e.target.style.borderColor = '#ddd'}
+                    />
+                    {busquedaMuebles && (
+                      <button
+                        type="button"
+                        onClick={() => setBusquedaMuebles('')}
+                        style={{
+                          position: 'absolute',
+                          right: 8,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          border: 'none',
+                          background: '#e2e8f0',
+                          color: '#64748b',
+                          borderRadius: '50%',
+                          width: 20,
+                          height: 20,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          fontSize: 11,
+                          padding: 0,
+                        }}
+                        title="Limpiar búsqueda"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <select
+                    value={filtroEstadoMuebles}
+                    onChange={e => setFiltroEstadoMuebles(e.target.value)}
+                    style={{
+                      padding: '9px 12px',
+                      borderRadius: 8,
+                      border: '1px solid #ddd',
+                      fontSize: 13,
+                      background: '#fff',
+                      cursor: 'pointer',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="todos">Todos los estados</option>
+                    <option value="activos">Solo Activos</option>
+                    <option value="inactivos">Solo Inactivos</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9ff', borderBottom: '1px solid #f0f0f0' }}>
+                      {['Nombre', 'Precio', 'Stock', 'Estado', 'Acciones'].map(h => (
+                        <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#555' }}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                  {muebles.length === 0 && (
-                    <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay muebles registrados aún.</td></tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {mueblesFiltrados.map(m => (
+                      <tr key={m.id} style={{ borderBottom: '1px solid #f8f8f8' }}>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 600, color: '#1a1a2e' }}>🪑 {m.nombre}</div>
+                          {m.descripcion && <div style={{ color: '#888', fontSize: 12, marginTop: 2 }}>{m.descripcion}</div>}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: 700, color: '#4a6cf7' }}>
+                          {m.precio_dia ? `$${parseFloat(m.precio_dia).toFixed(2)}` : '—'}
+                        </td>
+                        <td style={{ padding: '12px 16px', color: '#666' }}>{m.stock} uds</td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ background: m.activo ? '#22c55e22' : '#ef444422', color: m.activo ? '#22c55e' : '#ef4444', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                            {m.activo ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button onClick={() => iniciarEditarMueble(m)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️</button>
+                            <button onClick={() => eliminarMueble(m.id, m.nombre)} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar">🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {muebles.length === 0 && (
+                      <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>No hay muebles registrados aún.</td></tr>
+                    )}
+                    {muebles.length > 0 && mueblesFiltrados.length === 0 && (
+                      <tr>
+                        <td colSpan="5" style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#64748b' }}>
+                          <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>🔍</div>
+                          <div style={{ fontWeight: 600, fontSize: 15, color: '#334155' }}>No se encontraron muebles</div>
+                          <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>
+                            No hay resultados coincidentes para la búsqueda actual.
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setBusquedaMuebles(''); setFiltroEstadoMuebles('todos'); }}
+                            style={{
+                              marginTop: '1rem',
+                              padding: '7px 16px',
+                              background: '#4a6cf7',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: 8,
+                              cursor: 'pointer',
+                              fontSize: 13,
+                              fontWeight: 600,
+                            }}
+                          >
+                            Limpiar búsqueda y filtros
+                          </button>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Combos y Paquetes ── */}
       {tab === 'combos' && (
