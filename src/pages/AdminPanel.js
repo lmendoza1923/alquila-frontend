@@ -432,7 +432,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 }
 
 // ─── Generador de Hoja de Entrega y Control (Sin Precios + Casillas Check) ────
-function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
+function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa, terminos) {
   const empNombre = configEmpresa?.nombre_empresa || 'Alquila tu Party';
   const empLogo = configEmpresa?.logo_url || '🎉';
   const empColor = configEmpresa?.color_primario || '#2563eb';
@@ -512,11 +512,34 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
     </tr>`;
   }).join('');
 
+  // Términos y condiciones numerados como en el contrato
+  const terminosPredeterminados = [
+    'El equipo se alquila con un horario definido entre el cliente y la empresa.',
+    'El equipo rentado debe permanecer en la ubicación especificada en el contrato. Cualquier traslado no autorizado puede resultar en cargos adicionales y el cliente será responsable por cualquier daño durante el traslado.',
+    'No se permite realizar modificaciones al equipo rentado. Cualquier decoración debe ser removible y no debe causar daños. No se permite el uso de clavos, grapas, pegamentos o cualquier material que pueda dañar el equipo.',
+    'El cliente es responsable por cualquier daño, pérdida o robo del equipo durante el período de renta. Los costos de reparación o reemplazo serán evaluados por la empresa y deberán ser cubiertos por el cliente.',
+    'Los anticipos realizados no son reembolsables bajo ninguna circunstancia.'
+  ];
+
+  const terminosTexto = (terminos && terminos.trim()) ? terminos : (configEmpresa?.terminos || configEmpresa?.terminos_condiciones || '');
+  let terminosHtml = '';
+  if (terminosTexto && terminosTexto.trim()) {
+    const lineasT = terminosTexto.split('\n').filter(l => l.trim().length > 0);
+    terminosHtml = lineasT.map((l, idx) => {
+      const sinNumero = l.replace(/^\d+[\.\-\)]\s*/, '');
+      return `<div style="margin-bottom:2px;"><b>${idx + 1}.</b> ${sinNumero}</div>`;
+    }).join('');
+  } else {
+    terminosHtml = terminosPredeterminados.map((t, idx) => `
+      <div style="margin-bottom:2px;"><b>${idx + 1}.</b> ${t}</div>
+    `).join('');
+  }
+
   const htmlHojaEntrega = `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title></title>
+<title>Hoja de Entrega ${reserva.id ? '#' + reserva.id.slice(0, 8).toUpperCase() : ''}</title>
 <style>
   @page { size: auto; margin: 6mm 8mm; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.3; font-size: 9.5px; }
@@ -623,6 +646,21 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa) {
     <div class="obs-box">
       <em>Espacio para registrar novedades físicas, accesos o cambios en la entrega:</em>
       <div style="height:18px;"></div>
+    </div>
+  </div>
+
+  <!-- AVISO DE NO DEVOLUCIONES -->
+  <div style="border: 1px solid #ef4444; border-radius: 2px; padding: 3px 8px; text-align: center; color: #dc2626; font-weight: 800; font-size: 9px; margin: 4px 0 6px 0; letter-spacing: 0.5px;">
+    ⚠ NO HAY DEVOLUCIONES EN ANTICIPOS
+  </div>
+
+  <!-- TÉRMINOS Y CONDICIONES -->
+  <div style="border: 1px solid #475569; border-radius: 2px; padding: 5px 8px; margin-bottom: 6px;">
+    <div style="color: ${empColor}; font-weight: 800; font-size: 9.5px; text-align: center; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;">
+      TÉRMINOS Y CONDICIONES
+    </div>
+    <div style="font-size: 7.5px; line-height: 1.35; color: #1e293b; text-align: justify;">
+      ${terminosHtml}
     </div>
   </div>
 
@@ -2420,7 +2458,7 @@ export default function AdminPanel() {
                             <button onClick={() => abrirEditarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️</button>
                             <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳</button>
                             <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄</button>
-                            <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚</button>
+                            <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config, terminos)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚</button>
                             <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️</button>
                             {r.estado !== 'cancelada' && r.estado !== 'completada' && (
                               <>
@@ -2596,7 +2634,7 @@ export default function AdminPanel() {
                                 <button onClick={() => abrirEditarReserva(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Editar">✏️</button>
                                 <button onClick={() => abrirPagos(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#22c55e', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Pagos">💳</button>
                                 <button onClick={() => abrirContrato(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#f59e0b', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Contrato PDF">📄</button>
-                                <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Hoja de Entrega">🚚</button>
+                                <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config, terminos)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Hoja de Entrega">🚚</button>
                               </div>
                             </div>
                           ))}
@@ -2810,7 +2848,7 @@ export default function AdminPanel() {
                                 <button onClick={() => abrirEditarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️ Editar</button>
                                 <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳 Pagos</button>
                                 <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄 Contrato</button>
-                                <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚 Entrega</button>
+                                <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config, terminos)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚 Entrega</button>
                                 <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️ Eliminar</button>
                               </div>
                             </div>
@@ -4848,7 +4886,7 @@ export default function AdminPanel() {
               </div>
               <button
                 onClick={() => {
-                  generarHojaEntregaPDF(modalContrato, modalContrato.items || [], combos, config);
+                  generarHojaEntregaPDF(modalContrato, modalContrato.items || [], combos, config, terminos);
                   setModalContrato(null);
                 }}
                 style={{ width: '100%', padding: '11px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
