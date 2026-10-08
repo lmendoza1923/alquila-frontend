@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../api';
 
 export default function ClientesAdmin({ onAbrirEditarReserva }) {
+  const navigate = useNavigate();
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
@@ -483,21 +485,38 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                 </div>
 
                 {/* Acciones para móviles */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 42px', gap: 6, marginTop: 4 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 36px', gap: 6, marginTop: 4 }}>
+                  <button
+                    onClick={() => navigate(`/catalogo?cliente_id=${c.id}`)}
+                    style={{
+                      background: '#ecfdf5',
+                      border: '1px solid #a7f3d0',
+                      color: '#065f46',
+                      padding: '8px 4px',
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                    title="Crear nueva reserva para este cliente"
+                  >
+                    📅 Reserva
+                  </button>
+
                   <button
                     onClick={() => setClienteSeleccionado(c)}
                     style={{
                       background: '#f1f5f9',
                       border: '1px solid #cbd5e1',
                       color: '#334155',
-                      padding: '8px 10px',
+                      padding: '8px 4px',
                       borderRadius: 6,
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: 600,
                       cursor: 'pointer'
                     }}
                   >
-                    👁️ Ver Ficha
+                    👁️ Ver
                   </button>
 
                   <button
@@ -506,9 +525,9 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                       background: '#eff6ff',
                       border: '1px solid #bfdbfe',
                       color: '#1d4ed8',
-                      padding: '8px 10px',
+                      padding: '8px 4px',
                       borderRadius: 6,
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: 600,
                       cursor: 'pointer'
                     }}
@@ -692,6 +711,23 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
 
                       <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: 6 }}>
+                          <button
+                            onClick={() => navigate(`/catalogo?cliente_id=${c.id}`)}
+                            title="Crear una nueva reserva para este cliente"
+                            style={{
+                              background: '#ecfdf5',
+                              border: '1px solid #a7f3d0',
+                              color: '#065f46',
+                              padding: '6px 10px',
+                              borderRadius: 6,
+                              cursor: 'pointer',
+                              fontSize: 13,
+                              fontWeight: 600
+                            }}
+                          >
+                            📅 Reserva
+                          </button>
+
                           <button
                             onClick={() => setClienteSeleccionado(c)}
                             title="Ver detalles completos del cliente y sus reservas"
@@ -995,6 +1031,26 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
             }}>
               <button
                 onClick={() => {
+                  const cId = clienteSeleccionado.id;
+                  setClienteSeleccionado(null);
+                  navigate(`/catalogo?cliente_id=${cId}`);
+                }}
+                style={{
+                  background: '#10b981',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '9px 16px',
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  width: isMobile ? '100%' : 'auto'
+                }}
+              >
+                📅 Nueva Reserva
+              </button>
+              <button
+                onClick={() => {
                   const c = clienteSeleccionado;
                   setClienteSeleccionado(null);
                   abrirEditar(c);
@@ -1011,7 +1067,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                   width: isMobile ? '100%' : 'auto'
                 }}
               >
-                ✏️ Editar Datos del Cliente
+                ✏️ Editar Datos
               </button>
               <button
                 onClick={() => setClienteSeleccionado(null)}

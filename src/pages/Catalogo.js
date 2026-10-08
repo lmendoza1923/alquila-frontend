@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -47,8 +47,74 @@ export default function Catalogo() {
   } = useCart();
 
   // Checkout states for Admin
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState({ alias: '', nombre: '', cedula: '', telefono: '', direccion: '', notas: '' });
+  const [clientes, setClientes] = useState([]);
+  const [busquedaCliente, setBusquedaCliente] = useState('');
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+  const [mostrarListaClientes, setMostrarListaClientes] = useState(false);
   const [loadingCheckout, setLoadingCheckout] = useState(false);
+
+  const seleccionarCliente = (c) => {
+    setClienteSeleccionado(c);
+    setForm({
+      alias: c.alias || '',
+      nombre: c.nombre || '',
+      cedula: c.cedula || '',
+      telefono: c.telefono || '',
+      direccion: c.direccion || '',
+      notas: c.notas || ''
+    });
+    setBusquedaCliente(`${c.nombre}${c.alias ? ` (${c.alias})` : ''}`);
+    setMostrarListaClientes(false);
+    toast.success(`Datos de ${c.nombre} cargados a la reserva`);
+  };
+
+  const limpiarCliente = () => {
+    setClienteSeleccionado(null);
+    setBusquedaCliente('');
+    setForm({ alias: '', nombre: '', cedula: '', telefono: '', direccion: '', notas: '' });
+  };
+
+  useEffect(() => {
+    if (isAdmin) {
+      api.get('/clientes')
+        .then(res => {
+          setClientes(res.data);
+          const cIdParam = searchParams.get('cliente_id');
+          if (cIdParam) {
+            const found = res.data.find(c => c.id === cIdParam);
+            if (found) {
+              setClienteSeleccionado(found);
+              setForm({
+                alias: found.alias || '',
+                nombre: found.nombre || '',
+                cedula: found.cedula || '',
+                telefono: found.telefono || '',
+                direccion: found.direccion || '',
+                notas: found.notas || ''
+              });
+              setBusquedaCliente(`${found.nombre}${found.alias ? ` (${found.alias})` : ''}`);
+              toast.success(`Cliente ${found.nombre} seleccionado para la reserva`);
+            }
+          }
+        })
+        .catch(err => console.error('Error cargando clientes:', err));
+    }
+  }, [isAdmin, searchParams]);
+
+  const clientesFiltrados = useMemo(() => {
+    if (!busquedaCliente.trim()) {
+      return clientes.slice(0, 10);
+    }
+    const q = busquedaCliente.toLowerCase().trim();
+    return clientes.filter(c =>
+      (c.nombre && c.nombre.toLowerCase().includes(q)) ||
+      (c.alias && c.alias.toLowerCase().includes(q)) ||
+      (c.cedula && c.cedula.toLowerCase().includes(q)) ||
+      (c.telefono && c.telefono.toLowerCase().includes(q))
+    ).slice(0, 12);
+  }, [clientes, busquedaCliente]);
   const [servicios, setServicios] = useState([]);
   const [requiereTransporte, setRequiereTransporte] = useState(false);
   const [costoTransporte, setCostoTransporte] = useState('');
@@ -123,10 +189,11 @@ export default function Catalogo() {
         alias_cliente: form.alias || null,
         nombre_cliente: form.nombre || null,
         cedula_cliente: form.cedula ? form.cedula.trim() : null,
-        email_cliente: null,
+        email_cliente: clienteSeleccionado?.email || null,
         telefono_cliente: form.telefono || null,
         direccion_entrega: form.direccion || null,
         notas: form.notas,
+        cliente_id: clienteSeleccionado?.id || null,
         items: itemsPayload
       });
       vaciar();
@@ -135,7 +202,7 @@ export default function Catalogo() {
       setCostoTransporte('');
       setRequiereDecoracion(false);
       setCostoDecoracion('');
-      setForm({ alias: '', nombre: '', cedula: '', telefono: '', direccion: '', notas: '' });
+      limpiarCliente();
       toast.success('Reserva creada exitosamente');
       navigate(`/confirmacion/${data.reserva.id}`);
     } catch (err) {
@@ -545,6 +612,128 @@ export default function Catalogo() {
               ) : (
                 <p style={{ color: '#aaa', fontSize: 12, margin: '6px 0 12px 0', fontStyle: 'italic' }}>Ningún servicio agregado.</p>
               )}
+
+              {/* Selector / Buscador para jalar cliente existente */}
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: 8,
+                padding: '10px',
+                marginTop: 10,
+                marginBottom: 8
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span>👥</span> Jalar Cliente / Formulario:
+                  </label>
+                  {clienteSeleccionado && (
+                    <button
+                      type="button"
+                      onClick={limpiarCliente}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#ef4444',
+                        fontSize: 11,
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        padding: 0
+                      }}
+                      title="Limpiar datos del cliente"
+                    >
+                      ✕ Limpiar
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={busquedaCliente}
+                    onChange={e => {
+                      setBusquedaCliente(e.target.value);
+                      setMostrarListaClientes(true);
+                    }}
+                    onFocus={() => setMostrarListaClientes(true)}
+                    onBlur={() => setTimeout(() => setMostrarListaClientes(false), 250)}
+                    placeholder="🔍 Buscar cliente por nombre, cédula o tel..."
+                    style={{
+                      ...s.input,
+                      padding: '7px 10px',
+                      fontSize: 12,
+                      width: '100%',
+                      marginBottom: 0,
+                      boxSizing: 'border-box'
+                    }}
+                  />
+
+                  {/* Dropdown flotante con lista de clientes */}
+                  {mostrarListaClientes && clientesFiltrados.length > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      background: '#fff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 8,
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.12)',
+                      maxHeight: 190,
+                      overflowY: 'auto',
+                      zIndex: 100,
+                      marginTop: 3
+                    }}>
+                      {clientesFiltrados.map(c => (
+                        <div
+                          key={c.id}
+                          onMouseDown={() => seleccionarCliente(c)}
+                          style={{
+                            padding: '8px 10px',
+                            borderBottom: '1px solid #f1f5f9',
+                            cursor: 'pointer',
+                            fontSize: 12,
+                            background: clienteSeleccionado?.id === c.id ? '#eff6ff' : '#fff'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                          onMouseLeave={e => e.currentTarget.style.background = clienteSeleccionado?.id === c.id ? '#eff6ff' : '#fff'}
+                        >
+                          <div style={{ fontWeight: 600, color: '#1e293b' }}>
+                            {c.nombre} {c.alias ? <span style={{ color: '#4a6cf7', fontWeight: 500 }}>({c.alias})</span> : null}
+                          </div>
+                          <div style={{ color: '#64748b', fontSize: 11, display: 'flex', gap: 8, marginTop: 2 }}>
+                            {c.telefono && <span>📞 {c.telefono}</span>}
+                            {c.cedula && <span>🪪 {c.cedula}</span>}
+                          </div>
+                          {c.notas && (
+                            <div style={{ color: '#059669', fontSize: 10, marginTop: 2, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              📝 {c.notas}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {clienteSeleccionado && (
+                  <div style={{
+                    marginTop: 6,
+                    fontSize: 11,
+                    color: '#065f46',
+                    background: '#ecfdf5',
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    border: '1px solid #a7f3d0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 4
+                  }}>
+                    <span>✓ Cliente jalado: <strong>{clienteSeleccionado.nombre}</strong></span>
+                    <span style={{ fontSize: 10, color: '#047857' }}>(Datos autocompletados)</span>
+                  </div>
+                )}
+              </div>
 
               {/* Datos del cliente */}
               <h4 style={{ margin: '12px 0 6px 0', fontSize: 13, color: '#555', fontWeight: 600 }}>Datos del cliente</h4>
