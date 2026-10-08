@@ -10,6 +10,7 @@ import Confirmacion from './pages/Confirmacion';
 import Login from './pages/Login';
 import MisReservas from './pages/MisReservas';
 import AdminPanel from './pages/AdminPanel';
+import FormularioCliente from './pages/FormularioCliente';
 
 function Navbar({ isMobile, mobileMenuOpen, setMobileMenuOpen }) {
   const { user, logout } = useAuth();
@@ -397,6 +398,8 @@ function AppContent() {
           <Route path="/mis-reservas" element={<ProtectedRoute><MisReservas /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/clientes" element={<AdminRoute><Navigate to="/admin?tab=clientes" replace /></AdminRoute>} />
+          <Route path="/formulario-cliente" element={<FormularioCliente />} />
+          <Route path="/registro-cliente" element={<Navigate to="/formulario-cliente" replace />} />
         </Routes>
       </div>
     </>

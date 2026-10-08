@@ -19,7 +19,32 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null); // Para ver detalles
   const [clienteEditando, setClienteEditando] = useState(null); // Para editar
   const [modalNuevo, setModalNuevo] = useState(false); // Para crear nuevo
+  const [modalCompartirLink, setModalCompartirLink] = useState(false); // Para compartir formulario de reserva
+  const [copiadoExito, setCopiadoExito] = useState(false);
   const [guardando, setGuardando] = useState(false);
+
+  const urlFormulario = `${window.location.origin}/formulario-cliente`;
+
+  const copiarLinkPublico = () => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(urlFormulario)
+        .then(() => {
+          setCopiadoExito(true);
+          toast.success('¡Enlace del formulario copiado!');
+          setTimeout(() => setCopiadoExito(false), 3000);
+        })
+        .catch(() => {
+          prompt('Copia este enlace para el cliente:', urlFormulario);
+        });
+    } else {
+      prompt('Copia este enlace para el cliente:', urlFormulario);
+    }
+  };
+
+  const compartirWhatsApp = () => {
+    const mensaje = `Hola, por favor completa tus datos en este enlace para registrar tu reserva y organizar tu evento:\n\n${urlFormulario}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`, '_blank');
+  };
 
   // Formulario de edición/creación
   const [form, setForm] = useState({
@@ -273,28 +298,59 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
           />
         </div>
 
-        <button
-          onClick={abrirNuevo}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            padding: '11px 18px',
-            background: '#4a6cf7',
-            color: '#fff',
-            borderRadius: 8,
-            border: 'none',
-            fontWeight: 600,
-            fontSize: 14,
-            cursor: 'pointer',
-            boxShadow: '0 2px 6px rgba(74, 108, 247, 0.25)',
-            width: isMobile ? '100%' : 'auto'
-          }}
-        >
-          <span>➕</span>
-          <span>Nuevo Cliente</span>
-        </button>
+        <div style={{
+          display: 'flex',
+          gap: 8,
+          flexDirection: isMobile ? 'column' : 'row',
+          width: isMobile ? '100%' : 'auto'
+        }}>
+          <button
+            onClick={() => setModalCompartirLink(true)}
+            title="Compartir link del formulario de reserva con clientes"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              padding: '11px 16px',
+              background: '#10b981',
+              color: '#fff',
+              borderRadius: 8,
+              border: 'none',
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
+              width: isMobile ? '100%' : 'auto'
+            }}
+          >
+            <span>🔗</span>
+            <span>Link para Clientes</span>
+          </button>
+
+          <button
+            onClick={abrirNuevo}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              padding: '11px 18px',
+              background: '#4a6cf7',
+              color: '#fff',
+              borderRadius: 8,
+              border: 'none',
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(74, 108, 247, 0.25)',
+              width: isMobile ? '100%' : 'auto'
+            }}
+          >
+            <span>➕</span>
+            <span>Nuevo Cliente</span>
+          </button>
+        </div>
       </div>
 
       {/* ── Lista de Clientes (Modo Tarjetas en Móviles o Tabla en Escritorio) ── */}
@@ -1172,6 +1228,205 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: COMPARTIR LINK PARA CLIENTES ── */}
+      {modalCompartirLink && (
+        <div 
+          onClick={() => setModalCompartirLink(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: '1rem'
+          }}
+        >
+          <div 
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff',
+              borderRadius: 14,
+              maxWidth: 540,
+              width: '100%',
+              padding: isMobile ? '1.25rem' : '1.75rem',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)',
+              border: '1px solid #e2e8f0'
+            }}
+          >
+            {/* Cabecera */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  background: '#ecfdf5',
+                  color: '#059669',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 20
+                }}>
+                  🔗
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 18, color: '#1e293b', fontWeight: 700 }}>
+                    Formulario para Clientes
+                  </h3>
+                  <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>
+                    Enlace público para que el cliente ingrese sus datos
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setModalCompartirLink(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: 20,
+                  cursor: 'pointer',
+                  color: '#94a3b8'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Explicación */}
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 8,
+              padding: '0.85rem 1rem',
+              fontSize: 13,
+              color: '#475569',
+              lineHeight: 1.5,
+              marginBottom: '1.25rem'
+            }}>
+              💡 <strong>¿Cómo funciona?</strong> Envía este enlace a tus clientes por WhatsApp o redes. Cuando ellos completen el formulario en su teléfono o computadora, se guardará directamente en tu base de datos de clientes listo para ser asociado a una reserva.
+            </div>
+
+            {/* Input con la URL */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>
+                Enlace directo al formulario:
+              </label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={urlFormulario}
+                  onClick={e => e.target.select()}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    background: '#f1f5f9',
+                    color: '#334155',
+                    outline: 'none',
+                    fontWeight: 500
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={copiarLinkPublico}
+                  style={{
+                    background: copiadoExito ? '#059669' : '#4a6cf7',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '0 14px',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'background 0.2s'
+                  }}
+                >
+                  {copiadoExito ? '✓ ¡Copiado!' : 'Copiar'}
+                </button>
+              </div>
+            </div>
+
+            {/* Acciones principales */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button
+                type="button"
+                onClick={compartirWhatsApp}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  padding: '12px',
+                  background: '#25D366',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: 'pointer'
+                }}
+              >
+                <span>💬</span>
+                <span>Enviar por WhatsApp</span>
+              </button>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <a
+                  href={urlFormulario}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    padding: '10px',
+                    background: '#fff',
+                    color: '#475569',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    textAlign: 'center'
+                  }}
+                >
+                  <span>🌐</span>
+                  <span>Ver Formulario</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setModalCompartirLink(false)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#f1f5f9',
+                    color: '#475569',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
