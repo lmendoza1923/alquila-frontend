@@ -121,6 +121,15 @@ function Navbar({ isMobile }) {
               {!isMobile && <span>Reservas</span>}
             </Link>
 
+            <Link to="/admin?tab=clientes" style={linkStyle(isActive('/admin', 'clientes'), true)}
+              onMouseOver={e => { if (!isActive('/admin', 'clientes')) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+              onMouseOut={e => { if (!isActive('/admin', 'clientes')) e.currentTarget.style.background = 'transparent'; }}
+              title="Clientes"
+            >
+              <span>👥</span>
+              {!isMobile && <span>Clientes</span>}
+            </Link>
+
             <Link to="/admin?tab=mobiliario" style={linkStyle(isActive('/admin', 'mobiliario'), true)}
               onMouseOver={e => { if (!isActive('/admin', 'mobiliario')) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
               onMouseOut={e => { if (!isActive('/admin', 'mobiliario')) e.currentTarget.style.background = 'transparent'; }}
@@ -273,6 +282,7 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/mis-reservas" element={<ProtectedRoute><MisReservas /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/clientes" element={<AdminRoute><Navigate to="/admin?tab=clientes" replace /></AdminRoute>} />
         </Routes>
       </div>
     </>

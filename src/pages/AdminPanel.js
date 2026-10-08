@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
 import { useConfig, DEFAULT_CONFIG, normalizarMetodosPago, formatearMetodosPagoTexto } from '../context/ConfigContext';
+import ClientesAdmin from './ClientesAdmin';
 
 const estadoColor = { pendiente: '#f59e0b', confirmada: '#3b82f6', activa: '#22c55e', completada: '#6b7280', cancelada: '#ef4444' };
 
@@ -2005,6 +2006,7 @@ export default function AdminPanel() {
         <h1 style={{ margin: 0 }}>
           {tab === 'dashboard' ? 'Panel de administración' : 
            tab === 'reservas' ? 'Gestión de Reservas' : 
+           tab === 'clientes' ? 'Gestión de Clientes' : 
            tab === 'mobiliario' ? 'Inventario de Mobiliario' : 
            tab === 'combos' ? 'Combos y Paquetes' : 
            tab === 'reportes' ? 'Estadísticas e Ingresos' : 
@@ -2867,6 +2869,11 @@ export default function AdminPanel() {
           </div>
         );
       })()}
+
+      {/* ── Clientes ── */}
+      {tab === 'clientes' && (
+        <ClientesAdmin onAbrirEditarReserva={abrirEditarReserva} />
+      )}
 
       {/* ── Mobiliario ── */}
       {tab === 'mobiliario' && (() => {
