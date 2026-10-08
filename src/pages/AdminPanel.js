@@ -1015,6 +1015,13 @@ function MetodosPagoEditor({ metodos, onChange, colorPrimario }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function AdminPanel() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [stats, setStats] = useState(null);
   const [reservas, setReservas] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -2001,9 +2008,9 @@ export default function AdminPanel() {
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <h1 style={{ margin: 0 }}>
+    <div className="admin-page-container" style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '1rem 0.75rem' : '2rem', width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <h1 style={{ margin: 0, fontSize: isMobile ? '1.35rem' : '1.8rem', color: '#1e293b' }}>
           {tab === 'dashboard' ? 'Panel de administración' : 
            tab === 'reservas' ? 'Gestión de Reservas' : 
            tab === 'clientes' ? 'Gestión de Clientes' : 
@@ -2019,16 +2026,18 @@ export default function AdminPanel() {
             style={{
               display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '8px',
-              padding: '10px 18px',
+              padding: isMobile ? '8px 14px' : '10px 18px',
               background: '#4a6cf7',
               color: '#fff',
               borderRadius: '8px',
               textDecoration: 'none',
               fontWeight: 600,
-              fontSize: '14px',
+              fontSize: isMobile ? '13px' : '14px',
               boxShadow: '0 2px 8px rgba(74, 108, 247, 0.25)',
-              transition: 'background 0.2s'
+              transition: 'background 0.2s',
+              width: isMobile ? '100%' : 'auto'
             }}
             onMouseOver={e => e.currentTarget.style.background = '#3b5bdb'}
             onMouseOut={e => e.currentTarget.style.background = '#4a6cf7'}
@@ -2043,19 +2052,29 @@ export default function AdminPanel() {
 
       {/* ── Dashboard ── */}
       {tab === 'dashboard' && stats && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginBottom: '2rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
             {[
               { label: 'Total reservas', value: stats.total_reservas, icon: '📋' },
               { label: 'Ingresos totales', value: `$${stats.ingresos_total?.toFixed(2)}`, icon: '💰' },
               { label: 'Muebles activos', value: stats.total_muebles, icon: '🪑' },
               { label: 'Combos activos', value: stats.total_combos || 0, icon: '🎁' },
               { label: 'Pendientes', value: stats.reservas_pendientes, icon: '⏳' },
-            ].map(s => (
-              <div key={s.label} style={{ background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', textAlign: 'center' }}>
-                <div style={{ fontSize: 36 }}>{s.icon}</div>
-                <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#1a1a2e' }}>{s.value}</div>
-                <div style={{ color: '#888', fontSize: 13 }}>{s.label}</div>
+            ].map((s, idx) => (
+              <div 
+                key={s.label} 
+                style={{ 
+                  background: '#fff', 
+                  borderRadius: 12, 
+                  padding: isMobile ? '1rem 0.75rem' : '1.5rem', 
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.07)', 
+                  textAlign: 'center',
+                  gridColumn: isMobile && idx === 4 ? '1 / -1' : 'auto'
+                }}
+              >
+                <div style={{ fontSize: isMobile ? 28 : 36 }}>{s.icon}</div>
+                <div style={{ fontSize: isMobile ? '1.35rem' : '1.8rem', fontWeight: 700, color: '#1a1a2e' }}>{s.value}</div>
+                <div style={{ color: '#888', fontSize: 12 }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -2872,7 +2891,7 @@ export default function AdminPanel() {
 
       {/* ── Clientes ── */}
       {tab === 'clientes' && (
-        <ClientesAdmin onAbrirEditarReserva={abrirEditarReserva} />
+        <ClientesAdmin isMobile={isMobile} onAbrirEditarReserva={abrirEditarReserva} />
       )}
 
       {/* ── Mobiliario ── */}
@@ -4527,8 +4546,8 @@ export default function AdminPanel() {
       {/* ══════════ MODAL EDITAR RESERVA ══════════ */}
       {reservaEditando && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 700, maxHeight: '92vh', overflowY: 'auto', padding: '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
-            <button onClick={() => setReservaEditando(null)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
+          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 700, maxHeight: '92vh', overflowY: 'auto', padding: isMobile ? '1.25rem 1rem' : '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
+            <button onClick={() => setReservaEditando(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
             <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.75rem' }}>
               Editar Reserva #{reservaEditando.id.slice(0, 8).toUpperCase()}
             </h3>
@@ -4714,13 +4733,13 @@ export default function AdminPanel() {
       {/* ══════════ MODAL PAGOS ══════════ */}
       {modalPagos && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', padding: '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
-            <button onClick={() => setModalPagos(null)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
+          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '1.25rem 1rem' : '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
+            <button onClick={() => setModalPagos(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
             <h3 style={{ marginTop: 0, marginBottom: 4, color: '#1a1a2e' }}>💳 Pagos — #{modalPagos.id.slice(0,8).toUpperCase()}</h3>
             <p style={{ color: '#888', fontSize: 13, margin: '0 0 1.5rem 0' }}>{modalPagos.nombre_cliente}</p>
 
             {/* Resumen de saldo */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 12, marginBottom: '1rem' }}>
               {[
                 { label: 'Total reserva', value: `$${parseFloat(modalPagos.total).toFixed(2)}`, color: '#1a1a2e' },
                 { label: 'Total pagado', value: `$${totalPagado.toFixed(2)}`, color: '#22c55e' },
@@ -4846,8 +4865,8 @@ export default function AdminPanel() {
       {/* ══════════ MODAL CONTRATO PDF ══════════ */}
       {modalContrato && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 480, padding: '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
-            <button onClick={() => setModalContrato(null)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
+          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 480, padding: isMobile ? '1.25rem 1rem' : '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
+            <button onClick={() => setModalContrato(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
             <h3 style={{ marginTop: 0, marginBottom: 4, color: '#1a1a2e' }}>📄 Generar Contrato</h3>
             <p style={{ color: '#888', fontSize: 13, margin: '0 0 1.5rem 0' }}>Reserva #{modalContrato.id.slice(0,8).toUpperCase()} · {modalContrato.nombre_cliente}</p>
 

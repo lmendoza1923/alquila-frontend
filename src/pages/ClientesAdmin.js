@@ -7,6 +7,14 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
   
+  // Detección de dispositivo móvil
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Modales
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null); // Para ver detalles
   const [clienteEditando, setClienteEditando] = useState(null); // Para editar
@@ -93,7 +101,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
     setModalNuevo(true);
   };
 
-  // Guardar edición
+  // Guardar edición o nuevo cliente
   const guardarEdicion = async (e) => {
     e.preventDefault();
     if (!form.nombre.trim() && !form.alias.trim()) {
@@ -107,7 +115,6 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
         const res = await api.put(`/clientes/${clienteEditando.id}`, form);
         toast.success('Cliente actualizado correctamente');
         setClienteEditando(null);
-        // Actualizar en el estado local
         setClientes(prev => prev.map(c => c.id === clienteEditando.id ? { ...c, ...res.data } : c));
         if (clienteSeleccionado && clienteSeleccionado.id === clienteEditando.id) {
           setClienteSeleccionado(prev => ({ ...prev, ...res.data }));
@@ -146,7 +153,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
   const obtenerLinkWhatsapp = (telefono) => {
     if (!telefono) return null;
     let limpio = telefono.replace(/[^0-9]/g, '');
-    if (limpio.length === 8) limpio = '507' + limpio; // Prefijo Panamá por defecto si son 8 dígitos
+    if (limpio.length === 8) limpio = '507' + limpio;
     return `https://wa.me/${limpio}`;
   };
 
@@ -175,30 +182,62 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* ── Tarjetas de Estadísticas ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        <div style={{ background: '#fff', borderRadius: 12, padding: '1.25rem', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ fontSize: 32, background: '#eef2ff', padding: '10px 14px', borderRadius: 10 }}>👥</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%', boxSizing: 'border-box' }}>
+      {/* ── Tarjetas de Estadísticas Responsivas ── */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gap: '0.75rem' 
+      }}>
+        <div style={{ 
+          background: '#fff', 
+          borderRadius: 12, 
+          padding: isMobile ? '0.85rem' : '1.25rem', 
+          border: '1px solid #e2e8f0', 
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: isMobile ? '0.6rem' : '1rem' 
+        }}>
+          <div style={{ fontSize: isMobile ? 24 : 32, background: '#eef2ff', padding: isMobile ? '8px 10px' : '10px 14px', borderRadius: 10 }}>👥</div>
           <div>
-            <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Total Clientes</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#1e293b' }}>{totalClientes}</div>
+            <div style={{ fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 600 }}>Total Clientes</div>
+            <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: '#1e293b' }}>{totalClientes}</div>
           </div>
         </div>
 
-        <div style={{ background: '#fff', borderRadius: 12, padding: '1.25rem', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ fontSize: 32, background: '#ecfdf5', padding: '10px 14px', borderRadius: 10 }}>📋</div>
+        <div style={{ 
+          background: '#fff', 
+          borderRadius: 12, 
+          padding: isMobile ? '0.85rem' : '1.25rem', 
+          border: '1px solid #e2e8f0', 
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: isMobile ? '0.6rem' : '1rem' 
+        }}>
+          <div style={{ fontSize: isMobile ? 24 : 32, background: '#ecfdf5', padding: isMobile ? '8px 10px' : '10px 14px', borderRadius: 10 }}>📋</div>
           <div>
-            <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Con Reservas</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#059669' }}>{clientesConReservas}</div>
+            <div style={{ fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 600 }}>Con Reservas</div>
+            <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: '#059669' }}>{clientesConReservas}</div>
           </div>
         </div>
 
-        <div style={{ background: '#fff', borderRadius: 12, padding: '1.25rem', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ fontSize: 32, background: '#fef3c7', padding: '10px 14px', borderRadius: 10 }}>💰</div>
+        <div style={{ 
+          background: '#fff', 
+          borderRadius: 12, 
+          padding: isMobile ? '0.85rem' : '1.25rem', 
+          border: '1px solid #e2e8f0', 
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: isMobile ? '0.6rem' : '1rem',
+          gridColumn: isMobile ? '1 / -1' : 'auto'
+        }}>
+          <div style={{ fontSize: isMobile ? 24 : 32, background: '#fef3c7', padding: isMobile ? '8px 10px' : '10px 14px', borderRadius: 10 }}>💰</div>
           <div>
-            <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Facturación Acumulada</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#b45309' }}>${totalFacturadoGeneral.toFixed(2)}</div>
+            <div style={{ fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 600 }}>Facturación Acumulada</div>
+            <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: '#b45309' }}>${totalFacturadoGeneral.toFixed(2)}</div>
           </div>
         </div>
       </div>
@@ -207,21 +246,21 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
       <div style={{
         background: '#fff',
         borderRadius: 12,
-        padding: '1rem 1.25rem',
+        padding: '1rem',
         border: '1px solid #e2e8f0',
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem'
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: '0.75rem'
       }}>
-        <div style={{ flex: '1', minWidth: '260px', position: 'relative' }}>
+        <div style={{ flex: '1', position: 'relative' }}>
           <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>🔍</span>
           <input
             type="text"
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre, alias, cédula, teléfono o dirección..."
+            placeholder={isMobile ? "Buscar cliente o teléfono..." : "Buscar por nombre, alias, cédula, teléfono o dirección..."}
             style={{
               width: '100%',
               padding: '10px 14px 10px 38px',
@@ -239,8 +278,9 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: 8,
-            padding: '10px 18px',
+            padding: '11px 18px',
             background: '#4a6cf7',
             color: '#fff',
             borderRadius: 8,
@@ -249,39 +289,210 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
             fontSize: 14,
             cursor: 'pointer',
             boxShadow: '0 2px 6px rgba(74, 108, 247, 0.25)',
-            transition: 'background 0.2s'
+            width: isMobile ? '100%' : 'auto'
           }}
-          onMouseOver={e => e.currentTarget.style.background = '#3b5bdb'}
-          onMouseOut={e => e.currentTarget.style.background = '#4a6cf7'}
         >
           <span>➕</span>
           <span>Nuevo Cliente</span>
         </button>
       </div>
 
-      {/* ── Tabla Principal de Clientes ── */}
-      <div style={{
-        background: '#fff',
-        borderRadius: 12,
-        border: '1px solid #e2e8f0',
-        overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-      }}>
-        {loading ? (
-          <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>⏳</div>
-            <p>Cargando información de clientes...</p>
-          </div>
-        ) : clientesFiltrados.length === 0 ? (
-          <div style={{ padding: '3.5rem', textAlign: 'center', color: '#64748b' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
-            <h3 style={{ margin: '0 0 6px 0', color: '#1e293b' }}>No se encontraron clientes</h3>
-            <p style={{ margin: 0, fontSize: 14 }}>
-              {busqueda ? 'No hay resultados que coincidan con la búsqueda.' : 'Aún no hay clientes registrados en la base de datos.'}
-            </p>
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
+      {/* ── Lista de Clientes (Modo Tarjetas en Móviles o Tabla en Escritorio) ── */}
+      {loading ? (
+        <div style={{ background: '#fff', borderRadius: 12, padding: '3rem', textAlign: 'center', color: '#64748b', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>⏳</div>
+          <p>Cargando información de clientes...</p>
+        </div>
+      ) : clientesFiltrados.length === 0 ? (
+        <div style={{ background: '#fff', borderRadius: 12, padding: '3rem', textAlign: 'center', color: '#64748b', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
+          <h3 style={{ margin: '0 0 6px 0', color: '#1e293b' }}>No se encontraron clientes</h3>
+          <p style={{ margin: 0, fontSize: 14 }}>
+            {busqueda ? 'No hay resultados que coincidan con la búsqueda.' : 'Aún no hay clientes registrados en la base de datos.'}
+          </p>
+        </div>
+      ) : isMobile ? (
+        /* VISTA MÓVIL: Tarjetas adaptadas y táctiles */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          {clientesFiltrados.map(c => {
+            const linkWa = obtenerLinkWhatsapp(c.telefono);
+            const numReservas = parseInt(c.total_reservas || 0);
+
+            return (
+              <div 
+                key={c.id} 
+                style={{
+                  background: '#fff',
+                  borderRadius: 12,
+                  padding: '1rem',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8
+                }}
+              >
+                {/* Cabecera de la tarjeta */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, paddingRight: 8 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>
+                      {c.nombre || 'Sin nombre registrado'}
+                    </div>
+                    {c.alias && (
+                      <div style={{ color: '#4a6cf7', fontSize: 12, fontWeight: 600, marginTop: 2 }}>
+                        🏷️ {c.alias}
+                      </div>
+                    )}
+                  </div>
+
+                  {numReservas > 0 ? (
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <span style={{
+                        background: '#eff6ff',
+                        color: '#1d4ed8',
+                        padding: '3px 8px',
+                        borderRadius: 12,
+                        fontSize: 11,
+                        fontWeight: 700
+                      }}>
+                        {numReservas} {numReservas === 1 ? 'reserva' : 'reservas'}
+                      </span>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#059669', marginTop: 2 }}>
+                        ${parseFloat(c.total_facturado || 0).toFixed(2)}
+                      </div>
+                    </div>
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontSize: 11 }}>Sin reservas</span>
+                  )}
+                </div>
+
+                {/* Datos rápidos del cliente */}
+                <div style={{
+                  background: '#f8fafc',
+                  padding: '9px 12px',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6
+                }}>
+                  {c.cedula && (
+                    <div>
+                      <span style={{ color: '#64748b' }}>Cédula: </span>
+                      <strong style={{ fontFamily: 'monospace' }}>{c.cedula}</strong>
+                    </div>
+                  )}
+
+                  {c.telefono && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <span style={{ color: '#64748b' }}>Teléfono: </span>
+                        <strong>{c.telefono}</strong>
+                      </div>
+                      {linkWa && (
+                        <a
+                          href={linkWa}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            background: '#25D366',
+                            color: '#fff',
+                            borderRadius: 6,
+                            padding: '3px 8px',
+                            fontSize: 11,
+                            textDecoration: 'none',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}
+                        >
+                          WhatsApp 💬
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {c.direccion && (
+                    <div style={{ color: '#334155' }}>
+                      📍 {c.direccion}
+                    </div>
+                  )}
+
+                  {c.notas && (
+                    <div style={{ color: '#64748b', fontStyle: 'italic', fontSize: 12 }}>
+                      📝 {c.notas}
+                    </div>
+                  )}
+                </div>
+
+                {/* Acciones para móviles */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 42px', gap: 6, marginTop: 4 }}>
+                  <button
+                    onClick={() => setClienteSeleccionado(c)}
+                    style={{
+                      background: '#f1f5f9',
+                      border: '1px solid #cbd5e1',
+                      color: '#334155',
+                      padding: '8px 10px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    👁️ Ver Ficha
+                  </button>
+
+                  <button
+                    onClick={() => abrirEditar(c)}
+                    style={{
+                      background: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      color: '#1d4ed8',
+                      padding: '8px 10px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✏️ Editar
+                  </button>
+
+                  <button
+                    onClick={() => eliminarCliente(c)}
+                    style={{
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#b91c1c',
+                      padding: '8px 0',
+                      borderRadius: 6,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Eliminar"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* VISTA ESCRITORIO: Tabla tradicional con columnas completas */
+        <div style={{
+          background: '#fff',
+          borderRadius: 12,
+          border: '1px solid #e2e8f0',
+          overflow: 'hidden',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+        }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -308,7 +519,6 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                       onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
                       onMouseOut={e => e.currentTarget.style.background = '#fff'}
                     >
-                      {/* Cliente y Alias */}
                       <td style={{ padding: '14px 16px' }}>
                         <div style={{ fontWeight: 600, color: '#1e293b' }}>
                           {c.nombre || 'Sin nombre registrado'}
@@ -320,7 +530,6 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                         )}
                       </td>
 
-                      {/* Cédula */}
                       <td style={{ padding: '14px 16px', color: '#475569', fontSize: 13 }}>
                         {c.cedula ? (
                           <span style={{ background: '#f1f5f9', padding: '3px 6px', borderRadius: 4, fontFamily: 'monospace' }}>
@@ -331,7 +540,6 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                         )}
                       </td>
 
-                      {/* Teléfono y Email */}
                       <td style={{ padding: '14px 16px' }}>
                         {c.telefono ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -369,7 +577,6 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                         )}
                       </td>
 
-                      {/* Dirección de Entrega */}
                       <td style={{ padding: '14px 16px', maxWidth: '240px' }}>
                         {c.direccion ? (
                           <div 
@@ -405,7 +612,6 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                         )}
                       </td>
 
-                      {/* Reservas e Historial */}
                       <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                         {numReservas > 0 ? (
                           <div>
@@ -428,7 +634,6 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                         )}
                       </td>
 
-                      {/* Acciones */}
                       <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: 6 }}>
                           <button
@@ -488,8 +693,8 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── MODAL: DETALLES COMPLETOS DEL CLIENTE Y RESERVAS ── */}
       {clienteSeleccionado && (
@@ -504,22 +709,22 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1100,
-          padding: '1.5rem'
+          padding: isMobile ? '0.5rem' : '1.5rem'
         }}>
           <div style={{
             background: '#fff',
             borderRadius: 14,
-            maxWidth: 850,
+            maxWidth: isMobile ? '96vw' : 850,
             width: '100%',
-            maxHeight: '90vh',
+            maxHeight: '92vh',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
             overflow: 'hidden'
           }}>
             {/* Header Modal */}
             <div style={{
-              padding: '1.25rem 1.5rem',
+              padding: isMobile ? '1rem' : '1.25rem 1.5rem',
               borderBottom: '1px solid #e2e8f0',
               display: 'flex',
               justifyContent: 'space-between',
@@ -527,14 +732,13 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
               background: '#f8fafc'
             }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: 18, color: '#1e293b' }}>
-                  Ficha del Cliente: {clienteSeleccionado.nombre || clienteSeleccionado.alias}
+                <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 18, color: '#1e293b' }}>
+                  Ficha del Cliente
                 </h2>
-                {clienteSeleccionado.alias && (
-                  <span style={{ fontSize: 13, color: '#4a6cf7', fontWeight: 600 }}>
-                    Alias: {clienteSeleccionado.alias}
-                  </span>
-                )}
+                <div style={{ fontSize: 13, color: '#4a6cf7', fontWeight: 600, marginTop: 2 }}>
+                  {clienteSeleccionado.nombre || clienteSeleccionado.alias}
+                  {clienteSeleccionado.alias && clienteSeleccionado.nombre && ` (${clienteSeleccionado.alias})`}
+                </div>
               </div>
               <button
                 onClick={() => setClienteSeleccionado(null)}
@@ -553,20 +757,20 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
             </div>
 
             {/* Contenido Scrollable */}
-            <div style={{ padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ padding: isMobile ? '1rem' : '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {/* Bloque: Datos Personales Registrados */}
               <div style={{
                 background: '#f8fafc',
                 borderRadius: 10,
-                padding: '1.25rem',
+                padding: isMobile ? '1rem' : '1.25rem',
                 border: '1px solid #e2e8f0'
               }}>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#1e293b', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <h4 style={{ margin: '0 0 0.85rem 0', color: '#1e293b', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>📋</span>
                   <span>Datos Registrados al Crear Reserva</span>
                 </h4>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
                   <div>
                     <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Nombre Completo</label>
                     <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, marginTop: 2 }}>
@@ -613,14 +817,16 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                     </div>
                   </div>
 
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Correo Electrónico</label>
-                    <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, marginTop: 2 }}>
-                      {clienteSeleccionado.email || '-'}
+                  {clienteSeleccionado.email && (
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Correo Electrónico</label>
+                      <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, marginTop: 2 }}>
+                        {clienteSeleccionado.email}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1' }}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Dirección de Entrega</label>
                     <div style={{ fontSize: 14, color: '#1e293b', marginTop: 2 }}>
                       {clienteSeleccionado.direccion || '-'}
@@ -628,7 +834,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                   </div>
 
                   {clienteSeleccionado.notas && (
-                    <div style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1' }}>
                       <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Notas Adicionales</label>
                       <div style={{ fontSize: 13, color: '#475569', marginTop: 2, background: '#fff', padding: '8px 12px', borderRadius: 6, border: '1px solid #e2e8f0', whiteSpace: 'pre-wrap' }}>
                         {clienteSeleccionado.notas}
@@ -640,37 +846,37 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
 
               {/* Bloque: Historial de Reservas del Cliente */}
               <div>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#1e293b', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h4 style={{ margin: '0 0 0.85rem 0', color: '#1e293b', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span>📦</span>
-                    <span>Historial de Reservas y Artículos Alquilados ({clienteSeleccionado.reservas?.length || 0})</span>
+                    <span>Reservas y Artículos Alquilados ({clienteSeleccionado.reservas?.length || 0})</span>
                   </span>
                   {clienteSeleccionado.total_facturado && (
-                    <span style={{ fontSize: 13, color: '#059669', fontWeight: 700 }}>
-                      Total facturado: ${parseFloat(clienteSeleccionado.total_facturado).toFixed(2)}
+                    <span style={{ fontSize: 12, color: '#059669', fontWeight: 700 }}>
+                      Total: ${parseFloat(clienteSeleccionado.total_facturado).toFixed(2)}
                     </span>
                   )}
                 </h4>
 
                 {!clienteSeleccionado.reservas || clienteSeleccionado.reservas.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '2rem', background: '#f8fafc', borderRadius: 10, color: '#94a3b8' }}>
+                  <div style={{ textAlign: 'center', padding: '1.5rem', background: '#f8fafc', borderRadius: 10, color: '#94a3b8', fontSize: 13 }}>
                     No hay reservas asociadas a este cliente.
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                     {clienteSeleccionado.reservas.map(reserva => (
                       <div
                         key={reserva.id}
                         style={{
                           border: '1px solid #e2e8f0',
                           borderRadius: 10,
-                          padding: '1rem',
+                          padding: '0.85rem',
                           background: '#fff'
                         }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                           <div>
-                            <span style={{ fontWeight: 700, color: '#1e293b', fontSize: 14 }}>
+                            <span style={{ fontWeight: 700, color: '#1e293b', fontSize: 13 }}>
                               Reserva #{reserva.id.slice(0, 8).toUpperCase()}
                             </span>
                             <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
@@ -678,38 +884,35 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             {getEstadoBadge(reserva.estado)}
-                            <span style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>
+                            <span style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>
                               ${parseFloat(reserva.total || 0).toFixed(2)}
                             </span>
                           </div>
                         </div>
 
-                        {/* Dirección y notas de la reserva */}
                         {reserva.direccion_entrega && reserva.direccion_entrega !== clienteSeleccionado.direccion && (
-                          <div style={{ fontSize: 12, color: '#475569', marginBottom: 6 }}>
+                          <div style={{ fontSize: 12, color: '#475569', marginBottom: 4 }}>
                             📍 <strong>Entrega:</strong> {reserva.direccion_entrega}
                           </div>
                         )}
                         {reserva.notas && (
-                          <div style={{ fontSize: 12, color: '#475569', fontStyle: 'italic', marginBottom: 8 }}>
+                          <div style={{ fontSize: 12, color: '#475569', fontStyle: 'italic', marginBottom: 6 }}>
                             📝 {reserva.notas}
                           </div>
                         )}
 
-                        {/* Items Alquilados */}
                         {reserva.items && reserva.items.length > 0 && (
-                          <div style={{ background: '#f8fafc', borderRadius: 6, padding: '8px 12px', marginTop: 8 }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>
-                              Artículos y Servicios Alquilados
+                          <div style={{ background: '#f8fafc', borderRadius: 6, padding: '8px 10px', marginTop: 6 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>
+                              Artículos Alquilados
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                               {reserva.items.map((item, idx) => (
                                 <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#334155' }}>
                                   <span>
                                     • {item.nombre} <strong style={{ color: '#64748b' }}>×{item.cantidad}</strong>
-                                    {item.precio_unitario ? ` ($${parseFloat(item.precio_unitario).toFixed(2)}/u)` : ''}
                                   </span>
                                   <span style={{ fontWeight: 600 }}>${parseFloat(item.subtotal || 0).toFixed(2)}</span>
                                 </div>
@@ -726,11 +929,12 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
 
             {/* Footer Modal */}
             <div style={{
-              padding: '1rem 1.5rem',
+              padding: '0.85rem 1rem',
               borderTop: '1px solid #e2e8f0',
               display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
               justifyContent: 'flex-end',
-              gap: 10,
+              gap: 8,
               background: '#f8fafc'
             }}>
               <button
@@ -743,14 +947,15 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                   background: '#4a6cf7',
                   color: '#fff',
                   border: 'none',
-                  padding: '8px 16px',
+                  padding: '9px 16px',
                   borderRadius: 6,
                   fontWeight: 600,
                   fontSize: 13,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  width: isMobile ? '100%' : 'auto'
                 }}
               >
-                ✏️ Editar Datos de este Cliente
+                ✏️ Editar Datos del Cliente
               </button>
               <button
                 onClick={() => setClienteSeleccionado(null)}
@@ -758,11 +963,12 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                   background: '#fff',
                   color: '#475569',
                   border: '1px solid #cbd5e1',
-                  padding: '8px 16px',
+                  padding: '9px 16px',
                   borderRadius: 6,
                   fontWeight: 600,
                   fontSize: 13,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  width: isMobile ? '100%' : 'auto'
                 }}
               >
                 Cerrar
@@ -772,7 +978,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
         </div>
       )}
 
-      {/* ── MODAL: CREAR O EDITAR CLIENTE ── */}
+      {/* ── MODAL: CREAR O EDITAR CLIENTE (Totalmente responsivo) ── */}
       {(clienteEditando || modalNuevo) && (
         <div style={{
           position: 'fixed',
@@ -785,26 +991,29 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1100,
-          padding: '1.5rem'
+          padding: isMobile ? '0.5rem' : '1.5rem'
         }}>
           <div style={{
             background: '#fff',
             borderRadius: 14,
-            maxWidth: 600,
+            maxWidth: isMobile ? '96vw' : 600,
             width: '100%',
+            maxHeight: '92vh',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
             <div style={{
-              padding: '1.25rem 1.5rem',
+              padding: isMobile ? '1rem' : '1.25rem 1.5rem',
               borderBottom: '1px solid #e2e8f0',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               background: '#f8fafc'
             }}>
-              <h2 style={{ margin: 0, fontSize: 17, color: '#1e293b' }}>
-                {clienteEditando ? `Editar Cliente: ${clienteEditando.nombre || clienteEditando.alias}` : 'Nuevo Cliente'}
+              <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 17, color: '#1e293b' }}>
+                {clienteEditando ? `Editar: ${clienteEditando.nombre || clienteEditando.alias}` : 'Nuevo Cliente'}
               </h2>
               <button
                 onClick={() => { setClienteEditando(null); setModalNuevo(false); }}
@@ -814,8 +1023,8 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
               </button>
             </div>
 
-            <form onSubmit={guardarEdicion} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <form onSubmit={guardarEdicion} style={{ padding: isMobile ? '1rem' : '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.85rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                     Nombre Completo *
@@ -825,7 +1034,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                     value={form.nombre}
                     onChange={e => setForm({ ...form, nombre: e.target.value })}
                     placeholder="Ej: Juan Pérez"
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 15, boxSizing: 'border-box' }}
                     required
                   />
                 </div>
@@ -839,12 +1048,12 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                     value={form.alias}
                     onChange={e => setForm({ ...form, alias: e.target.value })}
                     placeholder="Ej: Juan Boda / Fiesta de María"
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 15, boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.85rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                     Cédula / Documento (opcional)
@@ -854,7 +1063,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                     value={form.cedula}
                     onChange={e => setForm({ ...form, cedula: e.target.value })}
                     placeholder="Ej: 8-888-8888"
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 15, boxSizing: 'border-box' }}
                   />
                 </div>
 
@@ -867,7 +1076,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                     value={form.telefono}
                     onChange={e => setForm({ ...form, telefono: e.target.value })}
                     placeholder="Ej: 6000-0000"
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 15, boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -881,7 +1090,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                   value={form.email}
                   onChange={e => setForm({ ...form, email: e.target.value })}
                   placeholder="cliente@ejemplo.com"
-                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 15, boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -894,7 +1103,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                   value={form.direccion}
                   onChange={e => setForm({ ...form, direccion: e.target.value })}
                   placeholder="Calle, edificio, urbanización, ciudad"
-                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 15, boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -906,7 +1115,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                   value={form.notas}
                   onChange={e => setForm({ ...form, notas: e.target.value })}
                   placeholder="Instrucciones especiales, preferencias de horario..."
-                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, height: 70, resize: 'vertical', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 15, height: 70, resize: 'vertical', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -917,15 +1126,15 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                     id="actualizar_reservas"
                     checked={form.actualizar_reservas}
                     onChange={e => setForm({ ...form, actualizar_reservas: e.target.checked })}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', width: 18, height: 18 }}
                   />
-                  <label htmlFor="actualizar_reservas" style={{ fontSize: 13, color: '#475569', cursor: 'pointer' }}>
+                  <label htmlFor="actualizar_reservas" style={{ fontSize: 12, color: '#475569', cursor: 'pointer' }}>
                     Actualizar también estos datos en las reservas históricas de este cliente
                   </label>
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'flex-end', gap: 8, marginTop: '0.5rem' }}>
                 <button
                   type="button"
                   onClick={() => { setClienteEditando(null); setModalNuevo(false); }}
@@ -933,11 +1142,12 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                     background: '#fff',
                     border: '1px solid #cbd5e1',
                     color: '#475569',
-                    padding: '9px 16px',
+                    padding: '10px 16px',
                     borderRadius: 8,
                     fontWeight: 600,
                     fontSize: 14,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    width: isMobile ? '100%' : 'auto'
                   }}
                 >
                   Cancelar
@@ -949,12 +1159,13 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                     background: '#4a6cf7',
                     border: 'none',
                     color: '#fff',
-                    padding: '9px 20px',
+                    padding: '10px 20px',
                     borderRadius: 8,
                     fontWeight: 600,
                     fontSize: 14,
                     cursor: guardando ? 'not-allowed' : 'pointer',
-                    opacity: guardando ? 0.7 : 1
+                    opacity: guardando ? 0.7 : 1,
+                    width: isMobile ? '100%' : 'auto'
                   }}
                 >
                   {guardando ? 'Guardando...' : (clienteEditando ? 'Guardar Cambios' : 'Crear Cliente')}
