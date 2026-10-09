@@ -175,13 +175,30 @@ export default function SucursalesAdmin() {
 
     setGuardando(true);
     try {
-      const items = (modalInventarioSucursal.mobiliario || []).map(m => ({
-        mueble_id: m.mueble_id,
-        cantidad: Math.max(0, parseInt(m.cantidad) || 0)
-      }));
+      const sucursalActualId = modalInventarioSucursal.sucursal.id;
+      const otraSucursal = sucursales.find(s => s.id !== sucursalActualId);
 
-      await api.put(`/sucursales/${modalInventarioSucursal.sucursal.id}/inventario`, { items });
-      toast.success(`Cantidades actualizadas para ${modalInventarioSucursal.sucursal.nombre}`);
+      const cambios = [];
+      (modalInventarioSucursal.mobiliario || []).forEach(m => {
+        const cant = Math.max(0, parseInt(m.cantidad) || 0);
+        cambios.push({
+          sucursal_id: sucursalActualId,
+          mueble_id: m.mueble_id,
+          cantidad: cant
+        });
+        if (otraSucursal && sucursales.length === 2) {
+          const stockTot = parseInt(m.stock_total) || 0;
+          const restante = Math.max(0, stockTot - cant);
+          cambios.push({
+            sucursal_id: otraSucursal.id,
+            mueble_id: m.mueble_id,
+            cantidad: restante
+          });
+        }
+      });
+
+      await api.post('/sucursales/distribucion/guardar', { cambios });
+      toast.success(`Cantidades sincronizadas y guardadas con éxito`);
       setModalInventarioSucursal(null);
       cargarDatos();
     } catch (err) {
@@ -192,13 +209,24 @@ export default function SucursalesAdmin() {
     }
   };
 
-  // ── Cambios en Planilla General ─────────────────────────────────────────
+  // ── Cambios en Planilla General (con balanceo automático a la otra sucursal) ──
   const handleCambioPlanilla = (muebleId, sucursalId, valor) => {
     const num = Math.max(0, parseInt(valor) || 0);
-    setPlanillaValores(prev => ({
-      ...prev,
-      [`${muebleId}_${sucursalId}`]: num
-    }));
+    const mueble = muebles.find(m => m.id === muebleId);
+    const stockTotal = mueble ? (parseInt(mueble.stock_total) || 0) : 0;
+    const otraSucursal = sucursales.find(s => s.id !== sucursalId);
+
+    setPlanillaValores(prev => {
+      const nuevo = {
+        ...prev,
+        [`${muebleId}_${sucursalId}`]: num
+      };
+      if (otraSucursal && sucursales.length === 2) {
+        const restante = Math.max(0, stockTotal - num);
+        nuevo[`${muebleId}_${otraSucursal.id}`] = restante;
+      }
+      return nuevo;
+    });
   };
 
   const hayCambiosPlanilla = useMemo(() => {
@@ -667,16 +695,37 @@ export default function SucursalesAdmin() {
             </div>
           </div>
 
+          {/* Aviso informativo de balanceo automático visual */}
+          <div style={{
+            padding: '9px 16px',
+            background: '#eff6ff',
+            borderBottom: '1px solid #bfdbfe',
+            fontSize: 12,
+            color: '#1e40af',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
+          }}>
+            <span style={{ fontSize: 16 }}>⚖️</span>
+            <span>
+              <strong>Balanceo visual automático:</strong> El <em>Stock Total</em> es la referencia. Al modificar la cantidad en una sucursal, la diferencia restante se asigna automáticamente a la otra.
+            </span>
+          </div>
+
           {/* Tabla Limpia (solo texto y números) */}
           <div style={{ overflowX: 'auto', maxHeight: '72vh' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
               <thead style={{ background: '#f1f5f9', position: 'sticky', top: 0, zIndex: 10 }}>
                 <tr>
-                  <th style={{ padding: '12px 14px', borderBottom: '2px solid #cbd5e1', minWidth: 260 }}>
+                  <th style={{ padding: '12px 14px', borderBottom: '2px solid #cbd5e1', minWidth: 240 }}>
                     Mobiliario
                   </th>
-                  <th style={{ padding: '12px 14px', borderBottom: '2px solid #cbd5e1', minWidth: 140 }}>
+                  <th style={{ padding: '12px 14px', borderBottom: '2px solid #cbd5e1', minWidth: 130 }}>
                     Categoría
+                  </th>
+                  <th style={{ padding: '12px 14px', borderBottom: '2px solid #cbd5e1', textAlign: 'center', minWidth: 120 }}>
+                    <div style={{ fontWeight: 700, color: '#1e293b' }}>Stock Total</div>
+                    <span style={{ fontSize: 11, color: '#64748b' }}>(Referencia)</span>
                   </th>
                   {sucursales.map(s => (
                     <th key={s.id} style={{ padding: '12px 14px', borderBottom: '2px solid #cbd5e1', textAlign: 'center', minWidth: 130 }}>
@@ -690,7 +739,7 @@ export default function SucursalesAdmin() {
               <tbody>
                 {mueblesFiltradosPlanilla.length === 0 ? (
                   <tr>
-                    <td colSpan={sucursales.length + 2} style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+                    <td colSpan={sucursales.length + 3} style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
                       No se encontraron mobiliarios con los filtros seleccionados
                     </td>
                   </tr>
@@ -711,6 +760,22 @@ export default function SucursalesAdmin() {
                       {/* Categoría */}
                       <td style={{ padding: '11px 14px', color: '#64748b', fontSize: 13 }}>
                         {m.categoria_nombre}
+                      </td>
+
+                      {/* Stock Total de Referencia */}
+                      <td style={{ padding: '11px 14px', textAlign: 'center' }}>
+                        <span style={{
+                          background: '#f1f5f9',
+                          border: '1px solid #cbd5e1',
+                          color: '#0f172a',
+                          fontWeight: 800,
+                          fontSize: 13,
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          display: 'inline-block'
+                        }}>
+                          {m.stock_total || 0}
+                        </span>
                       </td>
 
                       {/* Input directo por Sucursal */}
@@ -846,11 +911,37 @@ export default function SucursalesAdmin() {
                           <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>
                             {m.nombre}
                           </div>
-                          {m.categoria_nombre && (
-                            <span style={{ fontSize: 12, color: '#64748b' }}>
-                              {m.categoria_nombre}
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 3 }}>
+                            {m.categoria_nombre && (
+                              <span style={{ fontSize: 12, color: '#64748b' }}>
+                                {m.categoria_nombre} •
+                              </span>
+                            )}
+                            <span style={{
+                              fontSize: 11,
+                              background: '#f1f5f9',
+                              color: '#334155',
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              fontWeight: 700,
+                              border: '1px solid #e2e8f0'
+                            }}>
+                              Stock Total Ref: {parseInt(m.stock_total) || 0}
                             </span>
-                          )}
+                          </div>
+                          {(() => {
+                            const otraSuc = sucursales.find(s => s.id !== modalInventarioSucursal?.sucursal?.id);
+                            if (otraSuc && sucursales.length === 2) {
+                              const stockTot = parseInt(m.stock_total) || 0;
+                              const restante = Math.max(0, stockTot - cant);
+                              return (
+                                <div style={{ fontSize: 12, color: '#2563eb', fontWeight: 600, marginTop: 4 }}>
+                                  ➡️ Quedará en {otraSuc.nombre}: <strong>{restante}</strong> piezas
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
