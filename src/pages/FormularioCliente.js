@@ -11,9 +11,10 @@ export default function FormularioCliente() {
     alias: '',
     cedula: '',
     telefono: '',
+    contacto2_nombre: '',
+    contacto2_telefono: '',
     email: '',
-    direccion: '',
-    notas: ''
+    direccion: ''
   });
 
   const [enviando, setEnviando] = useState(false);
@@ -28,8 +29,23 @@ export default function FormularioCliente() {
       return;
     }
 
+    if (!form.cedula.trim()) {
+      toast.error('Por favor ingresa tu cédula / identificación');
+      return;
+    }
+
     if (!form.telefono.trim()) {
       toast.error('Por favor ingresa tu número de teléfono / WhatsApp');
+      return;
+    }
+
+    if (!form.contacto2_nombre.trim()) {
+      toast.error('Por favor ingresa el nombre del segundo contacto');
+      return;
+    }
+
+    if (!form.contacto2_telefono.trim()) {
+      toast.error('Por favor ingresa el teléfono / WhatsApp del segundo contacto');
       return;
     }
 
@@ -53,9 +69,10 @@ export default function FormularioCliente() {
       alias: '',
       cedula: '',
       telefono: '',
+      contacto2_nombre: '',
+      contacto2_telefono: '',
       email: '',
-      direccion: '',
-      notas: ''
+      direccion: ''
     });
     setEnviadoExito(false);
     setClienteRegistrado(null);
@@ -176,7 +193,7 @@ export default function FormularioCliente() {
               </div>
               {form.alias && (
                 <div>
-                  <span style={{ color: '#64748b' }}>Evento / Alias:</span> <strong>{form.alias}</strong>
+                  <span style={{ color: '#64748b' }}>Motivo del Evento:</span> <strong>{form.alias}</strong>
                 </div>
               )}
               {form.cedula && (
@@ -187,14 +204,14 @@ export default function FormularioCliente() {
               <div>
                 <span style={{ color: '#64748b' }}>Teléfono / WhatsApp:</span> <strong>{form.telefono}</strong>
               </div>
-              {form.direccion && (
+              {(form.contacto2_nombre || form.contacto2_telefono) && (
                 <div>
-                  <span style={{ color: '#64748b' }}>Dirección de Entrega:</span> <strong>{form.direccion}</strong>
+                  <span style={{ color: '#64748b' }}>Segundo Contacto:</span> <strong>{form.contacto2_nombre}{form.contacto2_telefono ? ` (${form.contacto2_telefono})` : ''}</strong>
                 </div>
               )}
-              {form.notas && (
+              {form.direccion && (
                 <div>
-                  <span style={{ color: '#64748b' }}>Detalles / Notas:</span> <em>{form.notas}</em>
+                  <span style={{ color: '#64748b' }}>Dirección del Evento:</span> <strong>{form.direccion}</strong>
                 </div>
               )}
             </div>
@@ -289,7 +306,7 @@ export default function FormularioCliente() {
                 />
               </div>
 
-              {/* Alias / Nombre del Evento */}
+              {/* Motivo del Evento */}
               <div>
                 <label style={{
                   display: 'block',
@@ -298,13 +315,13 @@ export default function FormularioCliente() {
                   color: '#334155',
                   marginBottom: 5
                 }}>
-                  Alias / Motivo del Evento
+                  Motivo del Evento
                 </label>
                 <input
                   type="text"
                   value={form.alias}
                   onChange={e => setForm({ ...form, alias: e.target.value })}
-                  placeholder="Ej: Boda Juan y María / Cumpleaños de Sofía"
+                  placeholder="Boda, 15 años, Baby Shower, Cumpleaños, Revelación"
                   style={{
                     width: '100%',
                     padding: '11px 14px',
@@ -316,7 +333,7 @@ export default function FormularioCliente() {
                   }}
                 />
                 <span style={{ fontSize: 11, color: '#64748b', marginTop: 3, display: 'block' }}>
-                  Nos ayuda a identificar y etiquetar rápidamente tu evento o reserva.
+                  Indica el motivo o tipo de evento (ej. Boda, 15 años, Baby Shower, Cumpleaños, Revelación).
                 </span>
               </div>
 
@@ -330,13 +347,14 @@ export default function FormularioCliente() {
                     color: '#334155',
                     marginBottom: 5
                   }}>
-                    Cédula / Pasaporte (opcional)
+                    Cédula / Pasaporte *
                   </label>
                   <input
                     type="text"
                     value={form.cedula}
                     onChange={e => setForm({ ...form, cedula: e.target.value })}
                     placeholder="Ej: 8-888-8888"
+                    required
                     style={{
                       width: '100%',
                       padding: '11px 14px',
@@ -378,6 +396,91 @@ export default function FormularioCliente() {
                 </div>
               </div>
 
+              {/* Segundo Contacto (Obligatorio) */}
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: 10,
+                padding: '14px 16px'
+              }}>
+                <div style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#1e293b',
+                  marginBottom: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  <span>👥</span>
+                  <span>Segundo Contacto *</span>
+                  <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>(Obligatorio)</span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#475569',
+                      marginBottom: 4
+                    }}>
+                      Nombre *
+                    </label>
+                    <input
+                      type="text"
+                      value={form.contacto2_nombre}
+                      onChange={e => setForm({ ...form, contacto2_nombre: e.target.value })}
+                      placeholder="Ej: María Rodríguez"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: 8,
+                        fontSize: 15,
+                        boxSizing: 'border-box',
+                        outline: 'none',
+                        background: '#fff'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#475569',
+                      marginBottom: 4
+                    }}>
+                      Teléfono / WhatsApp *
+                    </label>
+                    <input
+                      type="tel"
+                      value={form.contacto2_telefono}
+                      onChange={e => setForm({ ...form, contacto2_telefono: e.target.value })}
+                      placeholder="Ej: 6000-0000"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: 8,
+                        fontSize: 15,
+                        boxSizing: 'border-box',
+                        outline: 'none',
+                        background: '#fff'
+                      }}
+                    />
+                  </div>
+                </div>
+                <span style={{ fontSize: 11, color: '#64748b', marginTop: 6, display: 'block' }}>
+                  Persona de respaldo o encargada en el evento para coordinar la entrega o recepción.
+                </span>
+              </div>
+
               {/* Correo Electrónico */}
               <div>
                 <label style={{
@@ -406,7 +509,7 @@ export default function FormularioCliente() {
                 />
               </div>
 
-              {/* Dirección de Entrega */}
+              {/* Dirección del Evento */}
               <div>
                 <label style={{
                   display: 'block',
@@ -415,7 +518,7 @@ export default function FormularioCliente() {
                   color: '#334155',
                   marginBottom: 5
                 }}>
-                  Dirección de Entrega del Mobiliario
+                  Dirección del Evento
                 </label>
                 <input
                   type="text"
@@ -428,36 +531,6 @@ export default function FormularioCliente() {
                     border: '1px solid #cbd5e1',
                     borderRadius: 8,
                     fontSize: 16,
-                    boxSizing: 'border-box',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              {/* Notas Adicionales / Fecha tentativa / Instrucciones */}
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: '#334155',
-                  marginBottom: 5
-                }}>
-                  Detalles del Evento o Notas Adicionales
-                </label>
-                <textarea
-                  value={form.notas}
-                  onChange={e => setForm({ ...form, notas: e.target.value })}
-                  placeholder="Fecha tentativa del evento, horario de entrega deseado, número de contacto adicional, etc."
-                  style={{
-                    width: '100%',
-                    padding: '11px 14px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: 8,
-                    fontSize: 16,
-                    height: 90,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
                     boxSizing: 'border-box',
                     outline: 'none'
                   }}

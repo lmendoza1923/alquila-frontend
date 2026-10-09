@@ -468,15 +468,15 @@ export default function Carrito() {
                 )}
               </div>
             )}
-            <label style={s.label}>Alias del cliente (para identificarlo rápido)</label>
-            <input style={s.input} value={form.alias} onChange={e => set('alias', e.target.value)} placeholder="Ej: Juan Boda / Fiesta de María" />
+            <label style={s.label}>Motivo del Evento</label>
+            <input style={s.input} value={form.alias} onChange={e => set('alias', e.target.value)} placeholder="Ej: Boda, 15 años, Baby Shower, Cumpleaños, Revelación" />
             <label style={s.label}>Nombre completo</label>
             <input style={s.input} value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Ej: Juan Pérez" />
-            <label style={s.label}>Cédula (opcional)</label>
+            <label style={s.label}>Cédula *</label>
             <input style={s.input} value={form.cedula} onChange={e => set('cedula', e.target.value)} placeholder="Ej: 8-888-8888" />
             <label style={s.label}>Teléfono / WhatsApp</label>
             <input style={s.input} value={form.telefono} onChange={e => set('telefono', e.target.value)} placeholder="6000-0000" />
-            <label style={s.label}>Dirección de entrega</label>
+            <label style={s.label}>Dirección del Evento</label>
             <input style={s.input} value={form.direccion} onChange={e => set('direccion', e.target.value)} placeholder="Calle, edificio, ciudad" />
             <label style={s.label}>Notas adicionales</label>
             <textarea style={{ ...s.input, height: 80, resize: 'vertical' }} value={form.notas} onChange={e => set('notas', e.target.value)} placeholder="Instrucciones especiales, horario de entrega..." />

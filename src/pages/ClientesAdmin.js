@@ -54,6 +54,8 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
     nombre: '',
     cedula: '',
     telefono: '',
+    contacto2_nombre: '',
+    contacto2_telefono: '',
     email: '',
     direccion: '',
     notas: '',
@@ -86,6 +88,8 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
       (c.alias && c.alias.toLowerCase().includes(q)) ||
       (c.cedula && c.cedula.toLowerCase().includes(q)) ||
       (c.telefono && c.telefono.toLowerCase().includes(q)) ||
+      (c.contacto2_nombre && c.contacto2_nombre.toLowerCase().includes(q)) ||
+      (c.contacto2_telefono && c.contacto2_telefono.toLowerCase().includes(q)) ||
       (c.direccion && c.direccion.toLowerCase().includes(q)) ||
       (c.email && c.email.toLowerCase().includes(q)) ||
       (c.notas && c.notas.toLowerCase().includes(q))
@@ -105,6 +109,8 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
       nombre: c.nombre || '',
       cedula: c.cedula || '',
       telefono: c.telefono || '',
+      contacto2_nombre: c.contacto2_nombre || '',
+      contacto2_telefono: c.contacto2_telefono || '',
       email: c.email || '',
       direccion: c.direccion || '',
       notas: c.notas || '',
@@ -120,6 +126,8 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
       nombre: '',
       cedula: '',
       telefono: '',
+      contacto2_nombre: '',
+      contacto2_telefono: '',
       email: '',
       direccion: '',
       notas: '',
@@ -918,6 +926,38 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                     </div>
                   )}
 
+                  {(clienteSeleccionado.contacto2_nombre || clienteSeleccionado.contacto2_telefono) && (
+                    <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1' }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Segundo Contacto</label>
+                      <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span>👤 {clienteSeleccionado.contacto2_nombre || 'Sin nombre'}</span>
+                        {clienteSeleccionado.contacto2_telefono && (
+                          <>
+                            <span>- 📞 {clienteSeleccionado.contacto2_telefono}</span>
+                            {obtenerLinkWhatsapp(clienteSeleccionado.contacto2_telefono) && (
+                              <a
+                                href={obtenerLinkWhatsapp(clienteSeleccionado.contacto2_telefono)}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  background: '#25D366',
+                                  color: '#fff',
+                                  borderRadius: '4px',
+                                  padding: '2px 6px',
+                                  fontSize: 11,
+                                  textDecoration: 'none',
+                                  fontWeight: 600
+                                }}
+                              >
+                                WhatsApp 💬
+                              </a>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1' }}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Dirección de Entrega</label>
                     <div style={{ fontSize: 14, color: '#1e293b', marginTop: 2 }}>
@@ -1187,6 +1227,34 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                     type="text"
                     value={form.telefono}
                     onChange={e => setForm({ ...form, telefono: e.target.value })}
+                    placeholder="Ej: 6000-0000"
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 15, boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.85rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                    Segundo Contacto (Nombre)
+                  </label>
+                  <input
+                    type="text"
+                    value={form.contacto2_nombre}
+                    onChange={e => setForm({ ...form, contacto2_nombre: e.target.value })}
+                    placeholder="Ej: María Rodríguez"
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 15, boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                    Segundo Contacto (Teléfono/WhatsApp)
+                  </label>
+                  <input
+                    type="text"
+                    value={form.contacto2_telefono}
+                    onChange={e => setForm({ ...form, contacto2_telefono: e.target.value })}
                     placeholder="Ej: 6000-0000"
                     style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 15, boxSizing: 'border-box' }}
                   />

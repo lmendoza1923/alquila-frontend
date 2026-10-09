@@ -4553,17 +4553,17 @@ export default function AdminPanel() {
             </h3>
             <form onSubmit={guardarEdicionReserva}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
-                <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Alias del Cliente</label>
-                  <input type="text" value={editAlias} onChange={e => setEditAlias(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} placeholder="Ej: Boda Juan / Fiesta Maria" /></div>
+                <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Motivo del Evento</label>
+                  <input type="text" value={editAlias} onChange={e => setEditAlias(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} placeholder="Ej: Boda, 15 años, Baby Shower, Cumpleaños, Revelación" /></div>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Nombre del Cliente</label>
                   <input type="text" value={editNombre} onChange={e => setEditNombre(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} /></div>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Cédula</label>
-                  <input type="text" value={editCedula} onChange={e => setEditCedula(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} placeholder="Opcional (Ej: 8-888-8888)" /></div>
+                  <input type="text" value={editCedula} onChange={e => setEditCedula(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} placeholder="Ej: 8-888-8888" /></div>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Teléfono</label>
                   <input type="text" value={editTelefono} onChange={e => setEditTelefono(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} /></div>
               </div>
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Dirección de Entrega</label>
+                <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Dirección del Evento</label>
                 <input type="text" value={editDireccion} onChange={e => setEditDireccion(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
