@@ -2050,6 +2050,54 @@ export default function AdminPanel() {
         )}
       </div>
 
+      {/* ── Barra de Pestañas Superior del Panel de Administración ── */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        overflowX: 'auto',
+        paddingBottom: '8px',
+        marginBottom: '1.5rem',
+        borderBottom: '2px solid #e2e8f0',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none'
+      }}>
+        {[
+          { id: 'dashboard', label: 'Resumen', icon: '📊' },
+          { id: 'reservas', label: 'Reservas', icon: '📋' },
+          { id: 'clientes', label: 'Clientes', icon: '👥' },
+          { id: 'sucursales', label: 'Sucursales', icon: '🏢' },
+          { id: 'mobiliario', label: 'Mobiliario', icon: '🪑' },
+          { id: 'combos', label: 'Combos', icon: '🎁' },
+          { id: 'reportes', label: 'Reportes', icon: '📈' },
+          { id: 'terminos', label: 'Términos', icon: '📄' },
+          { id: 'configuracion', label: 'Configuración', icon: '🎨' },
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setSearchParams({ tab: t.id })}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: isMobile ? '8px 12px' : '9px 16px',
+              borderRadius: '8px',
+              border: tab === t.id ? '2px solid #4a6cf7' : '1px solid #cbd5e1',
+              background: tab === t.id ? '#4a6cf7' : '#fff',
+              color: tab === t.id ? '#fff' : '#475569',
+              fontWeight: tab === t.id ? 700 : 600,
+              fontSize: isMobile ? '12px' : '13px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              boxShadow: tab === t.id ? '0 2px 8px rgba(74, 108, 247, 0.3)' : '0 1px 3px rgba(0,0,0,0.04)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <span>{t.icon}</span>
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </div>
+
 
 
       {/* ── Dashboard ── */}
