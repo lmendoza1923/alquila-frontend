@@ -4,6 +4,7 @@ import api from '../api';
 import toast from 'react-hot-toast';
 import { useConfig, DEFAULT_CONFIG, normalizarMetodosPago, formatearMetodosPagoTexto } from '../context/ConfigContext';
 import ClientesAdmin from './ClientesAdmin';
+import SucursalesAdmin from './SucursalesAdmin';
 
 const estadoColor = { pendiente: '#f59e0b', confirmada: '#3b82f6', activa: '#22c55e', completada: '#6b7280', cancelada: '#ef4444' };
 
@@ -2014,6 +2015,7 @@ export default function AdminPanel() {
           {tab === 'dashboard' ? 'Panel de administración' : 
            tab === 'reservas' ? 'Gestión de Reservas' : 
            tab === 'clientes' ? 'Gestión de Clientes' : 
+           tab === 'sucursales' ? 'Gestión de Sucursales y Distribución' :
            tab === 'mobiliario' ? 'Inventario de Mobiliario' : 
            tab === 'combos' ? 'Combos y Paquetes' : 
            tab === 'reportes' ? 'Estadísticas e Ingresos' : 
@@ -2892,6 +2894,11 @@ export default function AdminPanel() {
       {/* ── Clientes ── */}
       {tab === 'clientes' && (
         <ClientesAdmin isMobile={isMobile} onAbrirEditarReserva={abrirEditarReserva} />
+      )}
+
+      {/* ── Sucursales y Distribución ── */}
+      {tab === 'sucursales' && (
+        <SucursalesAdmin />
       )}
 
       {/* ── Mobiliario ── */}

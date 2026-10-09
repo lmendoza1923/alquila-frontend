@@ -91,6 +91,11 @@ function Navbar({ isMobile, mobileMenuOpen, setMobileMenuOpen }) {
             <span>Mobiliario</span>
           </Link>
 
+          <Link to="/admin?tab=sucursales" style={linkStyle(isActive('/admin', 'sucursales'), true)} onClick={() => isMobile && setMobileMenuOpen(false)}>
+            <span style={{ fontSize: 18 }}>🏢</span>
+            <span>Sucursales</span>
+          </Link>
+
           <Link to="/admin?tab=combos" style={linkStyle(isActive('/admin', 'combos'), true)} onClick={() => isMobile && setMobileMenuOpen(false)}>
             <span style={{ fontSize: 18 }}>🎁</span>
             <span>Combos y Paquetes</span>
@@ -398,6 +403,7 @@ function AppContent() {
           <Route path="/mis-reservas" element={<ProtectedRoute><MisReservas /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/clientes" element={<AdminRoute><Navigate to="/admin?tab=clientes" replace /></AdminRoute>} />
+          <Route path="/sucursales" element={<AdminRoute><Navigate to="/admin?tab=sucursales" replace /></AdminRoute>} />
           <Route path="/formulario-cliente" element={<FormularioCliente />} />
           <Route path="/registro-cliente" element={<Navigate to="/formulario-cliente" replace />} />
         </Routes>
