@@ -4995,7 +4995,7 @@ export default function AdminPanel() {
                         }}
                         style={{ width: 17, height: 17, cursor: 'pointer', accentColor: '#2563eb' }}
                       />
-                      <span>🚚 Incluir Transporte / Flete</span>
+                      <span>Transporte</span>
                     </label>
                     {editRequiereTransporte && (
                       <span style={{ fontSize: 11, background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
@@ -5037,7 +5037,7 @@ export default function AdminPanel() {
                         }}
                         style={{ width: 17, height: 17, cursor: 'pointer', accentColor: '#8b5cf6' }}
                       />
-                      <span>✨ Incluir Decoración</span>
+                      <span>Decoración</span>
                     </label>
                     {editRequiereDecoracion && (
                       <span style={{ fontSize: 11, background: '#f5f3ff', color: '#6d28d9', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
