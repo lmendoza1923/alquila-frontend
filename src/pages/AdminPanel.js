@@ -1078,7 +1078,15 @@ export default function AdminPanel() {
   const [itemsEditando, setItemsEditando] = useState([]);
   const [muebleSeleccionado, setMuebleSeleccionado] = useState('');
   const [cantidadAgregar, setCantidadAgregar] = useState(1);
-  const [tipoArticuloAgregar, setTipoArticuloAgregar] = useState('mueble'); // 'mueble' o 'combo'
+  const [tipoArticuloAgregar, setTipoArticuloAgregar] = useState('mueble'); // 'mueble', 'combo', 'transporte', 'decoracion', 'servicio'
+  const [editRequiereTransporte, setEditRequiereTransporte] = useState(false);
+  const [editCostoTransporte, setEditCostoTransporte] = useState('');
+  const [editRequiereDecoracion, setEditRequiereDecoracion] = useState(false);
+  const [editCostoDecoracion, setEditCostoDecoracion] = useState('');
+  const [costoTransporteAgregar, setCostoTransporteAgregar] = useState('');
+  const [costoDecoracionAgregar, setCostoDecoracionAgregar] = useState('');
+  const [servicioNombreAgregar, setServicioNombreAgregar] = useState('');
+  const [servicioPrecioAgregar, setServicioPrecioAgregar] = useState('');
 
   // Estados pagos
   const [modalPagos, setModalPagos] = useState(null); // reserva seleccionada
@@ -1367,6 +1375,19 @@ export default function AdminPanel() {
   }, [terminos]);
 
   // ── Editar reserva ──────────────────────────────────────────────────────────
+  const cerrarEditarReserva = () => {
+    setReservaEditando(null);
+    setEditRequiereTransporte(false);
+    setEditCostoTransporte('');
+    setEditRequiereDecoracion(false);
+    setEditCostoDecoracion('');
+    setCostoTransporteAgregar('');
+    setCostoDecoracionAgregar('');
+    setServicioNombreAgregar('');
+    setServicioPrecioAgregar('');
+    setItemsEditando([]);
+  };
+
   const abrirEditarReserva = (r) => {
     setReservaEditando(r);
     setEditAlias(r.alias_cliente || '');
@@ -1379,7 +1400,40 @@ export default function AdminPanel() {
     setEditFechaFin(r.fecha_fin ? r.fecha_fin.substring(0, 10) : '');
     setEditTotal(r.total || '');
     setEditEstado(r.estado || 'pendiente');
-    const items = (r.items || []).filter(i => i && (i.mueble || i.combo_id)).map((i, idx) => {
+
+    const esItemTransporte = (item) => {
+      if (item.mueble_id || item.combo_id) return false;
+      const n = (item.mueble || item.nombre || '').toLowerCase();
+      return n.includes('transporte') || n.includes('flete') || n.includes('envio') || n.includes('envío');
+    };
+
+    const esItemDecoracion = (item) => {
+      if (item.mueble_id || item.combo_id) return false;
+      const n = (item.mueble || item.nombre || '').toLowerCase();
+      return n.includes('decorac');
+    };
+
+    const itemTrans = (r.items || []).find(esItemTransporte);
+    if (itemTrans) {
+      setEditRequiereTransporte(true);
+      const p = itemTrans.precio_unitario !== undefined && itemTrans.precio_unitario !== null ? itemTrans.precio_unitario : (itemTrans.subtotal || '');
+      setEditCostoTransporte(String(p));
+    } else {
+      setEditRequiereTransporte(false);
+      setEditCostoTransporte('');
+    }
+
+    const itemDeco = (r.items || []).find(esItemDecoracion);
+    if (itemDeco) {
+      setEditRequiereDecoracion(true);
+      const p = itemDeco.precio_unitario !== undefined && itemDeco.precio_unitario !== null ? itemDeco.precio_unitario : (itemDeco.subtotal || '');
+      setEditCostoDecoracion(String(p));
+    } else {
+      setEditRequiereDecoracion(false);
+      setEditCostoDecoracion('');
+    }
+
+    const items = (r.items || []).filter(i => i && (i.mueble || i.combo_id || i.nombre)).filter(i => !esItemTransporte(i) && !esItemDecoracion(i)).map((i, idx) => {
       let customComps = i.componentes || [];
       if (i.combo_id && (!customComps || customComps.length === 0)) {
         const comboObj = combos.find(c => c.id === i.combo_id);
@@ -1394,7 +1448,7 @@ export default function AdminPanel() {
       return {
         mueble_id: i.mueble_id || null,
         combo_id: i.combo_id || null,
-        nombre: i.mueble,
+        nombre: i.mueble || i.nombre,
         cantidad: i.cantidad,
         subtotal: i.subtotal,
         precio_unitario: i.precio_unitario !== undefined && i.precio_unitario !== null ? parseFloat(i.precio_unitario) : null,
@@ -1406,6 +1460,10 @@ export default function AdminPanel() {
     setMuebleSeleccionado('');
     setCantidadAgregar(1);
     setTipoArticuloAgregar('mueble');
+    setCostoTransporteAgregar('');
+    setCostoDecoracionAgregar('');
+    setServicioNombreAgregar('');
+    setServicioPrecioAgregar('');
 
     // Carga diferida de componentes de combos si alguno no los tenía en memoria
     items.forEach(async (it, index) => {
@@ -1428,6 +1486,51 @@ export default function AdminPanel() {
   };
 
   const agregarMuebleAReserva = async () => {
+    if (tipoArticuloAgregar === 'transporte') {
+      const costo = parseFloat(costoTransporteAgregar) || 0;
+      setEditRequiereTransporte(true);
+      setEditCostoTransporte(String(costo));
+      recalcularTotal(itemsEditando, null, null, true, costo, editRequiereDecoracion, editCostoDecoracion);
+      setCostoTransporteAgregar('');
+      setTipoArticuloAgregar('mueble');
+      toast.success('Transporte agregado a la reserva');
+      return;
+    }
+
+    if (tipoArticuloAgregar === 'decoracion') {
+      const costo = parseFloat(costoDecoracionAgregar) || 0;
+      setEditRequiereDecoracion(true);
+      setEditCostoDecoracion(String(costo));
+      recalcularTotal(itemsEditando, null, null, editRequiereTransporte, editCostoTransporte, true, costo);
+      setCostoDecoracionAgregar('');
+      setTipoArticuloAgregar('mueble');
+      toast.success('Decoración agregada a la reserva');
+      return;
+    }
+
+    if (tipoArticuloAgregar === 'servicio') {
+      if (!servicioNombreAgregar.trim()) return toast.error('Ingresa el nombre del servicio');
+      const precioUnit = parseFloat(servicioPrecioAgregar) || 0;
+      const cant = parseInt(cantidadAgregar) || 1;
+      const nuevoServicio = {
+        mueble_id: null,
+        combo_id: null,
+        nombre: servicioNombreAgregar.trim(),
+        cantidad: cant,
+        precio_unitario: precioUnit,
+        subtotal: precioUnit * cant
+      };
+      const nuevosItems = [...itemsEditando, nuevoServicio];
+      setItemsEditando(nuevosItems);
+      recalcularTotal(nuevosItems);
+      setServicioNombreAgregar('');
+      setServicioPrecioAgregar('');
+      setCantidadAgregar(1);
+      setTipoArticuloAgregar('mueble');
+      toast.success(`Servicio "${nuevoServicio.nombre}" agregado`);
+      return;
+    }
+
     if (!muebleSeleccionado) return toast.error('Selecciona un artículo');
 
     if (tipoArticuloAgregar === 'combo') {
@@ -1587,7 +1690,15 @@ export default function AdminPanel() {
     }));
   };
 
-  const recalcularTotal = (items, customInicio, customFin) => {
+  const recalcularTotal = (
+    items, 
+    customInicio, 
+    customFin, 
+    customReqTrans, 
+    customCostoTrans, 
+    customReqDeco, 
+    customCostoDeco
+  ) => {
     const inicio = customInicio !== undefined && customInicio !== null ? customInicio : editFechaInicio;
     const fin = customFin !== undefined && customFin !== null ? customFin : editFechaFin;
     if (!inicio || !fin) return items;
@@ -1627,7 +1738,17 @@ export default function AdminPanel() {
       }
     });
 
-    const total = updatedItems.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+    const subtotalArticulos = updatedItems.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+
+    const reqTrans = customReqTrans !== undefined && customReqTrans !== null ? customReqTrans : editRequiereTransporte;
+    const costoTrans = customCostoTrans !== undefined && customCostoTrans !== null ? customCostoTrans : editCostoTransporte;
+    const totalTrans = reqTrans ? (parseFloat(costoTrans) || 0) : 0;
+
+    const reqDeco = customReqDeco !== undefined && customReqDeco !== null ? customReqDeco : editRequiereDecoracion;
+    const costoDeco = customCostoDeco !== undefined && customCostoDeco !== null ? customCostoDeco : editCostoDecoracion;
+    const totalDeco = reqDeco ? (parseFloat(costoDeco) || 0) : 0;
+
+    const total = subtotalArticulos + totalTrans + totalDeco;
     setEditTotal(total.toFixed(2));
     return updatedItems;
   };
@@ -1646,6 +1767,28 @@ export default function AdminPanel() {
         precio_unitario: i.precio_unitario !== undefined && i.precio_unitario !== null ? parseFloat(i.precio_unitario) : null,
         componentes: i.combo_id ? (i.componentes || []) : null
       }));
+
+      if (editRequiereTransporte) {
+        formattedItems.push({
+          mueble_id: null,
+          combo_id: null,
+          nombre: 'Transporte',
+          cantidad: 1,
+          precio_unitario: parseFloat(editCostoTransporte) || 0,
+          componentes: null
+        });
+      }
+
+      if (editRequiereDecoracion) {
+        formattedItems.push({
+          mueble_id: null,
+          combo_id: null,
+          nombre: 'Decoración',
+          cantidad: 1,
+          precio_unitario: parseFloat(editCostoDecoracion) || 0,
+          componentes: null
+        });
+      }
 
       const payload = {
         alias_cliente: editAlias.trim(),
@@ -1666,7 +1809,7 @@ export default function AdminPanel() {
       toast.success('Reserva actualizada correctamente');
       const resReservas = await api.get('/reservas');
       setReservas(resReservas.data);
-      setReservaEditando(null);
+      cerrarEditarReserva();
       api.get('/admin/stats').then(r => setStats(r.data));
       api.get('/muebles?todos=true').then(r => setMuebles(r.data));
     } catch (err) {
@@ -4602,7 +4745,7 @@ export default function AdminPanel() {
       {reservaEditando && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 700, maxHeight: '92vh', overflowY: 'auto', padding: isMobile ? '1.25rem 1rem' : '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
-            <button onClick={() => setReservaEditando(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
+            <button type="button" onClick={cerrarEditarReserva} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
             <h3 style={{ marginTop: 0, marginBottom: '1.5rem', color: '#1a1a2e', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '0.75rem' }}>
               Editar Reserva #{reservaEditando.id.slice(0, 8).toUpperCase()}
             </h3>
@@ -4739,30 +4882,187 @@ export default function AdminPanel() {
                   </div>
                 ) : <p style={{ color: '#888', fontSize: 13, margin: '0 0 1rem 0' }}>No hay artículos en esta reserva.</p>}
 
-                {/* Agregar artículo */}
+                {/* Agregar artículo o servicio */}
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                  <div style={{ minWidth: 100 }}>
+                  <div style={{ minWidth: 120 }}>
                     <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Tipo</label>
                     <select value={tipoArticuloAgregar} onChange={e => { setTipoArticuloAgregar(e.target.value); setMuebleSeleccionado(''); }} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, background: '#fff', cursor: 'pointer' }}>
-                      <option value="mueble">Mueble</option>
-                      <option value="combo">Combo</option>
+                      <option value="mueble">🪑 Mueble</option>
+                      <option value="combo">🎁 Combo</option>
+                      <option value="transporte">🚚 Transporte</option>
+                      <option value="decoracion">✨ Decoración</option>
+                      <option value="servicio">🔧 Otro Servicio</option>
                     </select>
                   </div>
-                  <div style={{ flex: 2, minWidth: 180 }}>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Seleccionar artículo</label>
-                    <select value={muebleSeleccionado} onChange={e => setMuebleSeleccionado(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff' }}>
-                      <option value="">Seleccionar...</option>
-                      {tipoArticuloAgregar === 'combo' 
-                        ? combos.filter(c => c.activo).map(c => <option key={c.id} value={c.id}>🎁 {c.nombre} — ${c.precio_dia}</option>)
-                        : muebles.filter(m => m.activo).map(m => <option key={m.id} value={m.id}>🪑 {m.nombre} — ${m.precio_dia}</option>)
-                      }
-                    </select>
-                  </div>
-                  <div style={{ width: 80 }}>
-                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Cantidad</label>
-                    <input type="number" min="1" value={cantidadAgregar} onChange={e => setCantidadAgregar(parseInt(e.target.value) || 1)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} />
-                  </div>
+
+                  {tipoArticuloAgregar === 'transporte' && (
+                    <div style={{ flex: 2, minWidth: 160 }}>
+                      <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Costo Transporte ($)</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="0.00" 
+                        value={costoTransporteAgregar} 
+                        onChange={e => setCostoTransporteAgregar(e.target.value)} 
+                        style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} 
+                      />
+                    </div>
+                  )}
+
+                  {tipoArticuloAgregar === 'decoracion' && (
+                    <div style={{ flex: 2, minWidth: 160 }}>
+                      <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Costo Decoración ($)</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="0.00" 
+                        value={costoDecoracionAgregar} 
+                        onChange={e => setCostoDecoracionAgregar(e.target.value)} 
+                        style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} 
+                      />
+                    </div>
+                  )}
+
+                  {tipoArticuloAgregar === 'servicio' && (
+                    <>
+                      <div style={{ flex: 2, minWidth: 140 }}>
+                        <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Nombre del servicio</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ej: Montaje, Limpieza" 
+                          value={servicioNombreAgregar} 
+                          onChange={e => setServicioNombreAgregar(e.target.value)} 
+                          style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} 
+                        />
+                      </div>
+                      <div style={{ width: 95 }}>
+                        <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Precio ($)</label>
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          placeholder="0.00" 
+                          value={servicioPrecioAgregar} 
+                          onChange={e => setServicioPrecioAgregar(e.target.value)} 
+                          style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} 
+                        />
+                      </div>
+                      <div style={{ width: 70 }}>
+                        <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Cantidad</label>
+                        <input type="number" min="1" value={cantidadAgregar} onChange={e => setCantidadAgregar(parseInt(e.target.value) || 1)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} />
+                      </div>
+                    </>
+                  )}
+
+                  {(tipoArticuloAgregar === 'mueble' || tipoArticuloAgregar === 'combo') && (
+                    <>
+                      <div style={{ flex: 2, minWidth: 180 }}>
+                        <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Seleccionar artículo</label>
+                        <select value={muebleSeleccionado} onChange={e => setMuebleSeleccionado(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff' }}>
+                          <option value="">Seleccionar...</option>
+                          {tipoArticuloAgregar === 'combo' 
+                            ? combos.filter(c => c.activo).map(c => <option key={c.id} value={c.id}>🎁 {c.nombre} — ${c.precio_dia}</option>)
+                            : muebles.filter(m => m.activo).map(m => <option key={m.id} value={m.id}>🪑 {m.nombre} — ${m.precio_dia}</option>)
+                          }
+                        </select>
+                      </div>
+                      <div style={{ width: 80 }}>
+                        <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, fontSize: 12, color: '#555' }}>Cantidad</label>
+                        <input type="number" min="1" value={cantidadAgregar} onChange={e => setCantidadAgregar(parseInt(e.target.value) || 1)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} />
+                      </div>
+                    </>
+                  )}
+
                   <button type="button" onClick={agregarMuebleAReserva} style={{ padding: '8px 16px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>+ Agregar</button>
+                </div>
+              </div>
+
+              {/* Servicios Especiales: Transporte & Decoración */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                {/* Transporte */}
+                <div style={{ background: '#f8fafc', border: editRequiereTransporte ? '1.5px solid #3b82f6' : '1px solid #e2e8f0', borderRadius: 10, padding: '1rem', transition: 'all 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#1e293b' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={editRequiereTransporte} 
+                        onChange={e => {
+                          const checked = e.target.checked;
+                          setEditRequiereTransporte(checked);
+                          recalcularTotal(itemsEditando, null, null, checked, editCostoTransporte, editRequiereDecoracion, editCostoDecoracion);
+                        }}
+                        style={{ width: 17, height: 17, cursor: 'pointer', accentColor: '#2563eb' }}
+                      />
+                      <span>🚚 Incluir Transporte / Flete</span>
+                    </label>
+                    {editRequiereTransporte && (
+                      <span style={{ fontSize: 11, background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
+                        Activo
+                      </span>
+                    )}
+                  </div>
+                  {editRequiereTransporte && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                      <label style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Costo ($):</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="0.00" 
+                        value={editCostoTransporte} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          setEditCostoTransporte(val);
+                          recalcularTotal(itemsEditando, null, null, editRequiereTransporte, val, editRequiereDecoracion, editCostoDecoracion);
+                        }}
+                        style={{ flex: 1, padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Decoración */}
+                <div style={{ background: '#f8fafc', border: editRequiereDecoracion ? '1.5px solid #8b5cf6' : '1px solid #e2e8f0', borderRadius: 10, padding: '1rem', transition: 'all 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#1e293b' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={editRequiereDecoracion} 
+                        onChange={e => {
+                          const checked = e.target.checked;
+                          setEditRequiereDecoracion(checked);
+                          recalcularTotal(itemsEditando, null, null, editRequiereTransporte, editCostoTransporte, checked, editCostoDecoracion);
+                        }}
+                        style={{ width: 17, height: 17, cursor: 'pointer', accentColor: '#8b5cf6' }}
+                      />
+                      <span>✨ Incluir Decoración</span>
+                    </label>
+                    {editRequiereDecoracion && (
+                      <span style={{ fontSize: 11, background: '#f5f3ff', color: '#6d28d9', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
+                        Activo
+                      </span>
+                    )}
+                  </div>
+                  {editRequiereDecoracion && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                      <label style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Costo ($):</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="0.00" 
+                        value={editCostoDecoracion} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          setEditCostoDecoracion(val);
+                          recalcularTotal(itemsEditando, null, null, editRequiereTransporte, editCostoTransporte, editRequiereDecoracion, val);
+                        }}
+                        style={{ flex: 1, padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -4775,7 +5075,7 @@ export default function AdminPanel() {
                 <textarea rows="2" value={editNotas} onChange={e => setEditNotas(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
               </div>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setReservaEditando(null)} style={{ padding: '10px 20px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>Cancelar</button>
+                <button type="button" onClick={cerrarEditarReserva} style={{ padding: '10px 20px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>Cancelar</button>
                 <button type="submit" disabled={loadingEdit} style={{ padding: '10px 20px', background: loadingEdit ? '#a5b4fc' : '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: loadingEdit ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 14 }}>
                   {loadingEdit ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
