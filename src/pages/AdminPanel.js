@@ -1361,6 +1361,14 @@ export default function AdminPanel() {
     }
   }, [tab, tipoReporte, mesReporte, anioReporte, fechaInicioReporte, fechaFinReporte]);
 
+  const [nuevosClientesForm, setNuevosClientesForm] = useState(0);
+
+  const cargarNuevosClientesCount = () => {
+    api.get('/clientes/nuevos-count')
+      .then(r => setNuevosClientesForm(r.data?.nuevos_formulario || 0))
+      .catch(() => {});
+  };
+
   // Cargar datos iniciales
   useEffect(() => {
     api.get('/admin/stats').then(r => setStats(r.data));
@@ -1368,6 +1376,28 @@ export default function AdminPanel() {
     api.get('/muebles?todos=true').then(r => setMuebles(r.data)).catch(() => {});
     api.get('/combos?todos=true').then(r => setCombos(r.data)).catch(() => {});
     api.get('/pagos/terminos').then(r => setTerminos(r.data.terminos)).catch(() => {});
+    cargarNuevosClientesCount();
+  }, []);
+
+  useEffect(() => {
+    const refrescarEnFoco = () => {
+      cargarNuevosClientesCount();
+      api.get('/reservas').then(r => {
+        setReservas(r.data);
+        setModalContrato(prev => {
+          if (!prev) return null;
+          const actualizada = r.data.find(item => item.id === prev.id);
+          return actualizada ? { ...prev, ...actualizada } : prev;
+        });
+      }).catch(() => {});
+    };
+    const handleClientesEvent = () => cargarNuevosClientesCount();
+    window.addEventListener('focus', refrescarEnFoco);
+    window.addEventListener('clientes-nuevos-updated', handleClientesEvent);
+    return () => {
+      window.removeEventListener('focus', refrescarEnFoco);
+      window.removeEventListener('clientes-nuevos-updated', handleClientesEvent);
+    };
   }, []);
 
   useEffect(() => {
@@ -1918,14 +1948,69 @@ export default function AdminPanel() {
     } catch { toast.error('Error al eliminar pago'); }
   };
 
-  // ── Contrato PDF ─────────────────────────────────────────────────────────────
+  // ── Contrato PDF y Enlace de Confirmación ────────────────────────────────────
   const abrirContrato = async (r) => {
     setModalContrato(r);
-    setContratoAbono('');
+    setContratoAbono(r.contrato_abono_extra > 0 ? String(r.contrato_abono_extra) : '');
     try {
       const res = await api.get(`/pagos/reserva/${r.id}`);
       setPagosParaContrato(res.data.pagos);
     } catch { setPagosParaContrato([]); }
+  };
+
+  const obtenerUrlContratoPublico = (reservaId) => {
+    return `${window.location.origin}/contrato/${reservaId}`;
+  };
+
+  const guardarAbonoExtraContrato = async (reserva) => {
+    const abonoNum = parseFloat(contratoAbono) || 0;
+    try {
+      const res = await api.patch(`/reservas/${reserva.id}/confirmacion-contrato`, {
+        contrato_abono_extra: abonoNum
+      });
+      setReservas(prev => prev.map(r => r.id === reserva.id ? { ...r, ...res.data } : r));
+      setModalContrato(prev => prev && prev.id === reserva.id ? { ...prev, ...res.data } : prev);
+    } catch {
+      // No bloquear envío si falla el guardado opcional
+    }
+  };
+
+  const copiarEnlaceContrato = async (reserva) => {
+    await guardarAbonoExtraContrato(reserva);
+    const url = obtenerUrlContratoPublico(reserva.id);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('¡Enlace del contrato copiado al portapapeles!');
+    } catch {
+      window.prompt('Copia este enlace para enviarlo al cliente:', url);
+    }
+  };
+
+  const enviarContratoPorWhatsApp = async (reserva) => {
+    await guardarAbonoExtraContrato(reserva);
+    const url = obtenerUrlContratoPublico(reserva.id);
+    const nombreEmpresa = config?.nombre_empresa || 'Alquila Tu Party';
+    const nombreCliente = reserva.nombre_cliente || 'Cliente';
+    const msg = `Hola *${nombreCliente}* 👋, te saludamos de *${nombreEmpresa}*.\n\nAquí tienes el enlace a tu *Contrato de Alquiler* (Reserva #${reserva.id.slice(0, 8).toUpperCase()}):\n👉 ${url}\n\nPor favor revísalo y al final del documento presiona el botón *"Confirmado"* para dejar confirmada tu reserva. ¡Muchas gracias!`;
+    const encoded = encodeURIComponent(msg);
+    const cleanPhone = (reserva.telefono_cliente || '').replace(/\D/g, '');
+    const waUrl = cleanPhone
+      ? `https://wa.me/${cleanPhone}?text=${encoded}`
+      : `https://api.whatsapp.com/send?text=${encoded}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const cambiarConfirmacionContrato = async (reserva, nuevoEstado) => {
+    try {
+      const res = await api.patch(`/reservas/${reserva.id}/confirmacion-contrato`, {
+        contrato_confirmado: nuevoEstado
+      });
+      setReservas(prev => prev.map(r => r.id === reserva.id ? { ...r, ...res.data } : r));
+      setModalContrato(prev => prev && prev.id === reserva.id ? { ...prev, ...res.data } : prev);
+      toast.success(nuevoEstado ? 'Contrato marcado como Confirmado (Verde)' : 'Contrato marcado como Pendiente de confirmar (Rojo)');
+    } catch {
+      toast.error('Error al actualizar el estado de confirmación del contrato');
+    }
   };
 
   const guardarTerminos = async () => {
@@ -2152,7 +2237,7 @@ export default function AdminPanel() {
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
-    <div className="admin-page-container" style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '1rem 0.75rem' : '2rem', width: '100%', boxSizing: 'border-box' }}>
+    <div className="admin-page-container" style={{ maxWidth: (tab === 'clientes' || tab === 'reservas') ? 1280 : 1100, margin: '0 auto', padding: isMobile ? '1rem 0.75rem' : '2rem', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <h1 style={{ margin: 0, fontSize: isMobile ? '1.35rem' : '1.8rem', color: '#1e293b' }}>
           {tab === 'dashboard' ? 'Panel de administración' : 
@@ -2207,7 +2292,7 @@ export default function AdminPanel() {
         {[
           { id: 'dashboard', label: 'Resumen', icon: '📊' },
           { id: 'reservas', label: 'Reservas', icon: '📋' },
-          { id: 'clientes', label: 'Clientes', icon: '👥' },
+          { id: 'clientes', label: 'Clientes', icon: '👥', badge: nuevosClientesForm },
           { id: 'sucursales', label: 'Sucursales', icon: '🏢' },
           { id: 'mobiliario', label: 'Mobiliario', icon: '🪑' },
           { id: 'combos', label: 'Combos', icon: '🎁' },
@@ -2224,7 +2309,7 @@ export default function AdminPanel() {
               gap: '6px',
               padding: isMobile ? '8px 12px' : '9px 16px',
               borderRadius: '8px',
-              border: tab === t.id ? '2px solid #4a6cf7' : '1px solid #cbd5e1',
+              border: tab === t.id ? '2px solid #4a6cf7' : (t.badge > 0 ? '2px solid #ef4444' : '1px solid #cbd5e1'),
               background: tab === t.id ? '#4a6cf7' : '#fff',
               color: tab === t.id ? '#fff' : '#475569',
               fontWeight: tab === t.id ? 700 : 600,
@@ -2237,6 +2322,20 @@ export default function AdminPanel() {
           >
             <span>{t.icon}</span>
             <span>{t.label}</span>
+            {t.badge > 0 && (
+              <span style={{
+                background: '#ef4444',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: 800,
+                padding: '1px 7px',
+                borderRadius: '12px',
+                lineHeight: 1.4,
+                boxShadow: '0 2px 5px rgba(239, 68, 68, 0.4)'
+              }}>
+                {t.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -2671,21 +2770,32 @@ export default function AdminPanel() {
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                             <button onClick={() => abrirEditarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Editar">✏️</button>
                             <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳</button>
-                            <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄</button>
+                            <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato y Envío al Cliente">📄</button>
                             <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config, terminos)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚</button>
                             <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️</button>
-                            {r.estado !== 'cancelada' && r.estado !== 'completada' && (
+                            {r.estado !== 'cancelada' && (
                               <>
-                                <button 
-                                  onClick={() => {
-                                    if (window.confirm(`¿Marcar la reserva de ${r.nombre_cliente} como completada?`)) {
-                                      cambiarEstado(r.id, 'completada');
-                                    }
+                                <button
+                                  onClick={() => abrirContrato(r)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: 6,
+                                    border: 'none',
+                                    background: r.contrato_confirmado ? '#16a34a' : '#ef4444',
+                                    color: '#fff',
+                                    fontSize: 12,
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    boxShadow: r.contrato_confirmado ? '0 2px 6px rgba(22, 163, 74, 0.3)' : '0 2px 6px rgba(239, 68, 68, 0.3)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 5
                                   }}
-                                  style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#10b981', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
-                                  title="Marcar como completada"
+                                  title={r.contrato_confirmado
+                                    ? `Contrato confirmado por el cliente${r.contrato_confirmado_en ? ' el ' + new Date(r.contrato_confirmado_en).toLocaleString('es-ES') : ''} (clic para ver/enviar contrato)`
+                                    : 'Pendiente de confirmación en el contrato (clic para enviar contrato al cliente)'}
                                 >
-                                  ✓ Completar
+                                  {r.contrato_confirmado ? '✓ Confirmado' : '● Confirmado'}
                                 </button>
                                 <button 
                                   onClick={() => {
@@ -2693,7 +2803,7 @@ export default function AdminPanel() {
                                       cambiarEstado(r.id, 'cancelada');
                                     }
                                   }}
-                                  style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+                                  style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#64748b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
                                   title="Cancelar reserva"
                                 >
                                   Cancelar
@@ -2844,11 +2954,29 @@ export default function AdminPanel() {
                                 </span>
                               </div>
                               {/* Botones de acción compactos */}
-                              <div style={{ display: 'flex', gap: '4px', marginTop: '4px', justifyContent: 'flex-end', borderTop: '1px solid #eee', paddingTop: '4px' }}>
+                              <div style={{ display: 'flex', gap: '4px', marginTop: '4px', justifyContent: 'flex-end', borderTop: '1px solid #eee', paddingTop: '4px', flexWrap: 'wrap' }}>
                                 <button onClick={() => abrirEditarReserva(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Editar">✏️</button>
                                 <button onClick={() => abrirPagos(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#22c55e', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Pagos">💳</button>
                                 <button onClick={() => abrirContrato(r)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#f59e0b', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Contrato PDF">📄</button>
                                 <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config, terminos)} style={{ padding: '3px 5px', borderRadius: 4, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: '10px', cursor: 'pointer' }} title="Hoja de Entrega">🚚</button>
+                                {r.estado !== 'cancelada' && (
+                                  <button
+                                    onClick={() => abrirContrato(r)}
+                                    style={{
+                                      padding: '3px 6px',
+                                      borderRadius: 4,
+                                      border: 'none',
+                                      background: r.contrato_confirmado ? '#16a34a' : '#ef4444',
+                                      color: '#fff',
+                                      fontSize: '10px',
+                                      fontWeight: 700,
+                                      cursor: 'pointer'
+                                    }}
+                                    title={r.contrato_confirmado ? 'Contrato confirmado por el cliente' : 'Pendiente de confirmación en el contrato'}
+                                  >
+                                    {r.contrato_confirmado ? '✓ Confirmado' : '● Confirmado'}
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -3063,6 +3191,24 @@ export default function AdminPanel() {
                                 <button onClick={() => abrirPagos(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Pagos">💳 Pagos</button>
                                 <button onClick={() => abrirContrato(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Contrato PDF">📄 Contrato</button>
                                 <button onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config, terminos)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Hoja de Entrega (Checklist)">🚚 Entrega</button>
+                                {r.estado !== 'cancelada' && (
+                                  <button
+                                    onClick={() => abrirContrato(r)}
+                                    style={{
+                                      padding: '6px 10px',
+                                      borderRadius: 6,
+                                      border: 'none',
+                                      background: r.contrato_confirmado ? '#16a34a' : '#ef4444',
+                                      color: '#fff',
+                                      fontSize: 12,
+                                      cursor: 'pointer',
+                                      fontWeight: 700
+                                    }}
+                                    title={r.contrato_confirmado ? 'Contrato confirmado por el cliente' : 'Pendiente de confirmación en el contrato'}
+                                  >
+                                    {r.contrato_confirmado ? '✓ Confirmado' : '● Confirmado'}
+                                  </button>
+                                )}
                                 <button onClick={() => eliminarReserva(r)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }} title="Eliminar definitivamente">🗑️ Eliminar</button>
                               </div>
                             </div>
@@ -5217,26 +5363,88 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* ══════════ MODAL CONTRATO PDF ══════════ */}
+      {/* ══════════ MODAL CONTRATO Y CONFIRMACIÓN DEL CLIENTE ══════════ */}
       {modalContrato && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(26,26,46,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '90%', maxWidth: 480, padding: isMobile ? '1.25rem 1rem' : '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', position: 'relative', boxSizing: 'border-box' }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '92%', maxWidth: 520, maxHeight: '92vh', overflowY: 'auto', padding: isMobile ? '1.25rem 1rem' : '1.75rem', boxShadow: '0 10px 30px rgba(0,0,0,0.18)', position: 'relative', boxSizing: 'border-box' }}>
             <button onClick={() => setModalContrato(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' }}>×</button>
-            <h3 style={{ marginTop: 0, marginBottom: 4, color: '#1a1a2e' }}>📄 Generar Contrato</h3>
-            <p style={{ color: '#888', fontSize: 13, margin: '0 0 1.5rem 0' }}>Reserva #{modalContrato.id.slice(0,8).toUpperCase()} · {modalContrato.nombre_cliente}</p>
+            <h3 style={{ marginTop: 0, marginBottom: 4, color: '#1a1a2e' }}>📄 Contrato y Confirmación del Cliente</h3>
+            <p style={{ color: '#888', fontSize: 13, margin: '0 0 1rem 0' }}>
+              Reserva #{modalContrato.id.slice(0, 8).toUpperCase()} · {modalContrato.nombre_cliente}
+            </p>
 
-            <div style={{ background: '#f8f9ff', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', fontSize: 14 }}>
+            {/* Banner de Estado de Confirmación en el Contrato (Rojo / Verde) */}
+            <div style={{
+              background: modalContrato.contrato_confirmado ? '#f0fdf4' : '#fef2f2',
+              border: `2px solid ${modalContrato.contrato_confirmado ? '#16a34a' : '#ef4444'}`,
+              borderRadius: 12,
+              padding: '12px 14px',
+              marginBottom: '1.1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10,
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: '50%',
+                  background: modalContrato.contrato_confirmado ? '#16a34a' : '#ef4444',
+                  color: '#fff',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: 16,
+                  flexShrink: 0
+                }}>
+                  {modalContrato.contrato_confirmado ? '✓' : '!'}
+                </span>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 13.5, color: modalContrato.contrato_confirmado ? '#15803d' : '#b91c1c' }}>
+                    {modalContrato.contrato_confirmado ? 'CONFIRMADO POR EL CLIENTE (VERDE)' : 'PENDIENTE DE CONFIRMAR (ROJO)'}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: modalContrato.contrato_confirmado ? '#166534' : '#991b1b', marginTop: 2 }}>
+                    {modalContrato.contrato_confirmado
+                      ? (modalContrato.contrato_confirmado_en
+                          ? `Confirmado el ${new Date(modalContrato.contrato_confirmado_en).toLocaleString('es-ES')}`
+                          : 'El cliente presionó el botón "Confirmado" en su contrato.')
+                      : 'Envía el enlace del contrato al cliente para que lo revise y presione el botón "Confirmado" al final.'}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => cambiarConfirmacionContrato(modalContrato, !modalContrato.contrato_confirmado)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  border: `1px solid ${modalContrato.contrato_confirmado ? '#fca5a5' : '#86efac'}`,
+                  background: '#fff',
+                  color: modalContrato.contrato_confirmado ? '#dc2626' : '#16a34a',
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {modalContrato.contrato_confirmado ? 'Cambiar a Pendiente' : '✓ Marcar Confirmado'}
+              </button>
+            </div>
+
+            <div style={{ background: '#f8f9ff', borderRadius: 10, padding: '0.85rem 1rem', marginBottom: '1rem', fontSize: 13.5 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ color: '#555' }}>Total reserva:</span>
                 <strong>${parseFloat(modalContrato.total).toFixed(2)}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#555' }}>Pagos registrados:</span>
                 <strong style={{ color: '#22c55e' }}>-${pagosParaContrato.reduce((s, p) => s + parseFloat(p.monto), 0).toFixed(2)}</strong>
               </div>
             </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ marginBottom: '1.1rem' }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: '#444', display: 'block', marginBottom: 6 }}>
                 Abono adicional en este contrato ($) <span style={{ color: '#888', fontWeight: 400 }}>(opcional)</span>
               </label>
@@ -5247,16 +5455,59 @@ export default function AdminPanel() {
                 value={contratoAbono}
                 onChange={e => setContratoAbono(e.target.value)}
                 placeholder="0.00"
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '9px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
               />
-              <p style={{ fontSize: 12, color: '#888', margin: '6px 0 0 0' }}>Si el cliente va a pagar un abono hoy, ingrésalo aquí para que aparezca en el contrato.</p>
+              <p style={{ fontSize: 11.5, color: '#888', margin: '4px 0 0 0' }}>Si el cliente va a pagar un abono hoy, ingrésalo aquí para que aparezca reflejado en el contrato.</p>
+            </div>
+
+            {/* Sección de Envío del Contrato Digital con Botón "Confirmado" */}
+            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 12, padding: '12px', marginBottom: '1.1rem' }}>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: '#0369a1', marginBottom: 6 }}>
+                📲 Enviar Contrato Digital al Cliente (con botón "Confirmado" al final)
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={obtenerUrlContratoPublico(modalContrato.id)}
+                  onClick={e => e.target.select()}
+                  style={{ flex: 1, padding: '7px 10px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', fontSize: 12, color: '#334155' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => copiarEnlaceContrato(modalContrato)}
+                  style={{ padding: '7px 12px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  📋 Copiar Link
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => enviarContratoPorWhatsApp(modalContrato)}
+                  style={{ flex: 2, padding: '10px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  💬 Enviar Contrato por WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await guardarAbonoExtraContrato(modalContrato);
+                    window.open(obtenerUrlContratoPublico(modalContrato.id), '_blank', 'noopener,noreferrer');
+                  }}
+                  style={{ flex: 1, padding: '10px 12px', background: '#fff', color: '#0369a1', border: '1px solid #7dd3fc', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 12.5, whiteSpace: 'nowrap' }}
+                >
+                  🔗 Ver Contrato
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setModalContrato(null)} style={{ flex: 1, padding: '10px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>Cerrar</button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
+                    await guardarAbonoExtraContrato(modalContrato);
                     generarContratoPDF(modalContrato, modalContrato.items || [], pagosParaContrato, terminos, contratoAbono, combos, config);
                     setModalContrato(null);
                   }}

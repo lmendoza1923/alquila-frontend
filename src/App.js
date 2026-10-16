@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { ConfigProvider, useConfig } from './context/ConfigContext';
+import api from './api';
 import Catalogo from './pages/Catalogo';
 import Carrito from './pages/Carrito';
 import Confirmacion from './pages/Confirmacion';
@@ -11,12 +12,36 @@ import Login from './pages/Login';
 import MisReservas from './pages/MisReservas';
 import AdminPanel from './pages/AdminPanel';
 import FormularioCliente from './pages/FormularioCliente';
+import ContratoPublico from './pages/ContratoPublico';
 
 function Navbar({ isMobile, mobileMenuOpen, setMobileMenuOpen }) {
   const { user, logout } = useAuth();
   const { items } = useCart();
   const { config } = useConfig();
   const location = useLocation();
+  const [nuevosClientes, setNuevosClientes] = useState(0);
+
+  const cargarNuevosClientes = useCallback(() => {
+    if (user?.rol === 'admin') {
+      api.get('/clientes/nuevos-count')
+        .then(res => setNuevosClientes(res.data?.nuevos_formulario || 0))
+        .catch(() => {});
+    }
+  }, [user]);
+
+  useEffect(() => {
+    cargarNuevosClientes();
+  }, [cargarNuevosClientes, location.pathname, location.search]);
+
+  useEffect(() => {
+    const handleUpdate = () => cargarNuevosClientes();
+    window.addEventListener('clientes-nuevos-updated', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+    return () => {
+      window.removeEventListener('clientes-nuevos-updated', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
+    };
+  }, [cargarNuevosClientes]);
 
   useEffect(() => {
     if (isMobile) {
@@ -24,7 +49,8 @@ function Navbar({ isMobile, mobileMenuOpen, setMobileMenuOpen }) {
     }
   }, [location, isMobile, setMobileMenuOpen]);
 
-  if (!user) return null;
+  const esRutaPublica = location.pathname.startsWith('/formulario-cliente') || location.pathname.startsWith('/registro-cliente') || location.pathname.startsWith('/contrato/');
+  if (!user || esRutaPublica) return null;
 
   const isActive = (path, tabName) => {
     if (path === '/admin') {
@@ -84,6 +110,23 @@ function Navbar({ isMobile, mobileMenuOpen, setMobileMenuOpen }) {
           <Link to="/admin?tab=clientes" style={linkStyle(isActive('/admin', 'clientes'), true)} onClick={() => isMobile && setMobileMenuOpen(false)}>
             <span style={{ fontSize: 18 }}>👥</span>
             <span>Clientes</span>
+            {nuevosClientes > 0 && (
+              <span
+                title={`${nuevosClientes} nuevo(s) registro(s) por formulario sin revisar`}
+                style={{
+                  marginLeft: 'auto',
+                  background: '#ef4444',
+                  color: '#fff',
+                  borderRadius: 12,
+                  fontSize: 11,
+                  padding: '2px 8px',
+                  fontWeight: 800,
+                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.45)'
+                }}
+              >
+                {nuevosClientes} {nuevosClientes === 1 ? 'nuevo' : 'nuevos'}
+              </span>
+            )}
           </Link>
 
           <Link to="/admin?tab=mobiliario" style={linkStyle(isActive('/admin', 'mobiliario'), true)} onClick={() => isMobile && setMobileMenuOpen(false)}>
@@ -370,6 +413,7 @@ function HomeRoute() {
 
 function AppContent() {
   const { user } = useAuth();
+  const location = useLocation();
   const [width, setWidth] = useState(window.innerWidth);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -380,8 +424,9 @@ function AppContent() {
   }, []);
 
   const isMobile = width < 768;
-  const sidebarWidth = user ? (isMobile ? '0px' : '260px') : '0px';
-  const paddingTop = user && isMobile ? '60px' : '0px';
+  const esRutaPublica = location.pathname.startsWith('/formulario-cliente') || location.pathname.startsWith('/registro-cliente') || location.pathname.startsWith('/contrato/');
+  const sidebarWidth = (user && !esRutaPublica) ? (isMobile ? '0px' : '260px') : '0px';
+  const paddingTop = (user && !esRutaPublica && isMobile) ? '60px' : '0px';
 
   return (
     <>
@@ -406,6 +451,7 @@ function AppContent() {
           <Route path="/sucursales" element={<AdminRoute><Navigate to="/admin?tab=sucursales" replace /></AdminRoute>} />
           <Route path="/formulario-cliente" element={<FormularioCliente />} />
           <Route path="/registro-cliente" element={<Navigate to="/formulario-cliente" replace />} />
+          <Route path="/contrato/:id" element={<ContratoPublico />} />
         </Routes>
       </div>
     </>

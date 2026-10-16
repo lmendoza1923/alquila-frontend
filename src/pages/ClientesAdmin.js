@@ -62,11 +62,18 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
     actualizar_reservas: true
   });
 
+  const [filtroOrigen, setFiltroOrigen] = useState('todos'); // 'todos' | 'por_revisar' | 'formulario'
+
+  const notificarCambioNuevos = () => {
+    window.dispatchEvent(new Event('clientes-nuevos-updated'));
+  };
+
   const cargarClientes = async () => {
     try {
       setLoading(true);
       const res = await api.get('/clientes');
       setClientes(res.data);
+      notificarCambioNuevos();
     } catch (err) {
       console.error(err);
       toast.error('Error al cargar la lista de clientes');
@@ -79,11 +86,53 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
     cargarClientes();
   }, []);
 
-  // Clientes filtrados por búsqueda
+  const marcarClienteRevisado = async (c, nuevoEstado = true, silencioso = false) => {
+    try {
+      const res = await api.patch(`/clientes/${c.id}/revisar`, { revisado: nuevoEstado });
+      setClientes(prev => prev.map(item => item.id === c.id ? { ...item, revisado: res.data.revisado } : item));
+      if (clienteSeleccionado && clienteSeleccionado.id === c.id) {
+        setClienteSeleccionado(prev => ({ ...prev, revisado: res.data.revisado }));
+      }
+      notificarCambioNuevos();
+      if (!silencioso) {
+        toast.success(nuevoEstado ? 'Registro de cliente marcado como revisado ✓' : 'Marcado como pendiente de revisión');
+      }
+    } catch (err) {
+      toast.error('Error al actualizar estado de revisión');
+    }
+  };
+
+  const marcarTodosRevisados = async () => {
+    try {
+      await api.patch('/clientes/revisar-todos');
+      setClientes(prev => prev.map(c => ({ ...c, revisado: true })));
+      if (clienteSeleccionado) {
+        setClienteSeleccionado(prev => ({ ...prev, revisado: true }));
+      }
+      if (filtroOrigen === 'por_revisar') setFiltroOrigen('todos');
+      notificarCambioNuevos();
+      toast.success('Todos los registros nuevos fueron marcados como revisados');
+    } catch (err) {
+      toast.error('Error al marcar registros como revisados');
+    }
+  };
+
+  const abrirFichaCliente = (c) => {
+    setClienteSeleccionado(c);
+  };
+
+  // Clientes filtrados por búsqueda y filtro de formulario
   const clientesFiltrados = useMemo(() => {
-    if (!busqueda.trim()) return clientes;
+    let base = clientes;
+    if (filtroOrigen === 'por_revisar') {
+      base = base.filter(c => c.origen_formulario && c.revisado === false);
+    } else if (filtroOrigen === 'formulario') {
+      base = base.filter(c => c.origen_formulario);
+    }
+
+    if (!busqueda.trim()) return base;
     const q = busqueda.toLowerCase().trim();
-    return clientes.filter(c => 
+    return base.filter(c => 
       (c.nombre && c.nombre.toLowerCase().includes(q)) ||
       (c.alias && c.alias.toLowerCase().includes(q)) ||
       (c.cedula && c.cedula.toLowerCase().includes(q)) ||
@@ -94,12 +143,13 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
       (c.email && c.email.toLowerCase().includes(q)) ||
       (c.notas && c.notas.toLowerCase().includes(q))
     );
-  }, [clientes, busqueda]);
+  }, [clientes, busqueda, filtroOrigen]);
 
   // Métricas rápidas
   const totalClientes = clientes.length;
   const clientesConReservas = clientes.filter(c => parseInt(c.total_reservas || 0) > 0).length;
   const totalFacturadoGeneral = clientes.reduce((acc, c) => acc + parseFloat(c.total_facturado || 0), 0);
+  const nuevosSinRevisar = clientes.filter(c => c.origen_formulario && c.revisado === false).length;
 
   // Abrir modal de edición
   const abrirEditar = (c) => {
@@ -155,7 +205,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
           setClienteSeleccionado(prev => ({ ...prev, ...res.data }));
         }
       } else {
-        const res = await api.post('/clientes', form);
+        await api.post('/clientes', form);
         toast.success('Cliente creado correctamente');
         setModalNuevo(false);
         await cargarClientes();
@@ -179,6 +229,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
       if (clienteSeleccionado && clienteSeleccionado.id === c.id) {
         setClienteSeleccionado(null);
       }
+      notificarCambioNuevos();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error al eliminar el cliente');
     }
@@ -217,79 +268,185 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem', width: '100%', boxSizing: 'border-box' }}>
+      {/* ── Alerta destacada si hay nuevos clientes registrados por formulario sin revisar ── */}
+      {nuevosSinRevisar > 0 && (
+        <div style={{
+          background: 'linear-gradient(90deg, #fff1f2 0%, #fef2f2 100%)',
+          border: '1.5px solid #f87171',
+          borderRadius: 12,
+          padding: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 10,
+          boxShadow: '0 2px 10px rgba(239, 68, 68, 0.12)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{
+              background: '#ef4444',
+              color: '#fff',
+              borderRadius: '50%',
+              width: 34,
+              height: 34,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 17,
+              flexShrink: 0
+            }}>
+              🔔
+            </span>
+            <div>
+              <div style={{ fontWeight: 800, color: '#991b1b', fontSize: 14 }}>
+                {nuevosSinRevisar === 1
+                  ? '¡Tienes 1 nuevo registro de cliente enviado desde el formulario!'
+                  : `¡Tienes ${nuevosSinRevisar} nuevos registros de clientes enviados desde el formulario!`}
+              </div>
+              <div style={{ fontSize: 12.5, color: '#b91c1c' }}>
+                Identifícalos con la etiqueta <strong>🆕 NUEVO · FORMULARIO</strong> para revisar sus datos o crearles su reserva.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setFiltroOrigen(filtroOrigen === 'por_revisar' ? 'todos' : 'por_revisar')}
+              style={{
+                background: filtroOrigen === 'por_revisar' ? '#991b1b' : '#ef4444',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                padding: '7px 13px',
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              {filtroOrigen === 'por_revisar' ? 'Ver todos los clientes' : `🔍 Filtrar nuevos (${nuevosSinRevisar})`}
+            </button>
+            <button
+              type="button"
+              onClick={marcarTodosRevisados}
+              style={{
+                background: '#fff',
+                color: '#15803d',
+                border: '1px solid #86efac',
+                borderRadius: 8,
+                padding: '7px 13px',
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              ✓ Marcar todos como revisados
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Tarjetas de Estadísticas Responsivas ── */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(180px, 1fr))', 
         gap: '0.75rem' 
       }}>
         <div style={{ 
           background: '#fff', 
           borderRadius: 12, 
-          padding: isMobile ? '0.85rem' : '1.25rem', 
+          padding: isMobile ? '0.85rem' : '1rem 1.15rem', 
           border: '1px solid #e2e8f0', 
           boxShadow: '0 1px 3px rgba(0,0,0,0.04)', 
           display: 'flex', 
           alignItems: 'center', 
-          gap: isMobile ? '0.6rem' : '1rem' 
+          gap: isMobile ? '0.6rem' : '0.85rem' 
         }}>
-          <div style={{ fontSize: isMobile ? 24 : 32, background: '#eef2ff', padding: isMobile ? '8px 10px' : '10px 14px', borderRadius: 10 }}>👥</div>
+          <div style={{ fontSize: isMobile ? 22 : 28, background: '#eef2ff', padding: isMobile ? '8px 10px' : '9px 12px', borderRadius: 10 }}>👥</div>
           <div>
-            <div style={{ fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 600 }}>Total Clientes</div>
-            <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: '#1e293b' }}>{totalClientes}</div>
+            <div style={{ fontSize: isMobile ? 11 : 12.5, color: '#64748b', fontWeight: 600 }}>Total Clientes</div>
+            <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: '#1e293b' }}>{totalClientes}</div>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setFiltroOrigen(filtroOrigen === 'por_revisar' ? 'todos' : 'por_revisar')}
+          title="Clic para filtrar los nuevos registros enviados por formulario"
+          style={{ 
+            background: nuevosSinRevisar > 0 ? '#fff1f2' : '#fff', 
+            borderRadius: 12, 
+            padding: isMobile ? '0.85rem' : '1rem 1.15rem', 
+            border: nuevosSinRevisar > 0 ? '1.5px solid #f87171' : '1px solid #e2e8f0', 
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: isMobile ? '0.6rem' : '0.85rem',
+            cursor: 'pointer'
+          }}
+        >
+          <div style={{ fontSize: isMobile ? 22 : 28, background: nuevosSinRevisar > 0 ? '#fee2e2' : '#f1f5f9', padding: isMobile ? '8px 10px' : '9px 12px', borderRadius: 10 }}>
+            {nuevosSinRevisar > 0 ? '🔔' : '📝'}
+          </div>
+          <div>
+            <div style={{ fontSize: isMobile ? 11 : 12.5, color: nuevosSinRevisar > 0 ? '#b91c1c' : '#64748b', fontWeight: 700 }}>
+              Nuevos Formulario
+            </div>
+            <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 800, color: nuevosSinRevisar > 0 ? '#dc2626' : '#475569' }}>
+              {nuevosSinRevisar} <span style={{ fontSize: 11, fontWeight: 600 }}>sin revisar</span>
+            </div>
           </div>
         </div>
 
         <div style={{ 
           background: '#fff', 
           borderRadius: 12, 
-          padding: isMobile ? '0.85rem' : '1.25rem', 
+          padding: isMobile ? '0.85rem' : '1rem 1.15rem', 
           border: '1px solid #e2e8f0', 
           boxShadow: '0 1px 3px rgba(0,0,0,0.04)', 
           display: 'flex', 
           alignItems: 'center', 
-          gap: isMobile ? '0.6rem' : '1rem' 
+          gap: isMobile ? '0.6rem' : '0.85rem' 
         }}>
-          <div style={{ fontSize: isMobile ? 24 : 32, background: '#ecfdf5', padding: isMobile ? '8px 10px' : '10px 14px', borderRadius: 10 }}>📋</div>
+          <div style={{ fontSize: isMobile ? 22 : 28, background: '#ecfdf5', padding: isMobile ? '8px 10px' : '9px 12px', borderRadius: 10 }}>📋</div>
           <div>
-            <div style={{ fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 600 }}>Con Reservas</div>
-            <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: '#059669' }}>{clientesConReservas}</div>
+            <div style={{ fontSize: isMobile ? 11 : 12.5, color: '#64748b', fontWeight: 600 }}>Con Reservas</div>
+            <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: '#059669' }}>{clientesConReservas}</div>
           </div>
         </div>
 
         <div style={{ 
           background: '#fff', 
           borderRadius: 12, 
-          padding: isMobile ? '0.85rem' : '1.25rem', 
+          padding: isMobile ? '0.85rem' : '1rem 1.15rem', 
           border: '1px solid #e2e8f0', 
           boxShadow: '0 1px 3px rgba(0,0,0,0.04)', 
           display: 'flex', 
           alignItems: 'center', 
-          gap: isMobile ? '0.6rem' : '1rem',
-          gridColumn: isMobile ? '1 / -1' : 'auto'
+          gap: isMobile ? '0.6rem' : '0.85rem'
         }}>
-          <div style={{ fontSize: isMobile ? 24 : 32, background: '#fef3c7', padding: isMobile ? '8px 10px' : '10px 14px', borderRadius: 10 }}>💰</div>
+          <div style={{ fontSize: isMobile ? 22 : 28, background: '#fef3c7', padding: isMobile ? '8px 10px' : '9px 12px', borderRadius: 10 }}>💰</div>
           <div>
-            <div style={{ fontSize: isMobile ? 11 : 13, color: '#64748b', fontWeight: 600 }}>Facturación Acumulada</div>
-            <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: '#b45309' }}>${totalFacturadoGeneral.toFixed(2)}</div>
+            <div style={{ fontSize: isMobile ? 11 : 12.5, color: '#64748b', fontWeight: 600 }}>Facturación Acumulada</div>
+            <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: '#b45309' }}>${totalFacturadoGeneral.toFixed(2)}</div>
           </div>
         </div>
       </div>
 
-      {/* ── Barra de Búsqueda y Botón Nuevo Cliente ── */}
+      {/* ── Barra de Búsqueda, Filtro de Formulario y Botón Nuevo Cliente ── */}
       <div style={{
         background: '#fff',
         borderRadius: 12,
-        padding: '1rem',
+        padding: '0.85rem 1rem',
         border: '1px solid #e2e8f0',
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
         alignItems: isMobile ? 'stretch' : 'center',
-        gap: '0.75rem'
+        gap: '0.65rem',
+        flexWrap: 'wrap'
       }}>
-        <div style={{ flex: '1', position: 'relative' }}>
+        <div style={{ flex: '1 1 240px', position: 'relative' }}>
           <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>🔍</span>
           <input
             type="text"
@@ -298,10 +455,10 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
             placeholder={isMobile ? "Buscar cliente o teléfono..." : "Buscar por nombre, alias, cédula, teléfono o dirección..."}
             style={{
               width: '100%',
-              padding: '10px 14px 10px 38px',
+              padding: '9px 12px 9px 36px',
               border: '1px solid #cbd5e1',
               borderRadius: 8,
-              fontSize: 14,
+              fontSize: 13.5,
               outline: 'none',
               boxSizing: 'border-box'
             }}
@@ -312,8 +469,29 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
           display: 'flex',
           gap: 8,
           flexDirection: isMobile ? 'column' : 'row',
-          width: isMobile ? '100%' : 'auto'
+          alignItems: isMobile ? 'stretch' : 'center',
+          width: isMobile ? '100%' : 'auto',
+          flexWrap: 'wrap'
         }}>
+          <select
+            value={filtroOrigen}
+            onChange={e => setFiltroOrigen(e.target.value)}
+            style={{
+              padding: '9px 12px',
+              borderRadius: 8,
+              border: filtroOrigen !== 'todos' ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+              background: filtroOrigen !== 'todos' ? '#fff1f2' : '#fff',
+              color: filtroOrigen !== 'todos' ? '#991b1b' : '#334155',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            <option value="todos">📋 Todos los clientes ({clientes.length})</option>
+            <option value="por_revisar">🔔 Nuevos por revisar ({nuevosSinRevisar})</option>
+            <option value="formulario">📝 Registrados por formulario</option>
+          </select>
+
           <button
             onClick={() => setModalCompartirLink(true)}
             title="Compartir link del formulario de reserva con clientes"
@@ -321,14 +499,14 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8,
-              padding: '11px 16px',
+              gap: 6,
+              padding: '9px 14px',
               background: '#10b981',
               color: '#fff',
               borderRadius: 8,
               border: 'none',
               fontWeight: 600,
-              fontSize: 14,
+              fontSize: 13.5,
               cursor: 'pointer',
               boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
               width: isMobile ? '100%' : 'auto'
@@ -344,14 +522,14 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8,
-              padding: '11px 18px',
+              gap: 6,
+              padding: '9px 16px',
               background: '#4a6cf7',
               color: '#fff',
               borderRadius: 8,
               border: 'none',
               fontWeight: 600,
-              fontSize: 14,
+              fontSize: 13.5,
               cursor: 'pointer',
               boxShadow: '0 2px 6px rgba(74, 108, 247, 0.25)',
               width: isMobile ? '100%' : 'auto'
@@ -363,7 +541,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
         </div>
       </div>
 
-      {/* ── Lista de Clientes (Modo Tarjetas en Móviles o Tabla en Escritorio) ── */}
+      {/* ── Lista de Clientes (Modo Tarjetas en Móviles o Tabla Ajustada en Escritorio sin Scroll Horizontal) ── */}
       {loading ? (
         <div style={{ background: '#fff', borderRadius: 12, padding: '3rem', textAlign: 'center', color: '#64748b', border: '1px solid #e2e8f0' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>⏳</div>
@@ -374,7 +552,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
           <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
           <h3 style={{ margin: '0 0 6px 0', color: '#1e293b' }}>No se encontraron clientes</h3>
           <p style={{ margin: 0, fontSize: 14 }}>
-            {busqueda ? 'No hay resultados que coincidan con la búsqueda.' : 'Aún no hay clientes registrados en la base de datos.'}
+            {busqueda || filtroOrigen !== 'todos' ? 'No hay resultados que coincidan con el filtro seleccionado.' : 'Aún no hay clientes registrados en la base de datos.'}
           </p>
         </div>
       ) : isMobile ? (
@@ -383,26 +561,48 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
           {clientesFiltrados.map(c => {
             const linkWa = obtenerLinkWhatsapp(c.telefono);
             const numReservas = parseInt(c.total_reservas || 0);
+            const esNuevoFormulario = Boolean(c.origen_formulario && c.revisado === false);
 
             return (
               <div 
                 key={c.id} 
                 style={{
-                  background: '#fff',
+                  background: esNuevoFormulario ? '#fffbeb' : '#fff',
                   borderRadius: 12,
                   padding: '1rem',
-                  border: '1px solid #e2e8f0',
+                  border: esNuevoFormulario ? '2px solid #f59e0b' : '1px solid #e2e8f0',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 8
                 }}
               >
+                {/* Indicador superior si es nuevo de formulario */}
+                {esNuevoFormulario && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef3c7', padding: '5px 10px', borderRadius: 8, border: '1px solid #fde68a' }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#b45309' }}>
+                      🆕 NUEVO REGISTRO POR FORMULARIO
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => marcarClienteRevisado(c, true)}
+                      style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      ✓ Revisado
+                    </button>
+                  </div>
+                )}
+
                 {/* Cabecera de la tarjeta */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1, paddingRight: 8 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>
-                      {c.nombre || 'Sin nombre registrado'}
+                    <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span>{c.nombre || 'Sin nombre registrado'}</span>
+                      {c.origen_formulario && c.revisado !== false && (
+                        <span style={{ background: '#e0f2fe', color: '#0369a1', fontSize: 10, padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
+                          📝 Formulario
+                        </span>
+                      )}
                     </div>
                     {c.alias && (
                       <div style={{ color: '#4a6cf7', fontSize: 12, fontWeight: 600, marginTop: 2 }}>
@@ -512,7 +712,7 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
                   </button>
 
                   <button
-                    onClick={() => setClienteSeleccionado(c)}
+                    onClick={() => abrirFichaCliente(c)}
                     style={{
                       background: '#f1f5f9',
                       border: '1px solid #cbd5e1',
@@ -567,232 +767,304 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
           })}
         </div>
       ) : (
-        /* VISTA ESCRITORIO: Tabla tradicional con columnas completas */
+        /* VISTA ESCRITORIO: Tabla compacta 100% ajustada al ancho disponible sin desplazamiento horizontal */
         <div style={{
           background: '#fff',
           borderRadius: 12,
           border: '1px solid #e2e8f0',
           overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          width: '100%'
         }}>
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th style={{ padding: '14px 16px' }}>Cliente / Alias</th>
-                  <th style={{ padding: '14px 16px' }}>Cédula</th>
-                  <th style={{ padding: '14px 16px' }}>Contacto</th>
-                  <th style={{ padding: '14px 16px' }}>Dirección de Entrega</th>
-                  <th style={{ padding: '14px 16px', textAlign: 'center' }}>Reservas</th>
-                  <th style={{ padding: '14px 16px', textAlign: 'right' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clientesFiltrados.map((c, index) => {
-                  const linkWa = obtenerLinkWhatsapp(c.telefono);
-                  const numReservas = parseInt(c.total_reservas || 0);
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: 11.5, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                <th style={{ padding: '11px 12px', width: '25%' }}>Cliente / Cédula</th>
+                <th style={{ padding: '11px 10px', width: '20%' }}>Contacto</th>
+                <th style={{ padding: '11px 10px', width: '24%' }}>Dirección de Entrega</th>
+                <th style={{ padding: '11px 8px', width: '11%', textAlign: 'center' }}>Reservas</th>
+                <th style={{ padding: '11px 12px', width: '20%', textAlign: 'right' }}>Opciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clientesFiltrados.map((c, index) => {
+                const linkWa = obtenerLinkWhatsapp(c.telefono);
+                const numReservas = parseInt(c.total_reservas || 0);
+                const esNuevoFormulario = Boolean(c.origen_formulario && c.revisado === false);
+                const bgBase = esNuevoFormulario ? '#fffbeb' : '#fff';
 
-                  return (
-                    <tr 
-                      key={c.id} 
-                      style={{ 
-                        borderBottom: index < clientesFiltrados.length - 1 ? '1px solid #f1f5f9' : 'none',
-                        transition: 'background 0.15s'
-                      }}
-                      onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
-                      onMouseOut={e => e.currentTarget.style.background = '#fff'}
-                    >
-                      <td style={{ padding: '14px 16px' }}>
-                        <div style={{ fontWeight: 600, color: '#1e293b' }}>
-                          {c.nombre || 'Sin nombre registrado'}
-                        </div>
-                        {c.alias && (
-                          <div style={{ color: '#4a6cf7', fontSize: 12, fontWeight: 500, marginTop: 2 }}>
-                            🏷️ {c.alias}
-                          </div>
-                        )}
-                      </td>
-
-                      <td style={{ padding: '14px 16px', color: '#475569', fontSize: 13 }}>
-                        {c.cedula ? (
-                          <span style={{ background: '#f1f5f9', padding: '3px 6px', borderRadius: 4, fontFamily: 'monospace' }}>
-                            {c.cedula}
+                return (
+                  <tr 
+                    key={c.id} 
+                    style={{ 
+                      background: bgBase,
+                      borderBottom: index < clientesFiltrados.length - 1 ? '1px solid #f1f5f9' : 'none',
+                      borderLeft: esNuevoFormulario ? '4px solid #ef4444' : '4px solid transparent',
+                      transition: 'background 0.15s'
+                    }}
+                    onMouseOver={e => e.currentTarget.style.background = esNuevoFormulario ? '#fef3c7' : '#f8fafc'}
+                    onMouseOut={e => e.currentTarget.style.background = bgBase}
+                  >
+                    {/* Columna 1: Cliente, Alias, Cédula e Indicador de Formulario */}
+                    <td style={{ padding: '10px 12px', verticalAlign: 'middle', wordBreak: 'break-word' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700, color: '#1e293b', fontSize: 13.5 }}>
+                          {c.nombre || 'Sin nombre'}
+                        </span>
+                        {esNuevoFormulario ? (
+                          <span
+                            title="Nuevo registro enviado desde el formulario público (Pendiente de revisar)"
+                            style={{
+                              background: '#ef4444',
+                              color: '#fff',
+                              fontSize: 10,
+                              fontWeight: 800,
+                              padding: '2px 7px',
+                              borderRadius: 10,
+                              letterSpacing: '0.02em',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3,
+                              boxShadow: '0 1px 4px rgba(239,68,68,0.35)'
+                            }}
+                          >
+                            🆕 NUEVO · FORMULARIO
                           </span>
-                        ) : (
-                          <span style={{ color: '#94a3b8' }}>-</span>
-                        )}
-                      </td>
-
-                      <td style={{ padding: '14px 16px' }}>
-                        {c.telefono ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontWeight: 500, color: '#1e293b' }}>{c.telefono}</span>
-                            {linkWa && (
-                              <a
-                                href={linkWa}
-                                target="_blank"
-                                rel="noreferrer"
-                                title="Escribir por WhatsApp"
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  background: '#25D366',
-                                  color: '#fff',
-                                  borderRadius: '50%',
-                                  width: 20,
-                                  height: 20,
-                                  fontSize: 11,
-                                  textDecoration: 'none'
-                                }}
-                              >
-                                💬
-                              </a>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={{ color: '#94a3b8' }}>Sin teléfono</span>
-                        )}
-                        {c.email && (
-                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                            ✉️ {c.email}
-                          </div>
-                        )}
-                      </td>
-
-                      <td style={{ padding: '14px 16px', maxWidth: '240px' }}>
-                        {c.direccion ? (
-                          <div 
-                            style={{ 
-                              color: '#334155', 
-                              fontSize: 13,
-                              whiteSpace: 'nowrap', 
-                              overflow: 'hidden', 
-                              textOverflow: 'ellipsis' 
-                            }}
-                            title={c.direccion}
-                          >
-                            📍 {c.direccion}
-                          </div>
-                        ) : (
-                          <span style={{ color: '#94a3b8', fontSize: 13 }}>-</span>
-                        )}
-                        {c.notas && (
-                          <div 
-                            style={{ 
-                              color: '#64748b', 
-                              fontSize: 11, 
-                              fontStyle: 'italic',
-                              whiteSpace: 'nowrap', 
-                              overflow: 'hidden', 
-                              textOverflow: 'ellipsis',
-                              marginTop: 2
-                            }}
-                            title={c.notas}
-                          >
-                            📝 {c.notas}
-                          </div>
-                        )}
-                      </td>
-
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                        {numReservas > 0 ? (
-                          <div>
-                            <span style={{
-                              background: '#eff6ff',
-                              color: '#1d4ed8',
-                              padding: '4px 10px',
-                              borderRadius: 16,
-                              fontSize: 12,
-                              fontWeight: 700
-                            }}>
-                              {numReservas} {numReservas === 1 ? 'reserva' : 'reservas'}
-                            </span>
-                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, fontWeight: 600 }}>
-                              ${parseFloat(c.total_facturado || 0).toFixed(2)}
-                            </div>
-                          </div>
-                        ) : (
-                          <span style={{ color: '#94a3b8', fontSize: 12 }}>Sin reservas</span>
-                        )}
-                      </td>
-
-                      <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: 6 }}>
-                          <button
-                            onClick={() => navigate(`/catalogo?cliente_id=${c.id}`)}
-                            title="Crear una nueva reserva para este cliente"
+                        ) : c.origen_formulario ? (
+                          <span
+                            title="Cliente registrado a través del formulario público (Ya revisado)"
                             style={{
-                              background: '#ecfdf5',
-                              border: '1px solid #a7f3d0',
-                              color: '#065f46',
-                              padding: '6px 10px',
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                              fontSize: 13,
-                              fontWeight: 600
+                              background: '#e0f2fe',
+                              color: '#0369a1',
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: '1px 6px',
+                              borderRadius: 8
                             }}
                           >
-                            📅 Reserva
-                          </button>
+                            📝 Formulario
+                          </span>
+                        ) : null}
+                      </div>
 
-                          <button
-                            onClick={() => setClienteSeleccionado(c)}
-                            title="Ver detalles completos del cliente y sus reservas"
-                            style={{
-                              background: '#f1f5f9',
-                              border: '1px solid #cbd5e1',
-                              color: '#334155',
-                              padding: '6px 10px',
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                              fontSize: 13,
-                              fontWeight: 600
-                            }}
-                          >
-                            👁️ Ver Ficha
-                          </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 3 }}>
+                        {c.alias && (
+                          <span style={{ color: '#4a6cf7', fontSize: 11.5, fontWeight: 600 }}>
+                            🏷️ {c.alias}
+                          </span>
+                        )}
+                        {c.cedula && (
+                          <span style={{ background: '#f1f5f9', color: '#475569', padding: '1px 6px', borderRadius: 4, fontFamily: 'monospace', fontSize: 11 }}>
+                            🆔 {c.cedula}
+                          </span>
+                        )}
+                      </div>
+                    </td>
 
-                          <button
-                            onClick={() => abrirEditar(c)}
-                            title="Editar datos del cliente"
-                            style={{
-                              background: '#eff6ff',
-                              border: '1px solid #bfdbfe',
-                              color: '#1d4ed8',
-                              padding: '6px 10px',
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                              fontSize: 13,
-                              fontWeight: 600
-                            }}
-                          >
-                            ✏️ Editar
-                          </button>
-
-                          <button
-                            onClick={() => eliminarCliente(c)}
-                            title="Eliminar cliente"
-                            style={{
-                              background: '#fef2f2',
-                              border: '1px solid #fecaca',
-                              color: '#b91c1c',
-                              padding: '6px 8px',
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                              fontSize: 13
-                            }}
-                          >
-                            🗑️
-                          </button>
+                    {/* Columna 2: Contacto */}
+                    <td style={{ padding: '10px 10px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                      {c.telefono ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600, color: '#1e293b', fontSize: 12.5 }}>{c.telefono}</span>
+                          {linkWa && (
+                            <a
+                              href={linkWa}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Escribir por WhatsApp"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: '#25D366',
+                                color: '#fff',
+                                borderRadius: '50%',
+                                width: 19,
+                                height: 19,
+                                fontSize: 10,
+                                textDecoration: 'none',
+                                flexShrink: 0
+                              }}
+                            >
+                              💬
+                            </a>
+                          )}
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: 12 }}>Sin teléfono</span>
+                      )}
+                      {c.contacto2_nombre && (
+                        <div style={{ fontSize: 11, color: '#475569', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={`2do Contacto: ${c.contacto2_nombre} ${c.contacto2_telefono || ''}`}>
+                          👥 {c.contacto2_nombre} {c.contacto2_telefono ? `(${c.contacto2_telefono})` : ''}
+                        </div>
+                      )}
+                      {c.email && (
+                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={c.email}>
+                          ✉️ {c.email}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Columna 3: Dirección y Notas (con ajuste de línea sin estirar la tabla) */}
+                    <td style={{ padding: '10px 10px', verticalAlign: 'middle' }}>
+                      {c.direccion ? (
+                        <div 
+                          style={{ 
+                            color: '#334155', 
+                            fontSize: 12,
+                            lineHeight: 1.35,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            wordBreak: 'break-word'
+                          }}
+                          title={c.direccion}
+                        >
+                          📍 {c.direccion}
+                        </div>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: 12 }}>-</span>
+                      )}
+                      {c.notas && (
+                        <div 
+                          style={{ 
+                            color: '#64748b', 
+                            fontSize: 11, 
+                            fontStyle: 'italic',
+                            whiteSpace: 'nowrap', 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis',
+                            marginTop: 2
+                          }}
+                          title={c.notas}
+                        >
+                          📝 {c.notas}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Columna 4: Reservas */}
+                    <td style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
+                      {numReservas > 0 ? (
+                        <div>
+                          <span style={{
+                            background: '#eff6ff',
+                            color: '#1d4ed8',
+                            padding: '3px 8px',
+                            borderRadius: 12,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            display: 'inline-block'
+                          }}>
+                            {numReservas} {numReservas === 1 ? 'res.' : 'res.'}
+                          </span>
+                          <div style={{ fontSize: 11.5, color: '#059669', marginTop: 3, fontWeight: 700 }}>
+                            ${parseFloat(c.total_facturado || 0).toFixed(2)}
+                          </div>
+                        </div>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: 11.5 }}>0</span>
+                      )}
+                    </td>
+
+                    {/* Columna 5: Opciones compactas siempre visibles */}
+                    <td style={{ padding: '10px 12px', textAlign: 'right', verticalAlign: 'middle' }}>
+                      <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+                        {esNuevoFormulario && (
+                          <button
+                            onClick={() => marcarClienteRevisado(c, true)}
+                            title="Marcar nuevo registro de formulario como revisado"
+                            style={{
+                              background: '#16a34a',
+                              border: 'none',
+                              color: '#fff',
+                              padding: '5px 8px',
+                              borderRadius: 6,
+                              cursor: 'pointer',
+                              fontSize: 11.5,
+                              fontWeight: 700,
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            ✓ Revisar
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => navigate(`/catalogo?cliente_id=${c.id}`)}
+                          title="Crear una nueva reserva para este cliente"
+                          style={{
+                            background: '#ecfdf5',
+                            border: '1px solid #a7f3d0',
+                            color: '#065f46',
+                            padding: '5px 8px',
+                            borderRadius: 6,
+                            cursor: 'pointer',
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          📅 Reserva
+                        </button>
+
+                        <button
+                          onClick={() => abrirFichaCliente(c)}
+                          title="Ver ficha completa del cliente y sus reservas"
+                          style={{
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            color: '#334155',
+                            padding: '5px 8px',
+                            borderRadius: 6,
+                            cursor: 'pointer',
+                            fontSize: 11.5,
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          👁️ Ver
+                        </button>
+
+                        <button
+                          onClick={() => abrirEditar(c)}
+                          title="Editar datos del cliente"
+                          style={{
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            color: '#1d4ed8',
+                            padding: '5px 7px',
+                            borderRadius: 6,
+                            cursor: 'pointer',
+                            fontSize: 12
+                          }}
+                        >
+                          ✏️
+                        </button>
+
+                        <button
+                          onClick={() => eliminarCliente(c)}
+                          title="Eliminar cliente"
+                          style={{
+                            background: '#fef2f2',
+                            border: '1px solid #fecaca',
+                            color: '#b91c1c',
+                            padding: '5px 7px',
+                            borderRadius: 6,
+                            cursor: 'pointer',
+                            fontSize: 12
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -832,9 +1104,23 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
               background: '#f8fafc'
             }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 18, color: '#1e293b' }}>
-                  Ficha del Cliente
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 18, color: '#1e293b' }}>
+                    Ficha del Cliente
+                  </h2>
+                  {clienteSeleccionado.origen_formulario && (
+                    <span style={{
+                      background: clienteSeleccionado.revisado === false ? '#ef4444' : '#e0f2fe',
+                      color: clienteSeleccionado.revisado === false ? '#fff' : '#0369a1',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: 10
+                    }}>
+                      {clienteSeleccionado.revisado === false ? '🆕 Nuevo desde Formulario (Sin revisar)' : '📝 Registrado por Formulario (Revisado)'}
+                    </span>
+                  )}
+                </div>
                 <div style={{ fontSize: 13, color: '#4a6cf7', fontWeight: 600, marginTop: 2 }}>
                   {clienteSeleccionado.nombre || clienteSeleccionado.alias}
                   {clienteSeleccionado.alias && clienteSeleccionado.nombre && ` (${clienteSeleccionado.alias})`}
@@ -858,6 +1144,46 @@ export default function ClientesAdmin({ onAbrirEditarReserva }) {
 
             {/* Contenido Scrollable */}
             <div style={{ padding: isMobile ? '1rem' : '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Banner de revisión dentro de la ficha si vino de formulario */}
+              {clienteSeleccionado.origen_formulario && (
+                <div style={{
+                  background: clienteSeleccionado.revisado === false ? '#fff1f2' : '#f0fdf4',
+                  border: `1px solid ${clienteSeleccionado.revisado === false ? '#fecdd3' : '#bbf7d0'}`,
+                  borderRadius: 10,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 10
+                }}>
+                  <div style={{ fontSize: 13, color: clienteSeleccionado.revisado === false ? '#991b1b' : '#166534' }}>
+                    <strong>{clienteSeleccionado.revisado === false ? '🔔 Este cliente llenó el formulario público y está pendiente de revisión.' : '✓ Este registro de formulario ya fue revisado.'}</strong>
+                    {clienteSeleccionado.fecha_formulario && (
+                      <div style={{ fontSize: 11.5, marginTop: 2, opacity: 0.85 }}>
+                        Enviado el: {new Date(clienteSeleccionado.fecha_formulario).toLocaleString('es-PA')}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => marcarClienteRevisado(clienteSeleccionado, clienteSeleccionado.revisado === false)}
+                    style={{
+                      background: clienteSeleccionado.revisado === false ? '#16a34a' : '#fff',
+                      color: clienteSeleccionado.revisado === false ? '#fff' : '#475569',
+                      border: clienteSeleccionado.revisado === false ? 'none' : '1px solid #cbd5e1',
+                      borderRadius: 8,
+                      padding: '8px 14px',
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {clienteSeleccionado.revisado === false ? '✓ Marcar como Revisado' : 'Marcar como pendiente'}
+                  </button>
+                </div>
+              )}
+
               {/* Bloque: Datos Personales Registrados */}
               <div style={{
                 background: '#f8fafc',
