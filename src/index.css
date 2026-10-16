@@ -66,7 +66,7 @@ html, body {
   }
 
   /* Las tablas se adaptan con desplazamiento horizontal táctil suave */
-  table {
+  table:not(.contrato-table) {
     display: block;
     width: 100% !important;
     overflow-x: auto !important;
