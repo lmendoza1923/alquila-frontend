@@ -149,13 +149,16 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 
   // Generar filas para Mobiliario
   const filasMobiliarioArray = [];
-  mobiliarioItems.forEach(i => {
+  mobiliarioItems.forEach((i, idx) => {
     const unitPrice = i.cantidad > 0 ? (parseFloat(i.subtotal || 0) / i.cantidad) : 0;
     const cod = i.codigo || obtenerCodigo(i.nombre || i.mueble, false);
+    const obs = i.observaciones || i.estado_item || '';
     
     filasMobiliarioArray.push(`<tr>
+      <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;font-weight:700;">${idx + 1}</td>
       <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;font-weight:600;">${i.cantidad}</td>
       <td style="padding:2.5px 6px;border:1px solid #000;font-weight:700;text-transform:uppercase;">${i.nombre || i.mueble || ''}</td>
+      <td style="padding:2.5px 6px;text-align:center;border:1px solid #000;">${obs}</td>
       <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;font-weight:600;">${cod}</td>
       <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;">$${unitPrice.toFixed(2)}</td>
       <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
@@ -172,9 +175,12 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
       componentesCombo.forEach(ci => {
         const compCant = ci.cantidad * i.cantidad;
         const compCod = obtenerCodigo(ci.nombre, false);
+        const compObs = ci.observaciones || '';
         filasMobiliarioArray.push(`<tr style="font-size:7.5px;color:#475569;">
+          <td style="padding:1.5px 4px;text-align:center;border:1px solid #000;"></td>
           <td style="padding:1.5px 4px;text-align:center;border:1px solid #000;">${compCant}</td>
           <td style="padding:1.5px 6px 1.5px 14px;border:1px solid #000;">└─ ${ci.nombre}</td>
+          <td style="padding:1.5px 6px;text-align:center;border:1px solid #000;">${compObs}</td>
           <td style="padding:1.5px 4px;text-align:center;border:1px solid #000;">${compCod}</td>
           <td style="padding:1.5px 6px;text-align:right;border:1px solid #000;color:#888;">—</td>
           <td style="padding:1.5px 6px;text-align:right;border:1px solid #000;color:#888;">—</td>
@@ -185,26 +191,33 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 
   const filasMuebles = filasMobiliarioArray.length > 0 ? filasMobiliarioArray.join('') : `<tr>
     <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;">-</td>
+    <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;">-</td>
     <td style="padding:2.5px 6px;border:1px solid #000;color:#64748b;font-style:italic;">Sin artículos</td>
+    <td style="padding:2.5px 6px;text-align:center;border:1px solid #000;"></td>
     <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;">N/A</td>
     <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;">$0.00</td>
     <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;">$0.00</td>
   </tr>`;
 
   // Generar filas para Servicios Adicionales
-  const filasServicios = servicioItems.length > 0 ? servicioItems.map(i => {
+  const filasServicios = servicioItems.length > 0 ? servicioItems.map((i, idx) => {
     const unitPrice = i.cantidad > 0 ? (parseFloat(i.subtotal || 0) / i.cantidad) : 0;
     const cod = i.codigo || obtenerCodigo(i.nombre || i.mueble, true);
+    const obs = i.observaciones || i.estado_item || '';
     return `<tr>
+      <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;font-weight:700;">${idx + 1}</td>
       <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;font-weight:600;">${i.cantidad}</td>
       <td style="padding:2.5px 6px;border:1px solid #000;font-weight:700;text-transform:uppercase;">${i.nombre || i.mueble || ''}</td>
+      <td style="padding:2.5px 6px;text-align:center;border:1px solid #000;">${obs}</td>
       <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;font-weight:600;">${cod}</td>
       <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;">$${unitPrice.toFixed(2)}</td>
       <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;font-weight:600;">$${parseFloat(i.subtotal || 0).toFixed(2)}</td>
     </tr>`;
   }).join('') : `<tr>
     <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;color:#64748b;">-</td>
+    <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;color:#64748b;">-</td>
     <td style="padding:2.5px 6px;border:1px solid #000;color:#64748b;font-style:italic;">Sin servicios adicionales</td>
+    <td style="padding:2.5px 6px;text-align:center;border:1px solid #000;color:#64748b;"></td>
     <td style="padding:2.5px 4px;text-align:center;border:1px solid #000;color:#64748b;">N/A</td>
     <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;color:#64748b;">$0.00</td>
     <td style="padding:2.5px 6px;text-align:right;border:1px solid #000;color:#64748b;">$0.00</td>
@@ -236,19 +249,46 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <title>Contrato ${numeroContrato}</title>
 <style>
   @page { size: portrait; margin: 8mm 10mm; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 0; background: #fff; line-height: 1.25; font-size: 9px; }
-  .page { max-width: 740px; margin: 0 auto; padding: 6px 12px; box-sizing: border-box; }
+  html, body { width: 100%; margin: 0; padding: 0; background: #fff; -webkit-text-size-adjust: 100%; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; line-height: 1.25; font-size: 9px; }
+  .page { max-width: 740px; width: 100%; margin: 0 auto; padding: 6px 12px; box-sizing: border-box; }
   .section-bar { background-color: ${empColor}; color: #ffffff; font-weight: 800; font-size: 9.5px; padding: 3px 6px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; margin-bottom: 0; }
-  table { width: 100%; border-collapse: collapse; font-size: 8.5px; margin-bottom: 0; border: 1px solid #000; }
-  th { padding: 3px 4px; text-align: center; border-right: 1px solid #000; font-weight: 800; text-transform: uppercase; font-size: 8.5px; background: #fff; }
-  td { padding: 2.5px 5px; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5px; margin-bottom: 0; border: 1px solid #000; table-layout: fixed; }
+  th { padding: 3px 4px; text-align: center; border-right: 1px solid #000; font-weight: 800; text-transform: uppercase; font-size: 8.5px; background: #fff; word-wrap: break-word; overflow-wrap: break-word; }
+  td { padding: 2.5px 5px; word-wrap: break-word; overflow-wrap: break-word; }
+  .col-num { width: 28px; }
+  .col-cant { width: 42px; }
+  .col-desc { width: auto; }
+  .col-obs { width: 130px; }
+  .col-cod { width: 85px; }
+  .col-punit { width: 72px; }
+  .col-imp { width: 72px; }
   .no-print { display: flex; }
+  @media screen and (max-width: 768px) {
+    body { font-size: 11.5px; }
+    .page { max-width: 100%; width: 100%; min-height: 100vh; padding: 10px 8px; }
+    .no-print { position: sticky; top: 0; z-index: 50; padding: 10px 10px !important; flex-wrap: wrap; gap: 8px; }
+    .contrato-header { flex-direction: column-reverse !important; gap: 8px !important; }
+    .contrato-header > div { max-width: 100% !important; width: 100% !important; }
+    .section-bar { font-size: 11px; padding: 5px 8px; }
+    table { font-size: 10px; }
+    th { font-size: 9px; padding: 4px 2px !important; }
+    td { font-size: 9.5px; padding: 4px 3px !important; }
+    .col-num { width: 6% !important; }
+    .col-cant { width: 9% !important; }
+    .col-desc { width: 27% !important; }
+    .col-obs { width: 19% !important; }
+    .col-cod { width: 13% !important; }
+    .col-punit { width: 13% !important; }
+    .col-imp { width: 13% !important; }
+  }
   @media print { 
     .no-print { display: none !important; }
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 9px; }
     .page { padding: 0; max-width: 100%; }
   }
 </style>
@@ -264,7 +304,7 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
 
 <div class="page">
   <!-- ENCABEZADO -->
-  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 8px;">
+  <div class="contrato-header" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 8px;">
     <!-- Izquierda: Nombre de la empresa y datos opcionales -->
     <div style="max-width: 62%;">
       <div style="font-size: 22px; font-weight: 900; color: ${empColor}; letter-spacing: -0.5px; margin-bottom: 4px;">
@@ -332,17 +372,19 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   <table>
     <thead>
       <tr style="border-bottom: 1px solid #000;">
-        <th style="width: 45px;">CANT.</th>
-        <th style="text-align: left; padding-left: 6px;">DESCRIPCIÓN</th>
-        <th style="width: 95px;">CÓDIGO</th>
-        <th style="text-align: right; width: 75px; padding-right: 6px;">P. UNIT.</th>
-        <th style="text-align: right; width: 75px; padding-right: 6px; border-right: none;">IMPORTE</th>
+        <th class="col-num">#</th>
+        <th class="col-cant">CANT.</th>
+        <th class="col-desc" style="text-align: left; padding-left: 6px;">DESCRIPCIÓN</th>
+        <th class="col-obs">OBSERVACIONES/ESTADO</th>
+        <th class="col-cod">CÓDIGO</th>
+        <th class="col-punit" style="text-align: right; padding-right: 6px;">P. UNIT.</th>
+        <th class="col-imp" style="text-align: right; padding-right: 6px; border-right: none;">IMPORTE</th>
       </tr>
     </thead>
     <tbody>
       ${filasMuebles}
       <tr style="border-top: 1px solid #000; background: #fff;">
-        <td colspan="4" style="padding: 3px 8px; text-align: right; font-weight: 800; border-right: 1px solid #000; font-size: 8.5px; text-transform: uppercase;">
+        <td colspan="6" style="padding: 3px 8px; text-align: right; font-weight: 800; border-right: 1px solid #000; font-size: 8.5px; text-transform: uppercase;">
           SUBTOTAL MERCANCÍA:
         </td>
         <td style="padding: 3px 6px; text-align: right; font-weight: 800; font-size: 8.5px;">
@@ -357,17 +399,19 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   <table>
     <thead>
       <tr style="border-bottom: 1px solid #000;">
-        <th style="width: 45px;">CANT.</th>
-        <th style="text-align: left; padding-left: 6px;">DESCRIPCIÓN</th>
-        <th style="width: 95px;">CÓDIGO</th>
-        <th style="text-align: right; width: 75px; padding-right: 6px;">P. UNIT.</th>
-        <th style="text-align: right; width: 75px; padding-right: 6px; border-right: none;">IMPORTE</th>
+        <th class="col-num">#</th>
+        <th class="col-cant">CANT.</th>
+        <th class="col-desc" style="text-align: left; padding-left: 6px;">DESCRIPCIÓN</th>
+        <th class="col-obs">OBSERVACIONES/ESTADO</th>
+        <th class="col-cod">CÓDIGO</th>
+        <th class="col-punit" style="text-align: right; padding-right: 6px;">P. UNIT.</th>
+        <th class="col-imp" style="text-align: right; padding-right: 6px; border-right: none;">IMPORTE</th>
       </tr>
     </thead>
     <tbody>
       ${filasServicios}
       <tr style="border-top: 1px solid #000; background: #fff;">
-        <td colspan="4" style="padding: 3px 8px; text-align: right; font-weight: 800; border-right: 1px solid #000; font-size: 8.5px; text-transform: uppercase;">
+        <td colspan="6" style="padding: 3px 8px; text-align: right; font-weight: 800; border-right: 1px solid #000; font-size: 8.5px; text-transform: uppercase;">
           SUBTOTAL SERVICIOS:
         </td>
         <td style="padding: 3px 6px; text-align: right; font-weight: 800; font-size: 8.5px;">
@@ -458,9 +502,10 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa, te
 
   // Generar filas para Mobiliario
   const filasMobiliarioArray = [];
-  mobiliarioItems.forEach(i => {
-    // Fila principal del mueble o combo
+  mobiliarioItems.forEach((i, idx) => {
+    // Fila principal del mueble o combo (enumerada)
     filasMobiliarioArray.push(`<tr>
+      <td style="padding:2.5px 4px;text-align:center;vertical-align:middle;font-weight:700;color:#334155;">${idx + 1}</td>
       <td style="padding:2.5px 4px;text-align:center;vertical-align:middle;">
         <div class="chk-box"></div>
       </td>
@@ -476,7 +521,7 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa, te
       </td>
     </tr>`);
 
-    // Si es un combo, agregar los componentes en filas individuales con check
+    // Si es un combo, agregar los componentes en filas individuales con check (sin enumerar)
     if (i.combo_id && todosLosCombos) {
       const componentesCombo = (i.componentes && i.componentes.length > 0)
         ? i.componentes
@@ -488,6 +533,7 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa, te
       componentesCombo.forEach(ci => {
         const compCant = ci.cantidad * i.cantidad;
         filasMobiliarioArray.push(`<tr style="background-color:#fafafa;font-size:8px;color:#475569;">
+          <td style="padding:2px 4px;text-align:center;vertical-align:middle;"></td>
           <td style="padding:2px 4px;text-align:center;vertical-align:middle;">
             <div class="chk-box-sm"></div>
           </td>
@@ -504,8 +550,9 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa, te
   const filasMuebles = filasMobiliarioArray.join('');
 
   // Generar filas para Servicios Adicionales
-  const filasServicios = servicioItems.map(i => {
+  const filasServicios = servicioItems.map((i, idx) => {
     return `<tr>
+      <td style="padding:2.5px 4px;text-align:center;vertical-align:middle;font-weight:700;color:#334155;">${idx + 1}</td>
       <td style="padding:2.5px 4px;text-align:center;vertical-align:middle;"><div class="chk-box"></div></td>
       <td style="padding:2.5px 4px;text-align:center;vertical-align:middle;font-weight:700;">${i.cantidad}</td>
       <td style="padding:2.5px 6px;vertical-align:middle;"><span style="font-weight:600;">${i.nombre || i.mueble || ''}</span></td>
@@ -541,22 +588,29 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa, te
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <title>Hoja de Entrega ${reserva.id ? '#' + reserva.id.slice(0, 8).toUpperCase() : ''}</title>
 <style>
   @page { size: auto; margin: 6mm 8mm; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.3; font-size: 9.5px; }
-  .page { max-width: 760px; margin: 0 auto; padding: 10px 14px; box-sizing: border-box; }
+  html, body { width: 100%; margin: 0; padding: 0; background: #fff; -webkit-text-size-adjust: 100%; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.3; font-size: 9.5px; }
+  .page { max-width: 760px; width: 100%; margin: 0 auto; padding: 10px 14px; box-sizing: border-box; }
   .header { border-bottom: 2px solid ${empColor}; padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
   .logo { font-size: 18px; font-weight: 800; color: ${empColor}; letter-spacing: -0.5px; display: flex; align-items: center; }
   .section { margin-bottom: 8px; }
   .section-title { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: ${empColor}; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; }
   .field label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: block; margin-bottom: 1px; font-weight: 600; }
   .field span { font-size: 10px; font-weight: 600; color: #0f172a; }
-  table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 6px; }
-  table, th, td { border: 1px solid #cbd5e1; }
+  table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 6px; table-layout: fixed; }
+  table, th, td { border: 1px solid #cbd5e1; word-wrap: break-word; overflow-wrap: break-word; }
   thead { background: #f8fafc; }
   th { padding: 3px 5px; text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #334155; font-weight: 700; }
   td { padding: 2.5px 5px; }
+  .col-num { width: 28px; text-align: center; }
+  .col-chk { width: 52px; text-align: center; }
+  .col-cant { width: 45px; text-align: center; }
+  .col-desc { width: auto; }
+  .col-obs { width: 135px; }
   .chk-box { width: 12px; height: 12px; border: 1.5px solid ${empColor}; border-radius: 2px; margin: 0 auto; background: #fff; }
   .chk-box-sm { width: 9px; height: 9px; border: 1px solid #64748b; border-radius: 2px; margin: 0 auto; background: #fff; }
   .obs-box { border: 1px solid #cbd5e1; border-radius: 4px; padding: 5px 8px; min-height: 24px; font-size: 8.5px; color: #64748b; background: #f8fafc; }
@@ -566,9 +620,26 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa, te
   .firma-card-title { font-size: 8.5px; font-weight: 700; text-transform: uppercase; color: ${empColor}; border-bottom: 1px solid #f1f5f9; padding-bottom: 2px; margin-bottom: 10px; text-align: center; }
   .firma-linea { border-top: 1px solid #94a3b8; padding-top: 2px; text-align: center; font-size: 8.5px; color: #475569; margin-top: 14px; }
   .no-print { display: flex; }
+  @media screen and (max-width: 768px) {
+    body { font-size: 11.5px; }
+    .page { max-width: 100%; width: 100%; min-height: 100vh; padding: 10px 8px; }
+    .no-print { position: sticky; top: 0; z-index: 50; padding: 10px 10px !important; flex-wrap: wrap; gap: 8px; }
+    .section-title { font-size: 11px; }
+    .field label { font-size: 9.5px; }
+    .field span { font-size: 11.5px; }
+    table { font-size: 10px; }
+    th { font-size: 8.5px; padding: 4px 2px !important; }
+    td { font-size: 9.5px; padding: 4px 3px !important; }
+    .col-num { width: 7% !important; }
+    .col-chk { width: 12% !important; }
+    .col-cant { width: 10% !important; }
+    .col-desc { width: 37% !important; }
+    .col-obs { width: 22% !important; }
+    .firmas-grid { grid-template-columns: 1fr; gap: 10px; }
+  }
   @media print { 
     .no-print { display: none !important; }
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 9.5px; }
     .page { padding: 0; max-width: 100%; }
   }
 </style>
@@ -612,11 +683,12 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa, te
     <table>
       <thead>
         <tr>
-          <th style="text-align:center;width:55px;">ENTREGA</th>
-          <th style="text-align:center;width:48px;">CANT.</th>
-          <th>DESCRIPCIÓN DEL MOBILIARIO / EQUIPO</th>
-          <th style="text-align:center;width:55px;">RETIRO</th>
-          <th style="width:140px;">OBSERVACIONES / ESTADO</th>
+          <th class="col-num" style="text-align:center;">#</th>
+          <th class="col-chk" style="text-align:center;">ENTREGA</th>
+          <th class="col-cant" style="text-align:center;">CANT.</th>
+          <th class="col-desc">DESCRIPCIÓN DEL MOBILIARIO / EQUIPO</th>
+          <th class="col-chk" style="text-align:center;">RETIRO</th>
+          <th class="col-obs">OBSERVACIONES / ESTADO</th>
         </tr>
       </thead>
       <tbody>${filasMuebles}</tbody>
@@ -629,11 +701,12 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa, te
     <table>
       <thead>
         <tr>
-          <th style="text-align:center;width:55px;">CHECK</th>
-          <th style="text-align:center;width:48px;">CANT.</th>
-          <th>DESCRIPCIÓN DEL SERVICIO</th>
-          <th style="text-align:center;width:55px;">CONFORME</th>
-          <th style="width:140px;">OBSERVACIONES</th>
+          <th class="col-num" style="text-align:center;">#</th>
+          <th class="col-chk" style="text-align:center;">CHECK</th>
+          <th class="col-cant" style="text-align:center;">CANT.</th>
+          <th class="col-desc">DESCRIPCIÓN DEL SERVICIO</th>
+          <th class="col-chk" style="text-align:center;">CONFORME</th>
+          <th class="col-obs">OBSERVACIONES</th>
         </tr>
       </thead>
       <tbody>

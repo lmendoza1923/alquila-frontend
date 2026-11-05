@@ -482,15 +482,17 @@ export default function ContratoPublico() {
           <table className="contrato-table" style={{ fontSize: isMobile ? 12 : 11, border: '1px solid #94a3b8' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #94a3b8', background: '#f8fafc', color: '#1e293b' }}>
-                <th style={{ width: isMobile ? '15%' : '52px', padding: isMobile ? '6px 4px' : '6px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>CANT.</th>
-                <th style={{ width: isMobile ? '58%' : 'auto', padding: isMobile ? '6px 8px' : '6px 8px', borderRight: '1px solid #94a3b8', textAlign: 'left', fontWeight: 800 }}>DESCRIPCIÓN</th>
+                <th style={{ width: isMobile ? '9%' : '32px', padding: isMobile ? '6px 2px' : '6px 4px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>#</th>
+                <th style={{ width: isMobile ? '12%' : '46px', padding: isMobile ? '6px 4px' : '6px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>CANT.</th>
+                <th style={{ width: isMobile ? '36%' : 'auto', padding: isMobile ? '6px 8px' : '6px 8px', borderRight: '1px solid #94a3b8', textAlign: 'left', fontWeight: 800 }}>DESCRIPCIÓN</th>
+                <th style={{ width: isMobile ? '21%' : '125px', padding: isMobile ? '6px 4px' : '6px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>OBSERVACIONES/ESTADO</th>
                 {!isMobile && (
                   <>
-                    <th style={{ width: '90px', padding: '6px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>CÓDIGO</th>
-                    <th style={{ width: '85px', padding: '6px 8px', borderRight: '1px solid #94a3b8', textAlign: 'right', fontWeight: 800 }}>P. UNIT.</th>
+                    <th style={{ width: '82px', padding: '6px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>CÓDIGO</th>
+                    <th style={{ width: '78px', padding: '6px 8px', borderRight: '1px solid #94a3b8', textAlign: 'right', fontWeight: 800 }}>P. UNIT.</th>
                   </>
                 )}
-                <th style={{ width: isMobile ? '27%' : '90px', padding: isMobile ? '6px 8px' : '6px 8px', textAlign: 'right', fontWeight: 800 }}>IMPORTE</th>
+                <th style={{ width: isMobile ? '22%' : '82px', padding: isMobile ? '6px 8px' : '6px 8px', textAlign: 'right', fontWeight: 800 }}>IMPORTE</th>
               </tr>
             </thead>
             <tbody>
@@ -500,6 +502,9 @@ export default function ContratoPublico() {
                 return (
                   <React.Fragment key={idx}>
                     <tr>
+                      <td style={{ padding: isMobile ? '7px 2px' : '5px 4px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: 700, verticalAlign: 'top', color: '#334155' }}>
+                        {idx + 1}
+                      </td>
                       <td style={{ padding: isMobile ? '7px 4px' : '5px 6px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: 700, verticalAlign: 'top' }}>
                         {i.cantidad}
                       </td>
@@ -513,6 +518,9 @@ export default function ContratoPublico() {
                           </div>
                         )}
                       </td>
+                      <td style={{ padding: isMobile ? '7px 6px' : '5px 6px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#475569', verticalAlign: 'top' }}>
+                        {i.observaciones || i.estado_item || ''}
+                      </td>
                       {!isMobile && (
                         <>
                           <td style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: 600, color: '#475569' }}>{cod}</td>
@@ -525,8 +533,10 @@ export default function ContratoPublico() {
                     </tr>
                     {i.combo_id && Array.isArray(i.componentes) && i.componentes.map((ci, cIdx) => (
                       <tr key={`${idx}-c-${cIdx}`} style={{ fontSize: isMobile ? 11 : 10.5, color: '#475569', background: '#f8fafc' }}>
+                        <td style={{ padding: '4px 2px', textAlign: 'center', border: '1px solid #e2e8f0' }}></td>
                         <td style={{ padding: '4px 4px', textAlign: 'center', border: '1px solid #e2e8f0', fontWeight: 600 }}>{ci.cantidad * i.cantidad}</td>
                         <td style={{ padding: isMobile ? '4px 8px 4px 12px' : '4px 8px 4px 18px', border: '1px solid #e2e8f0' }}>└─ {ci.nombre}</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #e2e8f0' }}>{ci.observaciones || ''}</td>
                         {!isMobile && (
                           <>
                             <td style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #e2e8f0' }}>{obtenerCodigo(ci.nombre, false)}</td>
@@ -541,7 +551,9 @@ export default function ContratoPublico() {
               }) : (
                 <tr>
                   <td style={{ padding: '6px', textAlign: 'center', border: '1px solid #cbd5e1' }}>-</td>
+                  <td style={{ padding: '6px', textAlign: 'center', border: '1px solid #cbd5e1' }}>-</td>
                   <td style={{ padding: '6px 8px', border: '1px solid #cbd5e1', color: '#64748b', fontStyle: 'italic' }}>Sin artículos</td>
+                  <td style={{ padding: '6px', textAlign: 'center', border: '1px solid #cbd5e1' }}></td>
                   {!isMobile && (
                     <>
                       <td style={{ padding: '6px', textAlign: 'center', border: '1px solid #cbd5e1' }}>N/A</td>
@@ -552,7 +564,7 @@ export default function ContratoPublico() {
                 </tr>
               )}
               <tr style={{ borderTop: '1.5px solid #94a3b8', background: '#f8fafc' }}>
-                <td colSpan={isMobile ? 2 : 4} style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 800, borderRight: '1px solid #94a3b8', textTransform: 'uppercase', fontSize: isMobile ? 11.5 : 11 }}>
+                <td colSpan={isMobile ? 4 : 6} style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 800, borderRight: '1px solid #94a3b8', textTransform: 'uppercase', fontSize: isMobile ? 11.5 : 11 }}>
                   SUBTOTAL MERCANCÍA:
                 </td>
                 <td style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 800, color: '#0f172a', fontSize: isMobile ? 12.5 : 11.5 }}>
@@ -581,15 +593,17 @@ export default function ContratoPublico() {
           <table className="contrato-table" style={{ fontSize: isMobile ? 12 : 11, border: '1px solid #94a3b8' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #94a3b8', background: '#f8fafc', color: '#1e293b' }}>
-                <th style={{ width: isMobile ? '15%' : '52px', padding: isMobile ? '6px 4px' : '6px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>CANT.</th>
-                <th style={{ width: isMobile ? '58%' : 'auto', padding: isMobile ? '6px 8px' : '6px 8px', borderRight: '1px solid #94a3b8', textAlign: 'left', fontWeight: 800 }}>DESCRIPCIÓN</th>
+                <th style={{ width: isMobile ? '9%' : '32px', padding: isMobile ? '6px 2px' : '6px 4px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>#</th>
+                <th style={{ width: isMobile ? '12%' : '46px', padding: isMobile ? '6px 4px' : '6px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>CANT.</th>
+                <th style={{ width: isMobile ? '36%' : 'auto', padding: isMobile ? '6px 8px' : '6px 8px', borderRight: '1px solid #94a3b8', textAlign: 'left', fontWeight: 800 }}>DESCRIPCIÓN</th>
+                <th style={{ width: isMobile ? '21%' : '125px', padding: isMobile ? '6px 4px' : '6px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>OBSERVACIONES/ESTADO</th>
                 {!isMobile && (
                   <>
-                    <th style={{ width: '90px', padding: '6px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>CÓDIGO</th>
-                    <th style={{ width: '85px', padding: '6px 8px', borderRight: '1px solid #94a3b8', textAlign: 'right', fontWeight: 800 }}>P. UNIT.</th>
+                    <th style={{ width: '82px', padding: '6px', borderRight: '1px solid #94a3b8', textAlign: 'center', fontWeight: 800 }}>CÓDIGO</th>
+                    <th style={{ width: '78px', padding: '6px 8px', borderRight: '1px solid #94a3b8', textAlign: 'right', fontWeight: 800 }}>P. UNIT.</th>
                   </>
                 )}
-                <th style={{ width: isMobile ? '27%' : '90px', padding: isMobile ? '6px 8px' : '6px 8px', textAlign: 'right', fontWeight: 800 }}>IMPORTE</th>
+                <th style={{ width: isMobile ? '22%' : '82px', padding: isMobile ? '6px 8px' : '6px 8px', textAlign: 'right', fontWeight: 800 }}>IMPORTE</th>
               </tr>
             </thead>
             <tbody>
@@ -598,8 +612,10 @@ export default function ContratoPublico() {
                 const cod = i.codigo || obtenerCodigo(i.nombre || i.mueble, true);
                 return (
                   <tr key={idx}>
+                    <td style={{ padding: isMobile ? '7px 2px' : '5px 4px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: 700, color: '#334155' }}>{idx + 1}</td>
                     <td style={{ padding: isMobile ? '7px 4px' : '5px 6px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: 700 }}>{i.cantidad}</td>
                     <td style={{ padding: isMobile ? '7px 8px' : '5px 8px', border: '1px solid #cbd5e1', fontWeight: 700, textTransform: 'uppercase' }}>{i.nombre || i.mueble || ''}</td>
+                    <td style={{ padding: isMobile ? '7px 6px' : '5px 6px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#475569' }}>{i.observaciones || i.estado_item || ''}</td>
                     {!isMobile && (
                       <>
                         <td style={{ padding: '5px 6px', textAlign: 'center', border: '1px solid #cbd5e1', fontWeight: 600 }}>{cod}</td>
@@ -612,7 +628,9 @@ export default function ContratoPublico() {
               }) : (
                 <tr>
                   <td style={{ padding: '6px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#64748b' }}>-</td>
+                  <td style={{ padding: '6px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#64748b' }}>-</td>
                   <td style={{ padding: '6px 8px', border: '1px solid #cbd5e1', color: '#64748b', fontStyle: 'italic' }}>Sin servicios adicionales</td>
+                  <td style={{ padding: '6px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#64748b' }}></td>
                   {!isMobile && (
                     <>
                       <td style={{ padding: '6px', textAlign: 'center', border: '1px solid #cbd5e1', color: '#64748b' }}>N/A</td>
@@ -623,7 +641,7 @@ export default function ContratoPublico() {
                 </tr>
               )}
               <tr style={{ borderTop: '1.5px solid #94a3b8', background: '#f8fafc' }}>
-                <td colSpan={isMobile ? 2 : 4} style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 800, borderRight: '1px solid #94a3b8', textTransform: 'uppercase', fontSize: isMobile ? 11.5 : 11 }}>
+                <td colSpan={isMobile ? 4 : 6} style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 800, borderRight: '1px solid #94a3b8', textTransform: 'uppercase', fontSize: isMobile ? 11.5 : 11 }}>
                   SUBTOTAL SERVICIOS:
                 </td>
                 <td style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 800, color: '#0f172a', fontSize: isMobile ? 12.5 : 11.5 }}>
