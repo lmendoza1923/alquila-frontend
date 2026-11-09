@@ -1714,46 +1714,43 @@ export default function AdminPanel() {
     }
   };
 
-  const eliminarMuebleDeReserva = (id, esCombo = false, nombre = null) => {
+  const eliminarMuebleDeReserva = (itemIdx) => {
     setItemsEditando(prev => {
-      const nuevos = prev.filter(i => {
-        if (!i.combo_id && !i.mueble_id) {
-          return i.nombre !== nombre;
-        }
-        return esCombo ? i.combo_id !== id : i.mueble_id !== id;
-      });
-      recalcularTotal(nuevos);
-      return nuevos;
+      const nuevos = prev.filter((_, idx) => idx !== itemIdx);
+      const recalculados = recalcularTotal(nuevos);
+      return recalculados || nuevos;
     });
-    toast.success('Artículo/servicio eliminado de la reserva');
+    toast.success('Artículo eliminado de la reserva');
   };
 
-  const actualizarCantidadItem = (id, nuevaCantidad, esCombo = false, nombre = null) => {
-    if (nuevaCantidad <= 0) return eliminarMuebleDeReserva(id, esCombo, nombre);
+  const actualizarCantidadItem = (itemIdx, nuevaCantidad) => {
+    if (nuevaCantidad <= 0) return eliminarMuebleDeReserva(itemIdx);
     setItemsEditando(prev => {
-      const nuevos = prev.map(i => {
-        if (!i.combo_id && !i.mueble_id) {
-          return i.nombre === nombre ? { ...i, cantidad: nuevaCantidad, subtotal: (i.precio_unitario || 0) * nuevaCantidad } : i;
-        }
-        const match = esCombo ? (i.combo_id === id) : (i.mueble_id === id);
-        return match ? { ...i, cantidad: nuevaCantidad } : i;
+      const nuevos = prev.map((item, idx) => {
+        if (idx !== itemIdx) return item;
+        return {
+          ...item,
+          cantidad: nuevaCantidad,
+          subtotal: (item.precio_unitario || 0) * nuevaCantidad
+        };
       });
-      recalcularTotal(nuevos);
-      return nuevos;
+      const recalculados = recalcularTotal(nuevos);
+      return recalculados || nuevos;
     });
   };
 
-  const actualizarPrecioItem = (id, nuevoPrecio, esCombo = false, nombre = null) => {
+  const actualizarPrecioItem = (itemIdx, nuevoPrecio) => {
     setItemsEditando(prev => {
-      const nuevos = prev.map(i => {
-        if (!i.combo_id && !i.mueble_id) {
-          return i.nombre === nombre ? { ...i, precio_unitario: nuevoPrecio, subtotal: nuevoPrecio * i.cantidad } : i;
-        }
-        const match = esCombo ? (i.combo_id === id) : (i.mueble_id === id);
-        return match ? { ...i, precio_unitario: nuevoPrecio } : i;
+      const nuevos = prev.map((item, idx) => {
+        if (idx !== itemIdx) return item;
+        return {
+          ...item,
+          precio_unitario: nuevoPrecio,
+          subtotal: nuevoPrecio * item.cantidad
+        };
       });
-      recalcularTotal(nuevos);
-      return nuevos;
+      const recalculados = recalcularTotal(nuevos);
+      return recalculados || nuevos;
     });
   };
 
@@ -1865,8 +1862,8 @@ export default function AdminPanel() {
       const formattedItems = itemsEditando.map(i => ({ 
         mueble_id: i.mueble_id || null, 
         combo_id: i.combo_id || null, 
-        cantidad: i.cantidad,
-        nombre: (!i.mueble_id && !i.combo_id) ? i.nombre : null,
+        cantidad: parseInt(i.cantidad) || 1,
+        nombre: i.nombre || i.mueble || null,
         precio_unitario: i.precio_unitario !== undefined && i.precio_unitario !== null ? parseFloat(i.precio_unitario) : null,
         componentes: i.combo_id ? (i.componentes || []) : null
       }));
@@ -5017,7 +5014,7 @@ export default function AdminPanel() {
                             </span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                               <span style={{ fontSize: 11, color: '#666' }}>Cant:</span>
-                              <input type="number" min="1" value={item.cantidad} onChange={e => actualizarCantidadItem(id, parseInt(e.target.value) || 1, !!item.combo_id, item.nombre)} style={{ width: 55, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }} />
+                              <input type="number" min="1" value={item.cantidad} onChange={e => actualizarCantidadItem(idx, parseInt(e.target.value) || 1)} style={{ width: 55, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }} />
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                               <span style={{ fontSize: 11, color: '#666' }}>Precio:</span>
@@ -5027,7 +5024,7 @@ export default function AdminPanel() {
                                 min="0" 
                                 value={item.precio_unitario !== null && item.precio_unitario !== undefined ? item.precio_unitario : ''} 
                                 placeholder={item.combo_id ? (combos.find(c => c.id === item.combo_id)?.precio_dia || '0.00') : (muebles.find(m => m.id === item.mueble_id)?.precio_dia || '0.00')}
-                                onChange={e => actualizarPrecioItem(id, parseFloat(e.target.value) || 0, !!item.combo_id, item.nombre)} 
+                                onChange={e => actualizarPrecioItem(idx, parseFloat(e.target.value) || 0)} 
                                 style={{ width: 75, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 6, textAlign: 'center', fontSize: 13 }} 
                               />
                               <span style={{ fontSize: 11, color: '#888' }}>
@@ -5037,7 +5034,7 @@ export default function AdminPanel() {
                             <span style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e', minWidth: 65, textAlign: 'right' }}>
                               ${parseFloat(item.subtotal || 0).toFixed(2)}
                             </span>
-                            <button type="button" onClick={() => eliminarMuebleDeReserva(id, !!item.combo_id, item.nombre)} style={{ background: '#ef444422', color: '#ef4444', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }} title="Eliminar artículo">🗑️</button>
+                            <button type="button" onClick={() => eliminarMuebleDeReserva(idx)} style={{ background: '#ef444422', color: '#ef4444', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }} title="Eliminar artículo">🗑️</button>
                           </div>
                           {item.combo_id && (
                             <div style={{ paddingLeft: '20px', marginTop: '6px', fontSize: '12px', background: '#fafafa', borderRadius: '8px', padding: '10px', width: '90%', marginLeft: '20px', boxSizing: 'border-box' }}>
