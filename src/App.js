@@ -602,7 +602,6 @@ function Navbar({ isMobile, mobileMenuOpen, setMobileMenuOpen }) {
     </aside>
   );
 }
-}
 
 function AdminRoute({ children }) {
   const { user } = useAuth();
