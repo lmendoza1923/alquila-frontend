@@ -6,15 +6,15 @@ import api from '../api';
 import toast from 'react-hot-toast';
 
 const s = {
-  page: { maxWidth: 900, margin: '0 auto', padding: '2rem' },
+  page: { maxWidth: 960, margin: '0 auto', padding: '2rem' },
   row: { display: 'flex', gap: '2rem', flexWrap: 'wrap' },
   left: { flex: 2, minWidth: 280 },
   right: { flex: 1, minWidth: 260 },
-  card: { background: '#fff', borderRadius: 12, padding: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', marginBottom: '1rem' },
-  item: { display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem 0', borderBottom: '1px solid #f0f0f0' },
-  input: { width: '100%', padding: '9px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, marginBottom: '0.75rem', boxSizing: 'border-box' },
-  label: { fontSize: 12, color: '#666', marginBottom: 3, display: 'block' },
-  btn: { width: '100%', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, padding: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '1rem' },
+  card: { background: '#ffffff', borderRadius: 16, padding: '1.75rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)', marginBottom: '1.25rem' },
+  item: { display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid #f1f5f9' },
+  input: { width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 14, marginBottom: '0.85rem', boxSizing: 'border-box', background: '#f8fafc', color: '#0f172a' },
+  label: { fontSize: 12, color: '#475569', marginBottom: 5, display: 'block', fontWeight: 600 },
+  btn: { width: '100%', background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 18px', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)', transition: 'all 0.15s ease' },
 };
 
 export default function Carrito() {

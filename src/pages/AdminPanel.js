@@ -2382,21 +2382,21 @@ export default function AdminPanel() {
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: isMobile ? '8px 12px' : '9px 16px',
-              borderRadius: '8px',
-              border: tab === t.id ? '2px solid #4a6cf7' : (t.badge > 0 ? '2px solid #ef4444' : '1px solid #cbd5e1'),
-              background: tab === t.id ? '#4a6cf7' : '#fff',
-              color: tab === t.id ? '#fff' : '#475569',
+              gap: '8px',
+              padding: isMobile ? '8px 14px' : '10px 18px',
+              borderRadius: '12px',
+              border: tab === t.id ? '1px solid #4f46e5' : (t.badge > 0 ? '1px solid #ef4444' : '1px solid #e2e8f0'),
+              background: tab === t.id ? '#4f46e5' : '#ffffff',
+              color: tab === t.id ? '#ffffff' : '#475569',
               fontWeight: tab === t.id ? 700 : 600,
               fontSize: isMobile ? '12px' : '13px',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
-              boxShadow: tab === t.id ? '0 2px 8px rgba(74, 108, 247, 0.3)' : '0 1px 3px rgba(0,0,0,0.04)',
-              transition: 'all 0.15s ease'
+              boxShadow: tab === t.id ? '0 4px 14px rgba(79, 70, 229, 0.28)' : '0 1px 2px rgba(0,0,0,0.03)',
+              transition: 'all 0.18s ease'
             }}
           >
-            <span>{t.icon}</span>
+            <span style={{ fontSize: 16 }}>{t.icon}</span>
             <span>{t.label}</span>
             {t.badge > 0 && (
               <span style={{
@@ -2404,10 +2404,10 @@ export default function AdminPanel() {
                 color: '#fff',
                 fontSize: '11px',
                 fontWeight: 800,
-                padding: '1px 7px',
-                borderRadius: '12px',
-                lineHeight: 1.4,
-                boxShadow: '0 2px 5px rgba(239, 68, 68, 0.4)'
+                padding: '2px 8px',
+                borderRadius: '999px',
+                lineHeight: 1.2,
+                boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)'
               }}>
                 {t.badge}
               </span>
@@ -2416,39 +2416,56 @@ export default function AdminPanel() {
         ))}
       </div>
 
-
-
       {/* ── Dashboard ── */}
       {tab === 'dashboard' && stats && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
             {[
-              { label: 'Total reservas', value: stats.total_reservas, icon: '📋' },
-              { label: 'Ingresos totales', value: `$${stats.ingresos_total?.toFixed(2)}`, icon: '💰' },
-              { label: 'Muebles activos', value: stats.total_muebles, icon: '🪑' },
-              { label: 'Combos activos', value: stats.total_combos || 0, icon: '🎁' },
-              { label: 'Pendientes', value: stats.reservas_pendientes, icon: '⏳' },
+              { label: 'Total reservas', value: stats.total_reservas, icon: '📋', bg: '#e0e7ff', color: '#4338ca' },
+              { label: 'Ingresos totales', value: `$${stats.ingresos_total?.toFixed(2)}`, icon: '💰', bg: '#dcfce7', color: '#15803d' },
+              { label: 'Muebles activos', value: stats.total_muebles, icon: '🪑', bg: '#fef3c7', color: '#b45309' },
+              { label: 'Combos activos', value: stats.total_combos || 0, icon: '🎁', bg: '#f3e8ff', color: '#7e22ce' },
+              { label: 'Pendientes', value: stats.reservas_pendientes, icon: '⏳', bg: '#fee2e2', color: '#b91c1c' },
             ].map((s, idx) => (
               <div 
                 key={s.label} 
                 style={{ 
-                  background: '#fff', 
-                  borderRadius: 12, 
-                  padding: isMobile ? '1rem 0.75rem' : '1.5rem', 
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.07)', 
-                  textAlign: 'center',
-                  gridColumn: isMobile && idx === 4 ? '1 / -1' : 'auto'
+                  background: '#ffffff', 
+                  borderRadius: 16, 
+                  padding: isMobile ? '1.25rem 1rem' : '1.5rem', 
+                  boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)', 
+                  border: '1px solid #e2e8f0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gridColumn: isMobile && idx === 4 ? '1 / -1' : 'auto',
+                  transition: 'all 0.2s ease'
                 }}
               >
-                <div style={{ fontSize: isMobile ? 28 : 36 }}>{s.icon}</div>
-                <div style={{ fontSize: isMobile ? '1.35rem' : '1.8rem', fontWeight: 700, color: '#1a1a2e' }}>{s.value}</div>
-                <div style={{ color: '#888', fontSize: 12 }}>{s.label}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>{s.label}</span>
+                  <div style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: s.bg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 18
+                  }}>
+                    {s.icon}
+                  </div>
+                </div>
+                <div style={{ fontSize: isMobile ? '1.5rem' : '1.85rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+                  {s.value}
+                </div>
               </div>
             ))}
           </div>
 
           {/* Tarjeta de Datos de la Empresa para Contratos */}
-          <div style={{ background: '#fff', borderRadius: 12, padding: '1.75rem', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0' }}>
+          <div style={{ background: '#ffffff', borderRadius: 16, padding: '1.75rem', boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>

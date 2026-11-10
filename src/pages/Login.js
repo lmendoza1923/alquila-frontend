@@ -4,14 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { useConfig } from '../context/ConfigContext';
 import toast from 'react-hot-toast';
 
-const s = {
-  page: { maxWidth: 420, margin: '3rem auto', padding: '2rem' },
-  card: { background: '#fff', borderRadius: 16, padding: '2rem', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' },
-  input: { width: '100%', padding: '10px 14px', border: '1px solid #ddd', borderRadius: 8, fontSize: 15, marginBottom: '1rem', boxSizing: 'border-box' },
-  btn: { width: '100%', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, padding: 12, fontWeight: 700, fontSize: 15, cursor: 'pointer' },
-  tab: (active) => ({ flex: 1, padding: '10px', border: 'none', background: active ? '#4a6cf7' : '#f0f0f0', color: active ? '#fff' : '#666', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }),
-};
-
 export default function Login() {
   const [modo, setModo] = useState('login');
   const [form, setForm] = useState({ nombre: '', email: '', password: '', telefono: '' });
@@ -41,41 +33,251 @@ export default function Login() {
     }
   };
 
-  const colorPrimario = config?.color_primario || '#4a6cf7';
+  const colorPrimario = config?.color_primario || '#4f46e5';
 
   return (
-    <div style={s.page}>
-      <div style={s.card}>
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          {config?.logo_url && (config.logo_url.startsWith('http') || config.logo_url.startsWith('data:')) ? (
-            <img
-              src={config.logo_url}
-              alt="Logo"
-              style={{ maxHeight: 72, maxWidth: 170, objectFit: 'contain', marginBottom: 8, borderRadius: 8 }}
-            />
-          ) : (
-            <div style={{ fontSize: 44, marginBottom: 4 }}>{config?.logo_url || '🎉'}</div>
-          )}
-          <h2 style={{ margin: '6px 0 2px', color: '#1a1a2e', fontSize: '1.35rem', fontWeight: 800 }}>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '1.5rem',
+      background: 'radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 40%), radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.06), transparent 40%), #f8fafc',
+      boxSizing: 'border-box'
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: 440,
+        background: '#ffffff',
+        borderRadius: 24,
+        padding: '2.5rem 2rem',
+        boxShadow: '0 20px 40px -15px rgba(15, 23, 42, 0.08), 0 0 1px 1px rgba(15, 23, 42, 0.05)',
+        border: '1px solid #f1f5f9',
+        position: 'relative',
+        boxSizing: 'border-box'
+      }}>
+        {/* Encabezado y Marca */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <div style={{ display: 'inline-flex', justifyContent: 'center', marginBottom: '1rem' }}>
+            {config?.logo_url && (config.logo_url.startsWith('http') || config.logo_url.startsWith('data:')) ? (
+              <img
+                src={config.logo_url}
+                alt="Logo"
+                style={{ maxHeight: 68, maxWidth: 180, objectFit: 'contain', borderRadius: 12 }}
+              />
+            ) : (
+              <div style={{
+                width: 58,
+                height: 58,
+                borderRadius: 16,
+                background: `linear-gradient(135deg, ${colorPrimario} 0%, #8b5cf6 100%)`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 28,
+                color: '#fff',
+                boxShadow: '0 8px 16px -4px rgba(79, 70, 229, 0.35)'
+              }}>
+                {config?.logo_url || '🎉'}
+              </div>
+            )}
+          </div>
+
+          <h2 style={{
+            margin: '0 0 6px',
+            color: '#0f172a',
+            fontSize: '1.5rem',
+            fontWeight: 800,
+            letterSpacing: '-0.02em'
+          }}>
             {config?.nombre_empresa || 'Alquila tu Party'}
           </h2>
-          {config?.eslogan && (
-            <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 13 }}>{config.eslogan}</p>
+          
+          <p style={{
+            margin: 0,
+            color: '#64748b',
+            fontSize: 13,
+            fontWeight: 500
+          }}>
+            {config?.eslogan || 'Sistema de reservas y alquiler de mobiliario'}
+          </p>
+        </div>
+
+        {/* Selector de Modo (Pills modernas) */}
+        <div style={{
+          display: 'flex',
+          background: '#f1f5f9',
+          padding: 4,
+          borderRadius: 14,
+          marginBottom: '1.75rem',
+          gap: 4
+        }}>
+          <button
+            type="button"
+            onClick={() => setModo('login')}
+            style={{
+              flex: 1,
+              padding: '9px 12px',
+              border: 'none',
+              borderRadius: 10,
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 13,
+              background: modo === 'login' ? '#ffffff' : 'transparent',
+              color: modo === 'login' ? '#0f172a' : '#64748b',
+              boxShadow: modo === 'login' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            Iniciar sesión
+          </button>
+          <button
+            type="button"
+            onClick={() => setModo('register')}
+            style={{
+              flex: 1,
+              padding: '9px 12px',
+              border: 'none',
+              borderRadius: 10,
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 13,
+              background: modo === 'register' ? '#ffffff' : 'transparent',
+              color: modo === 'register' ? '#0f172a' : '#64748b',
+              boxShadow: modo === 'register' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            Registrarse
+          </button>
+        </div>
+
+        {/* Formulario */}
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {modo === 'register' && (
+            <>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                  Nombre completo
+                </label>
+                <input
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 10,
+                    fontSize: 14,
+                    color: '#0f172a',
+                    background: '#f8fafc',
+                    boxSizing: 'border-box'
+                  }}
+                  placeholder="Ej. Juan Pérez"
+                  value={form.nombre}
+                  onChange={e => set('nombre', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                  Teléfono / WhatsApp
+                </label>
+                <input
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 10,
+                    fontSize: 14,
+                    color: '#0f172a',
+                    background: '#f8fafc',
+                    boxSizing: 'border-box'
+                  }}
+                  placeholder="Ej. 6500-1234"
+                  value={form.telefono}
+                  onChange={e => set('telefono', e.target.value)}
+                />
+              </div>
+            </>
           )}
-        </div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
-          <button style={s.tab(modo === 'login')} onClick={() => setModo('login')}>Iniciar sesión</button>
-          <button style={s.tab(modo === 'register')} onClick={() => setModo('register')}>Registrarse</button>
-        </div>
-        <form onSubmit={submit}>
-          {modo === 'register' && <>
-            <input style={s.input} placeholder="Nombre completo" value={form.nombre} onChange={e => set('nombre', e.target.value)} required />
-            <input style={s.input} placeholder="Teléfono" value={form.telefono} onChange={e => set('telefono', e.target.value)} />
-          </>}
-          <input style={s.input} type="email" placeholder="Correo electrónico" value={form.email} onChange={e => set('email', e.target.value)} required />
-          <input style={s.input} type="password" placeholder="Contraseña" value={form.password} onChange={e => set('password', e.target.value)} required />
-          <button type="submit" style={s.btn}>{modo === 'login' ? 'Ingresar' : 'Crear cuenta'}</button>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+              Correo electrónico
+            </label>
+            <input
+              type="email"
+              style={{
+                width: '100%',
+                padding: '11px 14px',
+                border: '1px solid #e2e8f0',
+                borderRadius: 10,
+                fontSize: 14,
+                color: '#0f172a',
+                background: '#f8fafc',
+                boxSizing: 'border-box'
+              }}
+              placeholder="tu@correo.com"
+              value={form.email}
+              onChange={e => set('email', e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+              Contraseña
+            </label>
+            <input
+              type="password"
+              style={{
+                width: '100%',
+                padding: '11px 14px',
+                border: '1px solid #e2e8f0',
+                borderRadius: 10,
+                fontSize: 14,
+                color: '#0f172a',
+                background: '#f8fafc',
+                boxSizing: 'border-box'
+              }}
+              placeholder="••••••••••••"
+              value={form.password}
+              onChange={e => set('password', e.target.value)}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            style={{
+              width: '100%',
+              marginTop: '0.75rem',
+              background: `linear-gradient(135deg, ${colorPrimario} 0%, #6366f1 100%)`,
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 12,
+              padding: '12px 16px',
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+            }}
+          >
+            {modo === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+          </button>
         </form>
+
+        {/* Footer sutil */}
+        <p style={{
+          marginTop: '1.75rem',
+          marginBottom: 0,
+          textAlign: 'center',
+          fontSize: 12,
+          color: '#94a3b8'
+        }}>
+          Acceso protegido y cifrado
+        </p>
       </div>
     </div>
   );

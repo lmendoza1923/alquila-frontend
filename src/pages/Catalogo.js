@@ -9,17 +9,17 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 const s = {
   page: { maxWidth: 1200, margin: '0 auto', padding: '2rem' },
-  filtros: { display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem', alignItems: 'center' },
-  input: { padding: '8px 12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.5rem' },
-  card: { background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', transition: 'transform .2s', display: 'flex', flexDirection: 'column' },
-  imgBox: { height: 180, background: '#e8eaf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, position: 'relative' },
-  body: { padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' },
-  nombre: { fontWeight: 600, fontSize: '1.05rem', marginBottom: 4, color: '#1a1a2e' },
-  precio: { color: '#4a6cf7', fontWeight: 700, fontSize: '1.15rem' },
-  btn: { width: '100%', marginTop: '0.75rem', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontWeight: 600 },
-  tabBtn: (active) => ({ padding: '10px 24px', borderRadius: 8, border: 'none', background: active ? '#4a6cf7' : '#e8eaf6', color: active ? '#fff' : '#555', cursor: 'pointer', fontWeight: 600, fontSize: 14 }),
-  label: { fontSize: 11, color: '#666', marginBottom: 3, display: 'block' }
+  filtros: { display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '2rem', alignItems: 'center' },
+  input: { padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', background: '#fff', color: '#0f172a' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' },
+  card: { background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.05)', transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)', display: 'flex', flexDirection: 'column' },
+  imgBox: { height: 180, background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 54, position: 'relative' },
+  body: { padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' },
+  nombre: { fontWeight: 700, fontSize: '1.05rem', marginBottom: 4, color: '#0f172a', letterSpacing: '-0.01em' },
+  precio: { color: '#4f46e5', fontWeight: 800, fontSize: '1.2rem', letterSpacing: '-0.02em' },
+  btn: { width: '100%', marginTop: '0.75rem', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 14px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)', transition: 'all 0.15s ease' },
+  tabBtn: (active) => ({ padding: '10px 22px', borderRadius: 12, border: 'none', background: active ? '#4f46e5' : '#f1f5f9', color: active ? '#fff' : '#64748b', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: active ? '0 4px 12px rgba(79, 70, 229, 0.25)' : 'none', transition: 'all 0.15s ease' }),
+  label: { fontSize: 11, color: '#64748b', marginBottom: 3, display: 'block', fontWeight: 600 }
 };
 
 export default function Catalogo() {

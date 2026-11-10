@@ -1,4 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 /* Estilos globales y optimización para dispositivos móviles */
+:root {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --bg-main: #f8fafc;
+  --surface: #ffffff;
+  --border-subtle: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
+}
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
@@ -7,54 +27,110 @@
 html, body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  background-color: #f7f8fc;
-  color: #1e293b;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
   overflow-x: hidden;
   width: 100%;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar suave para tablas y contenedores horizontales */
+/* Scrollbar suave para tablas y contenedores */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(0, 0, 0, 0.03);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+  background: rgba(100, 116, 139, 0.25);
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(100, 116, 139, 0.45);
 }
 
-/* Optimización para dispositivos móviles (smartphones y tablets) */
+/* Efectos visuales modernos */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.modern-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s;
+}
+
+.modern-card:hover {
+  border-color: #cbd5e1;
+}
+
+/* Inputs y controles interactivos modernos */
+input, select, textarea {
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15) !important;
+}
+
+button {
+  font-family: inherit;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:active {
+  transform: scale(0.985);
+}
+
+/* Badges y estados con estilo moderno */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Tablas modernas */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Optimización para dispositivos móviles */
 @media (max-width: 768px) {
-  /* Evitar zoom automático al pulsar inputs en iOS Safari */
   input, select, textarea {
     font-size: 16px !important;
   }
 
-  /* Reducir los padding excesivos de páginas para aprovechar el ancho total */
   [style*="padding: 2rem"], 
   [style*="padding: 2rem 1rem"], 
   .admin-page-container {
     padding: 1rem 0.75rem !important;
   }
 
-  /* Grilla de productos responsiva */
   [style*="minmax(260px, 1fr)"] {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
     gap: 0.75rem !important;
   }
 
-  /* Modales perfectamente adaptados a la pantalla del móvil */
   .modal-dialog-responsive,
   [style*="width: 90%"],
   [style*="width: 95%"] {
@@ -65,7 +141,6 @@ html, body {
     max-height: 92vh !important;
   }
 
-  /* Las tablas se adaptan con desplazamiento horizontal táctil suave */
   table:not(.contrato-table) {
     display: block;
     width: 100% !important;
@@ -73,7 +148,6 @@ html, body {
     -webkit-overflow-scrolling: touch !important;
   }
 
-  /* Contenedores flexibles apilables en móvil */
   .mobile-stack {
     flex-direction: column !important;
     align-items: stretch !important;
