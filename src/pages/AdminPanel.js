@@ -1182,10 +1182,16 @@ export default function AdminPanel() {
   const [loadingTerminos, setLoadingTerminos] = useState(false);
 
   // Estados para Configuración de Marca y Estética
-  const { config, saveConfig } = useConfig();
+  const { config, saveConfig, refreshConfig } = useConfig();
   const [configForm, setConfigForm] = useState(config || DEFAULT_CONFIG);
   const [guardandoConfig, setGuardandoConfig] = useState(false);
   const [logoTipo, setLogoTipo] = useState('emoji'); // 'emoji' | 'url'
+
+  useEffect(() => {
+    if (typeof refreshConfig === 'function') {
+      refreshConfig();
+    }
+  }, [tab]);
 
   useEffect(() => {
     if (config) {

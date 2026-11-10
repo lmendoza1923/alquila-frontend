@@ -82,12 +82,16 @@ export function ConfigProvider({ children }) {
 
   const fetchConfig = async () => {
     try {
-      const { data } = await api.get('/configuracion');
+      const { data } = await api.get(`/configuracion?t=${Date.now()}`);
       if (data && typeof data === 'object') {
         const merged = { ...DEFAULT_CONFIG, ...data };
         merged.metodos_pago = normalizarMetodosPago(merged.metodos_pago);
         setConfig(merged);
-        localStorage.setItem('app_config', JSON.stringify(merged));
+        try {
+          localStorage.setItem('app_config', JSON.stringify(merged));
+        } catch (storageErr) {
+          console.warn('No se pudo guardar en localStorage (cuota excedida?):', storageErr);
+        }
       }
     } catch (err) {
       console.warn('No se pudo conectar a /api/configuracion, usando caché/default:', err);

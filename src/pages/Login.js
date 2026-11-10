@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useConfig } from '../context/ConfigContext';
 import toast from 'react-hot-toast';
 
 const s = {
@@ -15,6 +16,7 @@ export default function Login() {
   const [modo, setModo] = useState('login');
   const [form, setForm] = useState({ nombre: '', email: '', password: '', telefono: '' });
   const { login, register } = useAuth();
+  const { config } = useConfig();
   const navigate = useNavigate();
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -39,10 +41,28 @@ export default function Login() {
     }
   };
 
+  const colorPrimario = config?.color_primario || '#4a6cf7';
+
   return (
     <div style={s.page}>
       <div style={s.card}>
-        <h2 style={{ textAlign: 'center', marginTop: 0, marginBottom: '1.5rem' }}>Acceder</h2>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          {config?.logo_url && (config.logo_url.startsWith('http') || config.logo_url.startsWith('data:')) ? (
+            <img
+              src={config.logo_url}
+              alt="Logo"
+              style={{ maxHeight: 72, maxWidth: 170, objectFit: 'contain', marginBottom: 8, borderRadius: 8 }}
+            />
+          ) : (
+            <div style={{ fontSize: 44, marginBottom: 4 }}>{config?.logo_url || '🎉'}</div>
+          )}
+          <h2 style={{ margin: '6px 0 2px', color: '#1a1a2e', fontSize: '1.35rem', fontWeight: 800 }}>
+            {config?.nombre_empresa || 'Alquila tu Party'}
+          </h2>
+          {config?.eslogan && (
+            <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 13 }}>{config.eslogan}</p>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
           <button style={s.tab(modo === 'login')} onClick={() => setModo('login')}>Iniciar sesión</button>
           <button style={s.tab(modo === 'register')} onClick={() => setModo('register')}>Registrarse</button>

@@ -241,7 +241,7 @@ function Navbar({ isMobile, mobileMenuOpen, setMobileMenuOpen }) {
           {/* Logo y Nombre al centro */}
           <Link to="/" style={{ color: '#fff', fontWeight: 700, fontSize: '1.05rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
             {config?.logo_url && (config.logo_url.startsWith('http') || config.logo_url.startsWith('data:')) ? (
-              <img src={config.logo_url} alt="Logo" style={{ maxHeight: 24, maxWidth: 24, objectFit: 'contain', borderRadius: 4 }} />
+              <img src={config.logo_url} alt="Logo" style={{ maxHeight: 32, maxWidth: 32, objectFit: 'contain', borderRadius: 6 }} />
             ) : (
               <span>{config?.logo_url || '🎉'}</span>
             )}
@@ -309,7 +309,7 @@ function Navbar({ isMobile, mobileMenuOpen, setMobileMenuOpen }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontWeight: 700, fontSize: '1.05rem' }}>
                   {config?.logo_url && (config.logo_url.startsWith('http') || config.logo_url.startsWith('data:')) ? (
-                    <img src={config.logo_url} alt="Logo" style={{ maxHeight: 24, maxWidth: 24, objectFit: 'contain', borderRadius: 4 }} />
+                    <img src={config.logo_url} alt="Logo" style={{ maxHeight: 32, maxWidth: 32, objectFit: 'contain', borderRadius: 6 }} />
                   ) : (
                     <span>{config?.logo_url || '🎉'}</span>
                   )}
@@ -373,7 +373,7 @@ function Navbar({ isMobile, mobileMenuOpen, setMobileMenuOpen }) {
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2.5rem', width: '100%' }}>
         <Link to="/" style={{ color: '#fff', fontWeight: 700, fontSize: '1.15rem', textDecoration: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
           {config?.logo_url && (config.logo_url.startsWith('http') || config.logo_url.startsWith('data:')) ? (
-            <img src={config.logo_url} alt="Logo" style={{ maxHeight: 28, maxWidth: 28, objectFit: 'contain', borderRadius: 4 }} />
+            <img src={config.logo_url} alt="Logo" style={{ maxHeight: 36, maxWidth: 36, objectFit: 'contain', borderRadius: 6 }} />
           ) : (
             <span>{config?.logo_url || '🎉'}</span>
           )}
