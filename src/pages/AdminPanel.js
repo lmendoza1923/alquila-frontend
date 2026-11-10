@@ -5652,7 +5652,7 @@ export default function AdminPanel() {
                 <div style={{ background: '#e2e8f0', padding: '6px 10px', borderRadius: 6, fontFamily: 'monospace', fontSize: 12, marginTop: 6, color: '#0f172a', wordBreak: 'break-all' }}>
                   {window.location.origin.includes('localhost')
                     ? 'http://localhost:4000/api/google-calendar/callback'
-                    : 'https://alquila-backend.onrender.com/api/google-calendar/callback'}
+                    : `${window.location.origin}/api/google-calendar/callback`}
                 </div>
               </div>
 
