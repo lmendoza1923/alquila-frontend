@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import { useConfig, DEFAULT_CONFIG, normalizarMetodosPago, formatearMetodosPagoTexto } from '../context/ConfigContext';
 import ClientesAdmin from './ClientesAdmin';
 import SucursalesAdmin from './SucursalesAdmin';
@@ -1286,6 +1287,65 @@ export default function AdminPanel() {
     if (window.confirm('¿Restablecer la configuración y colores a los valores por defecto?')) {
       setConfigForm(DEFAULT_CONFIG);
       setLogoTipo('emoji');
+    }
+  };
+
+  // Estados y funciones para Cambio de Contraseña
+  const { user } = useAuth();
+  const [usuariosLista, setUsuariosLista] = useState([]);
+  const [usuarioTargetId, setUsuarioTargetId] = useState('');
+  const [passwordForm, setPasswordForm] = useState({
+    passwordActual: '',
+    nuevaPassword: '',
+    confirmarPassword: ''
+  });
+  const [mostrarPwdActual, setMostrarPwdActual] = useState(false);
+  const [mostrarPwdNueva, setMostrarPwdNueva] = useState(false);
+  const [mostrarPwdConfirmar, setMostrarPwdConfirmar] = useState(false);
+  const [cambiandoPassword, setCambiandoPassword] = useState(false);
+
+  useEffect(() => {
+    if (tab === 'configuracion') {
+      api.get('/auth/usuarios')
+        .then(res => {
+          if (Array.isArray(res.data)) {
+            setUsuariosLista(res.data);
+          }
+        })
+        .catch(err => console.warn('No se pudo cargar lista de usuarios:', err));
+    }
+  }, [tab]);
+
+  const handleCambiarPassword = async (e) => {
+    e.preventDefault();
+    if (!passwordForm.nuevaPassword || passwordForm.nuevaPassword.trim().length < 6) {
+      return toast.error('La nueva contraseña debe tener al menos 6 caracteres');
+    }
+    if (passwordForm.nuevaPassword !== passwordForm.confirmarPassword) {
+      return toast.error('Las contraseñas no coinciden');
+    }
+
+    const targetId = usuarioTargetId || user?.id;
+    const esPropia = !targetId || targetId === user?.id;
+
+    if (esPropia && !passwordForm.passwordActual) {
+      return toast.error('Debes ingresar tu contraseña actual');
+    }
+
+    setCambiandoPassword(true);
+    try {
+      await api.put('/auth/change-password', {
+        passwordActual: passwordForm.passwordActual,
+        nuevaPassword: passwordForm.nuevaPassword,
+        usuario_id: targetId
+      });
+      toast.success('¡Contraseña actualizada con éxito!');
+      setPasswordForm({ passwordActual: '', nuevaPassword: '', confirmarPassword: '' });
+    } catch (err) {
+      const msg = err.response?.data?.error || err.response?.data?.message || err.message || 'Error al cambiar contraseña';
+      toast.error(msg);
+    } finally {
+      setCambiandoPassword(false);
     }
   };
 
@@ -4973,6 +5033,207 @@ export default function AdminPanel() {
                   style={{ padding: '12px 18px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
                 >
                   Restablecer
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* ── Seguridad y Cambio de Contraseña de Usuarios ── */}
+          <div style={{ background: '#fff', borderRadius: 12, padding: '1.75rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem', borderBottom: '1px solid #f0f0f0', paddingBottom: '1rem' }}>
+              <span style={{ fontSize: 24 }}>🔐</span>
+              <div>
+                <h2 style={{ margin: '0 0 4px 0', fontSize: '1.25rem', color: '#1a1a2e' }}>Seguridad y Cambio de Contraseña</h2>
+                <p style={{ margin: 0, color: '#64748b', fontSize: 13 }}>
+                  Actualiza tu contraseña de acceso o asigna una nueva contraseña a los usuarios del sistema.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleCambiarPassword} style={{ maxWidth: 560, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Selector de Usuario si es Admin */}
+              {user?.rol === 'admin' && usuariosLista.length > 0 && (
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                    Usuario a Modificar
+                  </label>
+                  <select
+                    value={usuarioTargetId || user?.id || ''}
+                    onChange={e => {
+                      setUsuarioTargetId(e.target.value);
+                      setPasswordForm({ passwordActual: '', nuevaPassword: '', confirmarPassword: '' });
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 8,
+                      border: '1px solid #cbd5e1',
+                      background: '#f8fafc',
+                      fontSize: 14,
+                      color: '#0f172a'
+                    }}
+                  >
+                    <option value={user?.id}>Mi Cuenta: {user?.nombre} ({user?.email})</option>
+                    {usuariosLista.filter(u => u.id !== user?.id).map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.nombre} ({u.email}) - Rol: {u.rol}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Contraseña actual (solo para su propia cuenta) */}
+              {(!usuarioTargetId || usuarioTargetId === user?.id) && (
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                    Contraseña Actual *
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={mostrarPwdActual ? 'text' : 'password'}
+                      value={passwordForm.passwordActual}
+                      onChange={e => setPasswordForm({ ...passwordForm, passwordActual: e.target.value })}
+                      placeholder="Ingresa tu contraseña actual"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px 42px 10px 12px',
+                        borderRadius: 8,
+                        border: '1px solid #cbd5e1',
+                        fontSize: 14,
+                        boxSizing: 'border-box',
+                        background: '#f8fafc'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMostrarPwdActual(v => !v)}
+                      style={{
+                        position: 'absolute',
+                        right: 8,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: '#64748b',
+                        cursor: 'pointer',
+                        padding: 4
+                      }}
+                      title={mostrarPwdActual ? 'Ocultar' : 'Mostrar'}
+                    >
+                      {mostrarPwdActual ? '🙈' : '👁️'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Nueva Contraseña */}
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                  Nueva Contraseña * (mínimo 6 caracteres)
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={mostrarPwdNueva ? 'text' : 'password'}
+                    value={passwordForm.nuevaPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, nuevaPassword: e.target.value })}
+                    placeholder="••••••••••••"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px 42px 10px 12px',
+                      borderRadius: 8,
+                      border: '1px solid #cbd5e1',
+                      fontSize: 14,
+                      boxSizing: 'border-box',
+                      background: '#f8fafc'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarPwdNueva(v => !v)}
+                    style={{
+                      position: 'absolute',
+                      right: 8,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      padding: 4
+                    }}
+                    title={mostrarPwdNueva ? 'Ocultar' : 'Mostrar'}
+                  >
+                    {mostrarPwdNueva ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirmar Nueva Contraseña */}
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                  Confirmar Nueva Contraseña *
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={mostrarPwdConfirmar ? 'text' : 'password'}
+                    value={passwordForm.confirmarPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, confirmarPassword: e.target.value })}
+                    placeholder="••••••••••••"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px 42px 10px 12px',
+                      borderRadius: 8,
+                      border: '1px solid #cbd5e1',
+                      fontSize: 14,
+                      boxSizing: 'border-box',
+                      background: '#f8fafc'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarPwdConfirmar(v => !v)}
+                    style={{
+                      position: 'absolute',
+                      right: 8,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      padding: 4
+                    }}
+                    title={mostrarPwdConfirmar ? 'Ocultar' : 'Mostrar'}
+                  >
+                    {mostrarPwdConfirmar ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={cambiandoPassword}
+                  style={{
+                    padding: '10px 22px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: configForm.color_primario || '#4a6cf7',
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: cambiandoPassword ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8
+                  }}
+                >
+                  {cambiandoPassword ? 'Actualizando...' : '🔑 Actualizar Contraseña'}
                 </button>
               </div>
             </form>
