@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useConfig, DEFAULT_CONFIG, normalizarMetodosPago, formatearMetodosPagoTexto } from '../context/ConfigContext';
 import ClientesAdmin from './ClientesAdmin';
 import SucursalesAdmin from './SucursalesAdmin';
+import EntregasAdmin from './EntregasAdmin';
 
 const estadoColor = { pendiente: '#f59e0b', confirmada: '#3b82f6', activa: '#22c55e', completada: '#6b7280', cancelada: '#ef4444' };
 
@@ -2377,11 +2378,12 @@ export default function AdminPanel() {
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
-    <div className="admin-page-container" style={{ maxWidth: (tab === 'clientes' || tab === 'reservas') ? 1280 : 1100, margin: '0 auto', padding: isMobile ? '1rem 0.75rem' : '2rem', width: '100%', boxSizing: 'border-box' }}>
+    <div className="admin-page-container" style={{ maxWidth: (tab === 'clientes' || tab === 'reservas' || tab === 'entregas') ? 1280 : 1100, margin: '0 auto', padding: isMobile ? '1rem 0.75rem' : '2rem', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <h1 style={{ margin: 0, fontSize: isMobile ? '1.35rem' : '1.8rem', color: '#1e293b' }}>
           {tab === 'dashboard' ? 'Panel de administración' : 
            tab === 'reservas' ? 'Gestión de Reservas' : 
+           tab === 'entregas' ? 'Control y Despacho de Entregas' : 
            tab === 'clientes' ? 'Gestión de Clientes' : 
            tab === 'sucursales' ? 'Gestión de Sucursales y Distribución' :
            tab === 'mobiliario' ? 'Inventario de Mobiliario' : 
@@ -2432,6 +2434,7 @@ export default function AdminPanel() {
         {[
           { id: 'dashboard', label: 'Resumen', icon: '📊' },
           { id: 'reservas', label: 'Reservas', icon: '📋' },
+          { id: 'entregas', label: 'Entregas', icon: '🚚' },
           { id: 'clientes', label: 'Clientes', icon: '👥', badge: nuevosClientesForm },
           { id: 'sucursales', label: 'Sucursales', icon: '🏢' },
           { id: 'mobiliario', label: 'Mobiliario', icon: '🪑' },
@@ -3793,6 +3796,26 @@ export default function AdminPanel() {
           </div>
         );
       })()}
+
+      {/* ── Entregas (Control de Carga y Despacho) ── */}
+      {tab === 'entregas' && (
+        <EntregasAdmin
+          reservas={reservas}
+          muebles={muebles}
+          combos={combos}
+          config={config}
+          terminos={terminos}
+          onAbrirEditarReserva={abrirEditarReserva}
+          onAbrirPagos={abrirPagos}
+          generarHojaEntregaPDF={generarHojaEntregaPDF}
+          onRefresh={() => {
+            api.get('/reservas').then(r => setReservas(r.data)).catch(() => {});
+            api.get('/combos?todos=true').then(r => setCombos(r.data)).catch(() => {});
+            api.get('/muebles?todos=true').then(r => setMuebles(r.data)).catch(() => {});
+            toast.success('Datos actualizados');
+          }}
+        />
+      )}
 
       {/* ── Clientes ── */}
       {tab === 'clientes' && (

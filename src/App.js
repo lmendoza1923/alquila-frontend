@@ -127,6 +127,14 @@ const NavIcon = ({ name, size = 18, color = 'currentColor' }) => {
         <line x1="18" y1="6" x2="6" y2="18" />
         <line x1="6" y1="6" x2="18" y2="18" />
       </svg>
+    ),
+    truck: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1" y="3" width="15" height="13" rx="1" />
+        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+        <circle cx="5.5" cy="18.5" r="2.5" />
+        <circle cx="18.5" cy="18.5" r="2.5" />
+      </svg>
     )
   };
   return icons[name] || null;
@@ -224,6 +232,11 @@ function Navbar({ isMobile, mobileMenuOpen, setMobileMenuOpen }) {
           <Link to="/admin?tab=reservas" style={linkStyle(isActive('/admin', 'reservas'), true)} onClick={() => isMobile && setMobileMenuOpen(false)}>
             <NavIcon name="calendar" color={isActive('/admin', 'reservas') ? '#818cf8' : '#94a3b8'} />
             <span>Reservas</span>
+          </Link>
+
+          <Link to="/admin?tab=entregas" style={linkStyle(isActive('/admin', 'entregas'), true)} onClick={() => isMobile && setMobileMenuOpen(false)}>
+            <NavIcon name="truck" color={isActive('/admin', 'entregas') ? '#818cf8' : '#94a3b8'} />
+            <span>Entregas</span>
           </Link>
 
           <Link to="/admin?tab=clientes" style={linkStyle(isActive('/admin', 'clientes'), true)} onClick={() => isMobile && setMobileMenuOpen(false)}>
@@ -660,6 +673,7 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/mis-reservas" element={<ProtectedRoute><MisReservas /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/entregas" element={<AdminRoute><Navigate to="/admin?tab=entregas" replace /></AdminRoute>} />
           <Route path="/clientes" element={<AdminRoute><Navigate to="/admin?tab=clientes" replace /></AdminRoute>} />
           <Route path="/sucursales" element={<AdminRoute><Navigate to="/admin?tab=sucursales" replace /></AdminRoute>} />
           <Route path="/formulario-cliente" element={<FormularioCliente />} />
