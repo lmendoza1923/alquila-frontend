@@ -3009,7 +3009,7 @@ export default function AdminPanel() {
               </div>
             )}
 
-            {/* ── 2. VISTA DÍA ── */}
+            {/* ── 2. VISTA DÍA (Compacta y Optimizada) ── */}
             {vistaReservas === 'dia' && (() => {
               const diaStr = formatYYYYMMDD(fechaRefDia);
               const esHoy = diaStr === todayStr;
@@ -3025,43 +3025,43 @@ export default function AdminPanel() {
               const pendientesCount = reservasDelDia.filter(r => r.estado === 'pendiente').length;
 
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  {/* Navegador de Día */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* Navegador de Día Compacto */}
                   <div style={{
                     background: '#fff',
-                    borderRadius: 12,
-                    padding: '14px 20px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    borderRadius: 10,
+                    padding: '8px 14px',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     flexWrap: 'wrap',
-                    gap: '12px'
+                    gap: '8px'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                       <button
                         type="button"
                         onClick={() => navegarDia(-1)}
-                        style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', color: '#333', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+                        style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}
                       >
-                        ◀ Anterior
+                        ◀ Ant
                       </button>
                       <button
                         type="button"
                         onClick={() => setFechaRefDia(new Date())}
-                        style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #4a6cf7', background: esHoy ? '#4a6cf7' : '#eef2ff', color: esHoy ? '#fff' : '#4a6cf7', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}
+                        style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #4a6cf7', background: esHoy ? '#4a6cf7' : '#eef2ff', color: esHoy ? '#fff' : '#4a6cf7', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}
                       >
                         Hoy
                       </button>
                       <button
                         type="button"
                         onClick={() => navegarDia(1)}
-                        style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', color: '#333', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+                        style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}
                       >
-                        Siguiente ▶
+                        Sig ▶
                       </button>
 
-                      {/* Selector directo de fecha */}
+                      {/* Selector directo de fecha compacto */}
                       <input
                         type="date"
                         value={diaStr}
@@ -3072,81 +3072,71 @@ export default function AdminPanel() {
                           }
                         }}
                         style={{
-                          padding: '6px 12px',
-                          borderRadius: 8,
+                          padding: '4px 8px',
+                          borderRadius: 6,
                           border: '1px solid #cbd5e1',
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: 600,
                           color: '#1e293b',
                           background: '#f8fafc',
                           cursor: 'pointer'
                         }}
-                        title="Seleccionar fecha específica en el calendario"
+                        title="Seleccionar fecha específica"
                       />
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#1a1a2e' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1a1a2e' }}>
                         {dayNamesSpanish[fechaRefDia.getDay()]}, {fechaRefDia.getDate()} de {monthNamesSpanish[fechaRefDia.getMonth()]} {fechaRefDia.getFullYear()}
                       </div>
                       {esHoy && (
-                        <span style={{ background: '#4a6cf7', color: '#fff', fontSize: '11px', fontWeight: 800, padding: '3px 9px', borderRadius: 12 }}>
+                        <span style={{ background: '#4a6cf7', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: 8 }}>
                           HOY
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Resumen KPI del Día */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-                    <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 10, background: '#eef2ff', color: '#4a6cf7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                        📋
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Reservas del Día</div>
-                        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>{reservasDelDia.length}</div>
-                      </div>
+                  {/* Resumen KPI del Día en Barra Compacta */}
+                  <div style={{
+                    background: '#fff',
+                    borderRadius: 10,
+                    padding: '8px 14px',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    fontSize: 12
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>📋 Reservas:</span>
+                      <strong style={{ fontSize: 14, color: '#0f172a' }}>{reservasDelDia.length}</strong>
                     </div>
 
-                    <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 10, background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                        💰
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Total Facturado</div>
-                        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>${totalFacturadoDia.toFixed(2)}</div>
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>💰 Facturado:</span>
+                      <strong style={{ fontSize: 14, color: '#10b981' }}>${totalFacturadoDia.toFixed(2)}</strong>
                     </div>
 
-                    <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 10, background: '#fff7ed', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                        ⏳
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Saldo por Cobrar</div>
-                        <div style={{ fontSize: 20, fontWeight: 800, color: saldoPendienteDia > 0 ? '#ea580c' : '#10b981' }}>${saldoPendienteDia.toFixed(2)}</div>
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>⏳ Por Cobrar:</span>
+                      <strong style={{ fontSize: 14, color: saldoPendienteDia > 0 ? '#ea580c' : '#10b981' }}>
+                        ${saldoPendienteDia.toFixed(2)}
+                      </strong>
                     </div>
 
-                    <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ fontSize: 12, color: '#475569', display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>🟢 Activas:</span> <strong style={{ color: '#16a34a' }}>{activasCount}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>🔵 Confirmadas:</span> <strong style={{ color: '#2563eb' }}>{confirmadasCount}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>🟡 Pendientes:</span> <strong style={{ color: '#d97706' }}>{pendientesCount}</strong>
-                        </div>
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#64748b' }}>
+                      <span>🟢 Activas: <strong style={{ color: '#16a34a' }}>{activasCount}</strong></span>
+                      <span>🔵 Confirmadas: <strong style={{ color: '#2563eb' }}>{confirmadasCount}</strong></span>
+                      <span>🟡 Pendientes: <strong style={{ color: '#d97706' }}>{pendientesCount}</strong></span>
                     </div>
                   </div>
 
-                  {/* Listado / Tarjetas de Reservas del Día */}
+                  {/* Listado / Cuadros de Reservas del Día Compactos */}
                   {reservasDelDia.length > 0 ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: '10px' }}>
                       {reservasDelDia.map(r => {
                         const totalPagos = (r.pagos || []).reduce((s, p) => s + parseFloat(p.monto || 0), 0);
                         const saldo = Math.max(0, parseFloat(r.total || 0) - totalPagos);
@@ -3156,169 +3146,160 @@ export default function AdminPanel() {
                             key={r.id}
                             style={{
                               background: '#fff',
-                              borderRadius: 14,
-                              padding: '18px',
-                              boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
-                              borderLeft: `6px solid ${estadoColor[r.estado] || '#4a6cf7'}`,
+                              borderRadius: 10,
+                              padding: '10px 12px',
+                              boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                              borderLeft: `4px solid ${estadoColor[r.estado] || '#4a6cf7'}`,
                               display: 'flex',
                               flexDirection: 'column',
-                              gap: '12px'
+                              gap: '6px',
+                              boxSizing: 'border-box'
                             }}
                           >
-                            {/* Cabecera de la tarjeta */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                              <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                                  <span style={{ fontWeight: 800, fontSize: 16, color: '#0f172a' }}>
+                            {/* Cabecera del cuadro */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span style={{ fontWeight: 700, fontSize: 13, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {r.alias_cliente ? `🎉 ${r.alias_cliente}` : (r.nombre_cliente || 'Reserva')}
                                   </span>
-                                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>
-                                    #{r.id.slice(0, 8).toUpperCase()}
+                                  <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, flexShrink: 0 }}>
+                                    #{r.id.slice(0, 6).toUpperCase()}
                                   </span>
                                 </div>
-                                <div style={{ fontSize: 13, color: '#475569', fontWeight: 600 }}>
-                                  👤 {r.nombre_cliente || 'Sin cliente asignado'}
+                                <div style={{ fontSize: 11, color: '#475569', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  👤 {r.nombre_cliente || 'Sin cliente'}
                                 </div>
                               </div>
                               <span style={{
                                 background: (estadoColor[r.estado] || '#888') + '22',
                                 color: estadoColor[r.estado] || '#888',
-                                fontSize: 11,
+                                fontSize: 10,
                                 fontWeight: 800,
-                                padding: '3px 10px',
-                                borderRadius: 20,
-                                textTransform: 'capitalize'
+                                padding: '2px 7px',
+                                borderRadius: 10,
+                                textTransform: 'capitalize',
+                                flexShrink: 0
                               }}>
                                 {r.estado}
                               </span>
                             </div>
 
-                            {/* Detalles de contacto y entrega */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, background: '#f8fafc', padding: 10, borderRadius: 8, fontSize: 12 }}>
-                              <div>
-                                <span style={{ color: '#64748b', display: 'block', fontSize: 11 }}>📞 Teléfono</span>
+                            {/* Detalles de contacto y entrega compactos */}
+                            <div style={{ background: '#f8fafc', padding: '6px 8px', borderRadius: 6, fontSize: 11, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 {r.telefono_cliente ? (
                                   <a
                                     href={`https://wa.me/${r.telefono_cliente.replace(/\D/g, '')}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    style={{ color: '#16a34a', fontWeight: 700, textDecoration: 'none' }}
+                                    style={{ color: '#16a34a', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 3 }}
                                   >
                                     💬 {r.telefono_cliente}
                                   </a>
-                                ) : <span style={{ color: '#94a3b8' }}>-</span>}
-                              </div>
-                              <div>
-                                <span style={{ color: '#64748b', display: 'block', fontSize: 11 }}>🗓️ Período</span>
-                                <strong style={{ color: '#1e293b' }}>
-                                  {formatShortDate(r.fecha_inicio)} {r.fecha_fin && r.fecha_fin !== r.fecha_inicio ? `al ${formatShortDate(r.fecha_fin)}` : ''}
-                                </strong>
+                                ) : <span style={{ color: '#94a3b8' }}>Sin tel</span>}
+                                <span style={{ color: '#475569', fontWeight: 600 }}>
+                                  🗓️ {formatShortDate(r.fecha_inicio)} {r.fecha_fin && r.fecha_fin !== r.fecha_inicio ? `- ${formatShortDate(r.fecha_fin)}` : ''}
+                                </span>
                               </div>
                               {r.direccion_entrega && (
-                                <div style={{ gridColumn: 'span 2' }}>
-                                  <span style={{ color: '#64748b', display: 'block', fontSize: 11 }}>📍 Entrega</span>
-                                  <span style={{ color: '#1e293b', fontWeight: 500 }}>{r.direccion_entrega}</span>
+                                <div style={{ color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.direccion_entrega}>
+                                  📍 {r.direccion_entrega}
                                 </div>
                               )}
                               {r.notas && (
-                                <div style={{ gridColumn: 'span 2' }}>
-                                  <span style={{ color: '#64748b', display: 'block', fontSize: 11 }}>📝 Notas</span>
-                                  <span style={{ color: '#64748b', fontStyle: 'italic' }}>{r.notas}</span>
+                                <div style={{ color: '#64748b', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.notas}>
+                                  📝 {r.notas}
                                 </div>
                               )}
                             </div>
 
-                            {/* Artículos de la reserva */}
+                            {/* Artículos de la reserva compactos */}
                             {((r.items && r.items.length > 0) || (r.combos && r.combos.length > 0)) && (
-                              <div style={{ fontSize: 12, borderTop: '1px dashed #e2e8f0', paddingTop: 8 }}>
-                                <div style={{ fontWeight: 700, color: '#334155', marginBottom: 4 }}>📦 Artículos incluidos:</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                  {(r.combos || []).map((c, cIdx) => (
-                                    <span key={`combo-${cIdx}`} style={{ background: '#fdf4ff', color: '#a855f7', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
-                                      🎁 {c.combo_nombre || c.nombre || 'Combo'} ({c.cantidad || 1})
-                                    </span>
-                                  ))}
-                                  {(r.items || []).map((it, itIdx) => (
-                                    <span key={`item-${itIdx}`} style={{ background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 500 }}>
-                                      🪑 {it.mueble_nombre || it.nombre || 'Artículo'} x{it.cantidad}
-                                    </span>
-                                  ))}
-                                </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, borderTop: '1px dashed #f1f5f9', paddingTop: 4 }}>
+                                {(r.combos || []).map((c, cIdx) => (
+                                  <span key={`combo-${cIdx}`} style={{ background: '#fdf4ff', color: '#a855f7', padding: '1px 5px', borderRadius: 4, fontSize: 10, fontWeight: 600 }}>
+                                    🎁 {c.combo_nombre || c.nombre || 'Combo'} ({c.cantidad || 1})
+                                  </span>
+                                ))}
+                                {(r.items || []).map((it, itIdx) => (
+                                  <span key={`item-${itIdx}`} style={{ background: '#f1f5f9', color: '#475569', padding: '1px 5px', borderRadius: 4, fontSize: 10, fontWeight: 500 }}>
+                                    🪑 {it.mueble_nombre || it.nombre || 'Art.'} x{it.cantidad}
+                                  </span>
+                                ))}
                               </div>
                             )}
 
-                            {/* Total y saldos */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
+                            {/* Total y saldos compactos */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: 4, fontSize: 11 }}>
                               <div>
-                                <span style={{ fontSize: 11, color: '#64748b', display: 'block' }}>Total Reserva</span>
-                                <strong style={{ fontSize: 16, color: '#0f172a' }}>${parseFloat(r.total || 0).toFixed(2)}</strong>
+                                <span style={{ color: '#64748b', marginRight: 4 }}>Total:</span>
+                                <strong style={{ fontSize: 13, color: '#0f172a' }}>${parseFloat(r.total || 0).toFixed(0)}</strong>
                               </div>
-                              <div style={{ textAlign: 'right' }}>
-                                <span style={{ fontSize: 11, color: '#64748b', display: 'block' }}>
-                                  {saldo > 0 ? 'Saldo Pendiente' : 'Completamente Pagado'}
-                                </span>
-                                <strong style={{ fontSize: 14, color: saldo > 0 ? '#ea580c' : '#16a34a' }}>
-                                  {saldo > 0 ? `$${saldo.toFixed(2)}` : '✓ Pagado'}
+                              <div>
+                                <span style={{ color: '#64748b', marginRight: 4 }}>Saldo:</span>
+                                <strong style={{ fontSize: 11, color: saldo > 0 ? '#ea580c' : '#16a34a' }}>
+                                  {saldo > 0 ? `$${saldo.toFixed(0)}` : '✓ Pagado'}
                                 </strong>
                               </div>
                             </div>
 
-                            {/* Acciones de la reserva */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
+                            {/* Botones de acción compactos en una sola fila */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, borderTop: '1px solid #f1f5f9', paddingTop: 6 }}>
                               <button
                                 onClick={() => abrirEditarReserva(r)}
-                                style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc', color: '#1e293b', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                style={{ padding: '4px 7px', borderRadius: 5, border: '1px solid #cbd5e1', background: '#f8fafc', color: '#1e293b', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
                                 title="Editar Reserva"
                               >
-                                ✏️ Editar
+                                ✏️
                               </button>
                               <button
                                 onClick={() => abrirPagos(r)}
-                                style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                style={{ padding: '4px 7px', borderRadius: 5, border: 'none', background: '#22c55e', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
                                 title="Ver o registrar pagos"
                               >
-                                💳 Pagos (${totalPagos.toFixed(0)})
+                                💳 ${totalPagos.toFixed(0)}
                               </button>
                               <button
                                 onClick={() => abrirContrato(r)}
-                                style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                                title="Contrato PDF"
+                                style={{ padding: '4px 7px', borderRadius: 5, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                                title="Ver Contrato PDF"
                               >
                                 📄 Contrato
                               </button>
                               <button
                                 onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config, terminos)}
-                                style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                                title="Generar Hoja de Entrega / Despacho"
+                                style={{ padding: '4px 7px', borderRadius: 5, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                                title="Hoja de Entrega / Despacho"
                               >
-                                🚚 Hoja Entrega
+                                🚚
                               </button>
                               {r.telefono_cliente && (
                                 <button
                                   onClick={() => enviarContratoPorWhatsApp(r)}
-                                  style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#25d366', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                  style={{ padding: '4px 7px', borderRadius: 5, border: 'none', background: '#25d366', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
                                   title="Enviar Contrato por WhatsApp"
                                 >
-                                  💬 WhatsApp
+                                  💬 WA
                                 </button>
                               )}
                               {r.estado !== 'cancelada' && (
                                 <button
                                   onClick={() => cambiarConfirmacionContrato(r, !r.contrato_confirmado)}
                                   style={{
-                                    padding: '6px 12px',
-                                    borderRadius: 6,
+                                    padding: '4px 7px',
+                                    borderRadius: 5,
                                     border: 'none',
                                     background: r.contrato_confirmado ? '#16a34a' : '#ef4444',
                                     color: '#fff',
-                                    fontSize: 12,
+                                    fontSize: 10,
                                     fontWeight: 700,
                                     cursor: 'pointer',
                                     marginLeft: 'auto'
                                   }}
-                                  title="Alternar estado de confirmación del contrato"
+                                  title="Alternar estado de confirmación del cliente"
                                 >
-                                  {r.contrato_confirmado ? '✓ Confirmado' : '● Pendiente'}
+                                  {r.contrato_confirmado ? '✓ Conf.' : '● Pend.'}
                                 </button>
                               )}
                             </div>
@@ -3329,52 +3310,53 @@ export default function AdminPanel() {
                   ) : (
                     <div style={{
                       background: '#fff',
-                      borderRadius: 14,
-                      padding: '3.5rem 2rem',
+                      borderRadius: 10,
+                      padding: '2rem 1.5rem',
                       textAlign: 'center',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
                     }}>
-                      <div style={{ fontSize: 44, marginBottom: 12 }}>🌴</div>
-                      <h3 style={{ margin: '0 0 6px 0', fontSize: 18, color: '#1e293b' }}>
-                        No hay reservas programadas para este día
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>🌴</div>
+                      <h3 style={{ margin: '0 0 4px 0', fontSize: 15, color: '#1e293b' }}>
+                        No hay reservas para este día
                       </h3>
-                      <p style={{ margin: '0 0 1.5rem 0', color: '#64748b', fontSize: 14 }}>
-                        El {dayNamesSpanish[fechaRefDia.getDay()]}, {fechaRefDia.getDate()} de {monthNamesSpanish[fechaRefDia.getMonth()]} {fechaRefDia.getFullYear()} se encuentra totalmente libre.
+                      <p style={{ margin: '0 0 1rem 0', color: '#64748b', fontSize: 12 }}>
+                        El {dayNamesSpanish[fechaRefDia.getDay()]}, {fechaRefDia.getDate()} de {monthNamesSpanish[fechaRefDia.getMonth()]} {fechaRefDia.getFullYear()} está libre.
                       </p>
-                      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button
                           type="button"
                           onClick={() => setFechaRefDia(new Date())}
                           style={{
-                            padding: '10px 18px',
-                            borderRadius: 8,
+                            padding: '6px 14px',
+                            borderRadius: 6,
                             border: '1px solid #cbd5e1',
                             background: '#fff',
                             color: '#334155',
                             fontWeight: 600,
+                            fontSize: 12,
                             cursor: 'pointer'
                           }}
                         >
-                          Ir al Día de Hoy
+                          Ir a Hoy
                         </button>
                         <Link
                           to="/catalogo"
                           style={{
-                            padding: '10px 20px',
-                            borderRadius: 8,
+                            padding: '6px 14px',
+                            borderRadius: 6,
                             border: 'none',
                             background: '#4a6cf7',
                             color: '#fff',
                             fontWeight: 700,
+                            fontSize: 12,
                             textDecoration: 'none',
                             cursor: 'pointer',
-                            boxShadow: '0 2px 8px rgba(74, 108, 247, 0.3)',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: 6
+                            gap: 4
                           }}
                         >
-                          ➕ Ir al Catálogo / Nueva Reserva
+                          ➕ Nueva Reserva
                         </Link>
                       </div>
                     </div>
