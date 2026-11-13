@@ -1104,8 +1104,9 @@ export default function AdminPanel() {
   const [muebles, setMuebles] = useState([]);
   const [combos, setCombos] = useState([]);
 
-  // Estados de vista y filtros de Reservas (Lista, Semana, Mes)
-  const [vistaReservas, setVistaReservas] = useState('lista'); // 'lista' | 'semana' | 'mes'
+  // Estados de vista y filtros de Reservas (Lista, Día, Semana, Mes)
+  const [vistaReservas, setVistaReservas] = useState('lista'); // 'lista' | 'dia' | 'semana' | 'mes'
+  const [fechaRefDia, setFechaRefDia] = useState(new Date());
   const [fechaRefSemana, setFechaRefSemana] = useState(new Date());
   const [fechaRefMes, setFechaRefMes] = useState(new Date());
   const [diaSeleccionadoMes, setDiaSeleccionadoMes] = useState(formatYYYYMMDD(new Date()));
@@ -2728,6 +2729,15 @@ export default function AdminPanel() {
         const mesIdx = fechaRefMes.getMonth();
         const diasCalendarioMes = getMonthCalendarMatrix(anioMes, mesIdx);
 
+        // Función de navegación de día
+        const navegarDia = (delta) => {
+          setFechaRefDia(prev => {
+            const n = new Date(prev);
+            n.setDate(n.getDate() + delta);
+            return n;
+          });
+        };
+
         // Funciones de navegación de semana
         const navegarSemana = (delta) => {
           setFechaRefSemana(prev => {
@@ -2762,7 +2772,7 @@ export default function AdminPanel() {
               flexWrap: 'wrap',
               gap: '12px'
             }}>
-              {/* 3 Iconos / Botones de Vista (Lista, Semana, Mes) */}
+              {/* 4 Iconos / Botones de Vista (Lista, Día, Semana, Mes) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f3f9', padding: '4px', borderRadius: '10px' }}>
                 <button
                   type="button"
@@ -2771,7 +2781,7 @@ export default function AdminPanel() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: '8px 18px',
+                    padding: '8px 16px',
                     borderRadius: '8px',
                     border: 'none',
                     background: vistaReservas === 'lista' ? '#4a6cf7' : 'transparent',
@@ -2790,12 +2800,36 @@ export default function AdminPanel() {
 
                 <button
                   type="button"
+                  onClick={() => setVistaReservas('dia')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: vistaReservas === 'dia' ? '#4a6cf7' : 'transparent',
+                    color: vistaReservas === 'dia' ? '#fff' : '#4b5563',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: vistaReservas === 'dia' ? '0 2px 8px rgba(74, 108, 247, 0.35)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                  title="Ver reservas por Día específico"
+                >
+                  <span style={{ fontSize: '17px' }}>📅</span>
+                  <span>Día</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setVistaReservas('semana')}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: '8px 18px',
+                    padding: '8px 16px',
                     borderRadius: '8px',
                     border: 'none',
                     background: vistaReservas === 'semana' ? '#4a6cf7' : 'transparent',
@@ -2808,7 +2842,7 @@ export default function AdminPanel() {
                   }}
                   title="Ver en formato Semana"
                 >
-                  <span style={{ fontSize: '17px' }}>📅</span>
+                  <span style={{ fontSize: '17px' }}>📆</span>
                   <span>Semana</span>
                 </button>
 
@@ -2819,7 +2853,7 @@ export default function AdminPanel() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: '8px 18px',
+                    padding: '8px 16px',
                     borderRadius: '8px',
                     border: 'none',
                     background: vistaReservas === 'mes' ? '#4a6cf7' : 'transparent',
@@ -2975,7 +3009,381 @@ export default function AdminPanel() {
               </div>
             )}
 
-            {/* ── 2. VISTA SEMANA ── */}
+            {/* ── 2. VISTA DÍA ── */}
+            {vistaReservas === 'dia' && (() => {
+              const diaStr = formatYYYYMMDD(fechaRefDia);
+              const esHoy = diaStr === todayStr;
+              const reservasDelDia = reservasFiltradas.filter(r => isReservaActiveOnDate(r, diaStr));
+              const totalFacturadoDia = reservasDelDia.reduce((sum, r) => sum + parseFloat(r.total || 0), 0);
+              const totalPagadoDia = reservasDelDia.reduce((sum, r) => {
+                const totalPagos = (r.pagos || []).reduce((pSum, p) => pSum + parseFloat(p.monto || 0), 0);
+                return sum + totalPagos;
+              }, 0);
+              const saldoPendienteDia = Math.max(0, totalFacturadoDia - totalPagadoDia);
+              const activasCount = reservasDelDia.filter(r => r.estado === 'activa').length;
+              const confirmadasCount = reservasDelDia.filter(r => r.estado === 'confirmada').length;
+              const pendientesCount = reservasDelDia.filter(r => r.estado === 'pendiente').length;
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Navegador de Día */}
+                  <div style={{
+                    background: '#fff',
+                    borderRadius: 12,
+                    padding: '14px 20px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => navegarDia(-1)}
+                        style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', color: '#333', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+                      >
+                        ◀ Anterior
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFechaRefDia(new Date())}
+                        style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #4a6cf7', background: esHoy ? '#4a6cf7' : '#eef2ff', color: esHoy ? '#fff' : '#4a6cf7', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}
+                      >
+                        Hoy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navegarDia(1)}
+                        style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', color: '#333', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+                      >
+                        Siguiente ▶
+                      </button>
+
+                      {/* Selector directo de fecha */}
+                      <input
+                        type="date"
+                        value={diaStr}
+                        onChange={e => {
+                          if (e.target.value) {
+                            const [y, m, d] = e.target.value.split('-');
+                            setFechaRefDia(new Date(Number(y), Number(m) - 1, Number(d)));
+                          }
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 8,
+                          border: '1px solid #cbd5e1',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: '#1e293b',
+                          background: '#f8fafc',
+                          cursor: 'pointer'
+                        }}
+                        title="Seleccionar fecha específica en el calendario"
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#1a1a2e' }}>
+                        {dayNamesSpanish[fechaRefDia.getDay()]}, {fechaRefDia.getDate()} de {monthNamesSpanish[fechaRefDia.getMonth()]} {fechaRefDia.getFullYear()}
+                      </div>
+                      {esHoy && (
+                        <span style={{ background: '#4a6cf7', color: '#fff', fontSize: '11px', fontWeight: 800, padding: '3px 9px', borderRadius: 12 }}>
+                          HOY
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Resumen KPI del Día */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                    <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 10, background: '#eef2ff', color: '#4a6cf7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                        📋
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Reservas del Día</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>{reservasDelDia.length}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 10, background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                        💰
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Total Facturado</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>${totalFacturadoDia.toFixed(2)}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 10, background: '#fff7ed', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                        ⏳
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Saldo por Cobrar</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: saldoPendienteDia > 0 ? '#ea580c' : '#10b981' }}>${saldoPendienteDia.toFixed(2)}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ fontSize: 12, color: '#475569', display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>🟢 Activas:</span> <strong style={{ color: '#16a34a' }}>{activasCount}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>🔵 Confirmadas:</span> <strong style={{ color: '#2563eb' }}>{confirmadasCount}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>🟡 Pendientes:</span> <strong style={{ color: '#d97706' }}>{pendientesCount}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Listado / Tarjetas de Reservas del Día */}
+                  {reservasDelDia.length > 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
+                      {reservasDelDia.map(r => {
+                        const totalPagos = (r.pagos || []).reduce((s, p) => s + parseFloat(p.monto || 0), 0);
+                        const saldo = Math.max(0, parseFloat(r.total || 0) - totalPagos);
+
+                        return (
+                          <div
+                            key={r.id}
+                            style={{
+                              background: '#fff',
+                              borderRadius: 14,
+                              padding: '18px',
+                              boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
+                              borderLeft: `6px solid ${estadoColor[r.estado] || '#4a6cf7'}`,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '12px'
+                            }}
+                          >
+                            {/* Cabecera de la tarjeta */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                                  <span style={{ fontWeight: 800, fontSize: 16, color: '#0f172a' }}>
+                                    {r.alias_cliente ? `🎉 ${r.alias_cliente}` : (r.nombre_cliente || 'Reserva')}
+                                  </span>
+                                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>
+                                    #{r.id.slice(0, 8).toUpperCase()}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: 13, color: '#475569', fontWeight: 600 }}>
+                                  👤 {r.nombre_cliente || 'Sin cliente asignado'}
+                                </div>
+                              </div>
+                              <span style={{
+                                background: (estadoColor[r.estado] || '#888') + '22',
+                                color: estadoColor[r.estado] || '#888',
+                                fontSize: 11,
+                                fontWeight: 800,
+                                padding: '3px 10px',
+                                borderRadius: 20,
+                                textTransform: 'capitalize'
+                              }}>
+                                {r.estado}
+                              </span>
+                            </div>
+
+                            {/* Detalles de contacto y entrega */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, background: '#f8fafc', padding: 10, borderRadius: 8, fontSize: 12 }}>
+                              <div>
+                                <span style={{ color: '#64748b', display: 'block', fontSize: 11 }}>📞 Teléfono</span>
+                                {r.telefono_cliente ? (
+                                  <a
+                                    href={`https://wa.me/${r.telefono_cliente.replace(/\D/g, '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{ color: '#16a34a', fontWeight: 700, textDecoration: 'none' }}
+                                  >
+                                    💬 {r.telefono_cliente}
+                                  </a>
+                                ) : <span style={{ color: '#94a3b8' }}>-</span>}
+                              </div>
+                              <div>
+                                <span style={{ color: '#64748b', display: 'block', fontSize: 11 }}>🗓️ Período</span>
+                                <strong style={{ color: '#1e293b' }}>
+                                  {formatShortDate(r.fecha_inicio)} {r.fecha_fin && r.fecha_fin !== r.fecha_inicio ? `al ${formatShortDate(r.fecha_fin)}` : ''}
+                                </strong>
+                              </div>
+                              {r.direccion_entrega && (
+                                <div style={{ gridColumn: 'span 2' }}>
+                                  <span style={{ color: '#64748b', display: 'block', fontSize: 11 }}>📍 Entrega</span>
+                                  <span style={{ color: '#1e293b', fontWeight: 500 }}>{r.direccion_entrega}</span>
+                                </div>
+                              )}
+                              {r.notas && (
+                                <div style={{ gridColumn: 'span 2' }}>
+                                  <span style={{ color: '#64748b', display: 'block', fontSize: 11 }}>📝 Notas</span>
+                                  <span style={{ color: '#64748b', fontStyle: 'italic' }}>{r.notas}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Artículos de la reserva */}
+                            {((r.items && r.items.length > 0) || (r.combos && r.combos.length > 0)) && (
+                              <div style={{ fontSize: 12, borderTop: '1px dashed #e2e8f0', paddingTop: 8 }}>
+                                <div style={{ fontWeight: 700, color: '#334155', marginBottom: 4 }}>📦 Artículos incluidos:</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                  {(r.combos || []).map((c, cIdx) => (
+                                    <span key={`combo-${cIdx}`} style={{ background: '#fdf4ff', color: '#a855f7', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
+                                      🎁 {c.combo_nombre || c.nombre || 'Combo'} ({c.cantidad || 1})
+                                    </span>
+                                  ))}
+                                  {(r.items || []).map((it, itIdx) => (
+                                    <span key={`item-${itIdx}`} style={{ background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 500 }}>
+                                      🪑 {it.mueble_nombre || it.nombre || 'Artículo'} x{it.cantidad}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Total y saldos */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: 8 }}>
+                              <div>
+                                <span style={{ fontSize: 11, color: '#64748b', display: 'block' }}>Total Reserva</span>
+                                <strong style={{ fontSize: 16, color: '#0f172a' }}>${parseFloat(r.total || 0).toFixed(2)}</strong>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <span style={{ fontSize: 11, color: '#64748b', display: 'block' }}>
+                                  {saldo > 0 ? 'Saldo Pendiente' : 'Completamente Pagado'}
+                                </span>
+                                <strong style={{ fontSize: 14, color: saldo > 0 ? '#ea580c' : '#16a34a' }}>
+                                  {saldo > 0 ? `$${saldo.toFixed(2)}` : '✓ Pagado'}
+                                </strong>
+                              </div>
+                            </div>
+
+                            {/* Acciones de la reserva */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
+                              <button
+                                onClick={() => abrirEditarReserva(r)}
+                                style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc', color: '#1e293b', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                title="Editar Reserva"
+                              >
+                                ✏️ Editar
+                              </button>
+                              <button
+                                onClick={() => abrirPagos(r)}
+                                style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                title="Ver o registrar pagos"
+                              >
+                                💳 Pagos (${totalPagos.toFixed(0)})
+                              </button>
+                              <button
+                                onClick={() => abrirContrato(r)}
+                                style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                title="Contrato PDF"
+                              >
+                                📄 Contrato
+                              </button>
+                              <button
+                                onClick={() => generarHojaEntregaPDF(r, r.items || [], combos, config, terminos)}
+                                style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#8b5cf6', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                title="Generar Hoja de Entrega / Despacho"
+                              >
+                                🚚 Hoja Entrega
+                              </button>
+                              {r.telefono_cliente && (
+                                <button
+                                  onClick={() => enviarContratoPorWhatsApp(r)}
+                                  style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#25d366', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                  title="Enviar Contrato por WhatsApp"
+                                >
+                                  💬 WhatsApp
+                                </button>
+                              )}
+                              {r.estado !== 'cancelada' && (
+                                <button
+                                  onClick={() => cambiarConfirmacionContrato(r, !r.contrato_confirmado)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: 6,
+                                    border: 'none',
+                                    background: r.contrato_confirmado ? '#16a34a' : '#ef4444',
+                                    color: '#fff',
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    marginLeft: 'auto'
+                                  }}
+                                  title="Alternar estado de confirmación del contrato"
+                                >
+                                  {r.contrato_confirmado ? '✓ Confirmado' : '● Pendiente'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div style={{
+                      background: '#fff',
+                      borderRadius: 14,
+                      padding: '3.5rem 2rem',
+                      textAlign: 'center',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                    }}>
+                      <div style={{ fontSize: 44, marginBottom: 12 }}>🌴</div>
+                      <h3 style={{ margin: '0 0 6px 0', fontSize: 18, color: '#1e293b' }}>
+                        No hay reservas programadas para este día
+                      </h3>
+                      <p style={{ margin: '0 0 1.5rem 0', color: '#64748b', fontSize: 14 }}>
+                        El {dayNamesSpanish[fechaRefDia.getDay()]}, {fechaRefDia.getDate()} de {monthNamesSpanish[fechaRefDia.getMonth()]} {fechaRefDia.getFullYear()} se encuentra totalmente libre.
+                      </p>
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => setFechaRefDia(new Date())}
+                          style={{
+                            padding: '10px 18px',
+                            borderRadius: 8,
+                            border: '1px solid #cbd5e1',
+                            background: '#fff',
+                            color: '#334155',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Ir al Día de Hoy
+                        </button>
+                        <Link
+                          to="/catalogo"
+                          style={{
+                            padding: '10px 20px',
+                            borderRadius: 8,
+                            border: 'none',
+                            background: '#4a6cf7',
+                            color: '#fff',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 8px rgba(74, 108, 247, 0.3)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6
+                          }}
+                        >
+                          ➕ Ir al Catálogo / Nueva Reserva
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── 3. VISTA SEMANA ── */}
             {vistaReservas === 'semana' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 {/* Navegador de Semana */}
