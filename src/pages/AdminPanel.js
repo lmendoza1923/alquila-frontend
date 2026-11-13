@@ -2030,6 +2030,7 @@ export default function AdminPanel() {
       const nuevoTotal = nuevosPagos.reduce((s, p) => s + parseFloat(p.monto), 0);
       setTotalPagado(nuevoTotal);
       setSaldoPendiente(parseFloat(modalPagos.total) - nuevoTotal);
+      setReservas(prev => prev.map(r => r.id === modalPagos.id ? { ...r, pagos: nuevosPagos, total_pagado: nuevoTotal } : r));
       setNuevoPagoMonto('');
       setNuevoPagoNotas('');
       setNuevoPagoFecha(getFechaHoy());
@@ -2060,6 +2061,7 @@ export default function AdminPanel() {
       const nuevoTotal = nuevosPagos.reduce((s, p) => s + parseFloat(p.monto), 0);
       setTotalPagado(nuevoTotal);
       setSaldoPendiente(parseFloat(modalPagos.total) - nuevoTotal);
+      setReservas(prev => prev.map(r => r.id === modalPagos.id ? { ...r, pagos: nuevosPagos, total_pagado: nuevoTotal } : r));
       setNuevoPagoMonto('');
       setNuevoPagoNotas('');
       setNuevoPagoFecha(getFechaHoy());
@@ -2081,6 +2083,7 @@ export default function AdminPanel() {
       const nuevoTotal = nuevosPagos.reduce((s, p) => s + parseFloat(p.monto), 0);
       setTotalPagado(nuevoTotal);
       setSaldoPendiente(parseFloat(modalPagos.total) - nuevoTotal);
+      setReservas(prev => prev.map(r => r.id === modalPagos.id ? { ...r, pagos: nuevosPagos, total_pagado: nuevoTotal } : r));
       toast.success('Pago eliminado');
     } catch { toast.error('Error al eliminar pago'); }
   };
@@ -3015,11 +3018,12 @@ export default function AdminPanel() {
               const esHoy = diaStr === todayStr;
               const reservasDelDia = reservasFiltradas.filter(r => isReservaActiveOnDate(r, diaStr));
               const totalFacturadoDia = reservasDelDia.reduce((sum, r) => sum + parseFloat(r.total || 0), 0);
-              const totalPagadoDia = reservasDelDia.reduce((sum, r) => {
-                const totalPagos = (r.pagos || []).reduce((pSum, p) => pSum + parseFloat(p.monto || 0), 0);
-                return sum + totalPagos;
+              const totalAbonadoDia = reservasDelDia.reduce((sum, r) => {
+                const abonosPagados = parseFloat(r.total_pagado || 0) || (r.pagos || []).reduce((pSum, p) => pSum + parseFloat(p.monto || 0), 0);
+                const abonoExtra = parseFloat(r.contrato_abono_extra || 0);
+                return sum + abonosPagados + abonoExtra;
               }, 0);
-              const saldoPendienteDia = Math.max(0, totalFacturadoDia - totalPagadoDia);
+              const saldoPendienteDia = Math.max(0, totalFacturadoDia - totalAbonadoDia);
               const activasCount = reservasDelDia.filter(r => r.estado === 'activa').length;
               const confirmadasCount = reservasDelDia.filter(r => r.estado === 'confirmada').length;
               const pendientesCount = reservasDelDia.filter(r => r.estado === 'pendiente').length;
@@ -3112,17 +3116,22 @@ export default function AdminPanel() {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span>📋 Reservas:</span>
-                      <strong style={{ fontSize: 14, color: '#0f172a' }}>{reservasDelDia.length}</strong>
+                      <strong style={{ fontSize: 13, color: '#0f172a' }}>{reservasDelDia.length}</strong>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>💰 Facturado:</span>
-                      <strong style={{ fontSize: 14, color: '#10b981' }}>${totalFacturadoDia.toFixed(2)}</strong>
+                      <span>💰 Total Facturado:</span>
+                      <strong style={{ fontSize: 13, color: '#0f172a' }}>${totalFacturadoDia.toFixed(2)}</strong>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>⏳ Por Cobrar:</span>
-                      <strong style={{ fontSize: 14, color: saldoPendienteDia > 0 ? '#ea580c' : '#10b981' }}>
+                      <span>💳 Abonos Recibidos:</span>
+                      <strong style={{ fontSize: 13, color: '#10b981' }}>${totalAbonadoDia.toFixed(2)}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>⏳ Saldo por Cobrar:</span>
+                      <strong style={{ fontSize: 13, color: saldoPendienteDia > 0 ? '#ea580c' : '#10b981' }}>
                         ${saldoPendienteDia.toFixed(2)}
                       </strong>
                     </div>
@@ -3138,8 +3147,11 @@ export default function AdminPanel() {
                   {reservasDelDia.length > 0 ? (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: '10px' }}>
                       {reservasDelDia.map(r => {
-                        const totalPagos = (r.pagos || []).reduce((s, p) => s + parseFloat(p.monto || 0), 0);
-                        const saldo = Math.max(0, parseFloat(r.total || 0) - totalPagos);
+                        const abonosPagados = parseFloat(r.total_pagado || 0) || (r.pagos || []).reduce((s, p) => s + parseFloat(p.monto || 0), 0);
+                        const abonoExtra = parseFloat(r.contrato_abono_extra || 0);
+                        const totalAbonado = abonosPagados + abonoExtra;
+                        const totalReserva = parseFloat(r.total || 0);
+                        const saldo = Math.max(0, totalReserva - totalAbonado);
 
                         return (
                           <div
@@ -3230,16 +3242,27 @@ export default function AdminPanel() {
                               </div>
                             )}
 
-                            {/* Total y saldos compactos */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: 4, fontSize: 11 }}>
+                            {/* Total, Abonos y Saldo compactos */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: 4, fontSize: 11, flexWrap: 'wrap', gap: 4 }}>
                               <div>
                                 <span style={{ color: '#64748b', marginRight: 4 }}>Total:</span>
-                                <strong style={{ fontSize: 13, color: '#0f172a' }}>${parseFloat(r.total || 0).toFixed(0)}</strong>
+                                <strong style={{ fontSize: 12, color: '#0f172a' }}>${totalReserva.toFixed(2)}</strong>
                               </div>
+                              {totalAbonado > 0 ? (
+                                <div style={{ color: '#16a34a' }}>
+                                  <span style={{ marginRight: 4 }}>Abono:</span>
+                                  <strong style={{ fontSize: 12 }}>-${totalAbonado.toFixed(2)}</strong>
+                                </div>
+                              ) : (
+                                <div>
+                                  <span style={{ color: '#94a3b8', marginRight: 4 }}>Abono:</span>
+                                  <span style={{ fontSize: 11, color: '#94a3b8' }}>$0.00</span>
+                                </div>
+                              )}
                               <div>
                                 <span style={{ color: '#64748b', marginRight: 4 }}>Saldo:</span>
-                                <strong style={{ fontSize: 11, color: saldo > 0 ? '#ea580c' : '#16a34a' }}>
-                                  {saldo > 0 ? `$${saldo.toFixed(0)}` : '✓ Pagado'}
+                                <strong style={{ fontSize: 12, color: saldo > 0 ? '#ea580c' : '#16a34a' }}>
+                                  {saldo > 0 ? `$${saldo.toFixed(2)}` : '✓ Pagado'}
                                 </strong>
                               </div>
                             </div>
@@ -3258,7 +3281,7 @@ export default function AdminPanel() {
                                 style={{ padding: '4px 7px', borderRadius: 5, border: 'none', background: '#22c55e', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
                                 title="Ver o registrar pagos"
                               >
-                                💳 ${totalPagos.toFixed(0)}
+                                💳 ${totalAbonado.toFixed(2)}
                               </button>
                               <button
                                 onClick={() => abrirContrato(r)}
