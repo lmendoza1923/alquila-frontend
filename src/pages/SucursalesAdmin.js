@@ -56,11 +56,12 @@ export default function SucursalesAdmin() {
       ]);
 
       setSucursales(resSuc.data || []);
-      setMuebles(resMatriz.data.muebles || []);
+      const mueblesOrdenados = (resMatriz.data.muebles || []).slice().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }));
+      setMuebles(mueblesOrdenados);
 
       // Inicializar planilla de valores
       const valores = {};
-      (resMatriz.data.muebles || []).forEach(m => {
+      mueblesOrdenados.forEach(m => {
         (resMatriz.data.sucursales || []).forEach(s => {
           valores[`${m.id}_${s.id}`] = m.distribucion[s.id] || 0;
         });
@@ -278,21 +279,24 @@ export default function SucursalesAdmin() {
     return muebles.filter(m => {
       const coincideBusqueda = !busquedaPlanilla.trim() || 
         m.nombre.toLowerCase().includes(busquedaPlanilla.toLowerCase()) ||
-        m.categoria_nombre.toLowerCase().includes(busquedaPlanilla.toLowerCase());
+        (m.categoria_nombre && m.categoria_nombre.toLowerCase().includes(busquedaPlanilla.toLowerCase()));
       const coincideCat = filtroCategoria === 'todas' || m.categoria_nombre === filtroCategoria;
       return coincideBusqueda && coincideCat;
-    });
+    }).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }));
   }, [muebles, busquedaPlanilla, filtroCategoria]);
 
   // Mobiliario filtrado en el modal de una sucursal específica
   const mobiliarioModalFiltrado = useMemo(() => {
     if (!modalInventarioSucursal?.mobiliario) return [];
-    if (!busquedaModal.trim()) return modalInventarioSucursal.mobiliario;
-    const q = busquedaModal.toLowerCase().trim();
-    return modalInventarioSucursal.mobiliario.filter(m =>
-      m.nombre.toLowerCase().includes(q) ||
-      (m.categoria_nombre && m.categoria_nombre.toLowerCase().includes(q))
-    );
+    let list = modalInventarioSucursal.mobiliario;
+    if (busquedaModal.trim()) {
+      const q = busquedaModal.toLowerCase().trim();
+      list = list.filter(m =>
+        m.nombre.toLowerCase().includes(q) ||
+        (m.categoria_nombre && m.categoria_nombre.toLowerCase().includes(q))
+      );
+    }
+    return list.slice().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }));
   }, [modalInventarioSucursal, busquedaModal]);
 
   return (

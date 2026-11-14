@@ -239,10 +239,10 @@ export default function EntregasAdmin({
       lista = lista.filter(i => i.esServicio);
     }
 
-    // Ordenar: primero mobiliario por cantidad descendente, luego alfabético
+    // Ordenar alfabéticamente de forma ascendente
     lista.sort((a, b) => {
       if (a.esServicio !== b.esServicio) return a.esServicio ? 1 : -1;
-      return b.cantidadTotal - a.cantidadTotal || a.nombre.localeCompare(b.nombre);
+      return a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
     });
 
     // Contar items verificados en checklist
@@ -1309,7 +1309,7 @@ export default function EntregasAdmin({
                         Mobiliario a Entregar:
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {(r.items || []).map((it, itIdx) => {
+                        {(r.items || []).slice().sort((a, b) => (a.nombre || a.mueble || '').localeCompare(b.nombre || b.mueble || '', 'es', { sensitivity: 'base' })).map((it, itIdx) => {
                           const isCombo = !!it.combo_id;
                           let comps = (it.componentes && it.componentes.length > 0) ? it.componentes : null;
                           if (isCombo && !comps) {
