@@ -1309,7 +1309,13 @@ export default function EntregasAdmin({
                         Mobiliario a Entregar:
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {(r.items || []).slice().sort((a, b) => (a.nombre || a.mueble || '').localeCompare(b.nombre || b.mueble || '', 'es', { sensitivity: 'base' })).map((it, itIdx) => {
+                        {(r.items || []).slice().sort((a, b) => {
+                          const aEsCombo = !!a.combo_id;
+                          const bEsCombo = !!b.combo_id;
+                          if (aEsCombo && !bEsCombo) return -1;
+                          if (!aEsCombo && bEsCombo) return 1;
+                          return (a.nombre || a.mueble || '').localeCompare(b.nombre || b.mueble || '', 'es', { sensitivity: 'base' });
+                        }).map((it, itIdx) => {
                           const isCombo = !!it.combo_id;
                           let comps = (it.componentes && it.componentes.length > 0) ? it.componentes : null;
                           if (isCombo && !comps) {

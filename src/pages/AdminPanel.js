@@ -134,6 +134,14 @@ function generarContratoPDF(reserva, items, pagos, terminos, abono, todosLosComb
   };
 
   const mobiliarioItems = items.filter(i => !esServicio(i.nombre || i.mueble));
+  // Prioridad: COMBOS primero, luego mobiliario individual por debajo
+  mobiliarioItems.sort((a, b) => {
+    const aEsCombo = !!a.combo_id;
+    const bEsCombo = !!b.combo_id;
+    if (aEsCombo && !bEsCombo) return -1;
+    if (!aEsCombo && bEsCombo) return 1;
+    return (a.nombre || a.mueble || '').localeCompare(b.nombre || b.mueble || '', 'es', { sensitivity: 'base' });
+  });
   const servicioItems = items.filter(i => esServicio(i.nombre || i.mueble));
 
   const subtotalMobiliario = mobiliarioItems.reduce((s, i) => s + parseFloat(i.subtotal || 0), 0);
@@ -500,6 +508,14 @@ function generarHojaEntregaPDF(reserva, items, todosLosCombos, configEmpresa, te
   };
 
   const mobiliarioItems = items.filter(i => !esServicio(i.nombre || i.mueble));
+  // Prioridad: COMBOS primero, luego mobiliario individual por debajo
+  mobiliarioItems.sort((a, b) => {
+    const aEsCombo = !!a.combo_id;
+    const bEsCombo = !!b.combo_id;
+    if (aEsCombo && !bEsCombo) return -1;
+    if (!aEsCombo && bEsCombo) return 1;
+    return (a.nombre || a.mueble || '').localeCompare(b.nombre || b.mueble || '', 'es', { sensitivity: 'base' });
+  });
   const servicioItems = items.filter(i => esServicio(i.nombre || i.mueble));
 
   // Generar filas para Mobiliario
@@ -1629,6 +1645,13 @@ export default function AdminPanel() {
       };
     });
     
+    items.sort((a, b) => {
+      const aEsCombo = !!a.combo_id;
+      const bEsCombo = !!b.combo_id;
+      if (aEsCombo && !bEsCombo) return -1;
+      if (!aEsCombo && bEsCombo) return 1;
+      return (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' });
+    });
     setItemsEditando(items);
     setMuebleSeleccionado('');
     setCantidadAgregar(1);
@@ -1693,7 +1716,20 @@ export default function AdminPanel() {
         precio_unitario: precioUnit,
         subtotal: precioUnit * cant
       };
-      const nuevosItems = [...itemsEditando, nuevoServicio];
+      const nuevosItems = [...itemsEditando, nuevoServicio].sort((a, b) => {
+        const aEsCombo = !!a.combo_id;
+        const bEsCombo = !!b.combo_id;
+        if (aEsCombo && !bEsCombo) return -1;
+        if (!aEsCombo && bEsCombo) return 1;
+        return (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' });
+      });
+      nuevosItems.sort((a, b) => {
+        const aEsCombo = !!a.combo_id;
+        const bEsCombo = !!b.combo_id;
+        if (aEsCombo && !bEsCombo) return -1;
+        if (!aEsCombo && bEsCombo) return 1;
+        return (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' });
+      });
       setItemsEditando(nuevosItems);
       recalcularTotal(nuevosItems);
       setServicioNombreAgregar('');
@@ -1752,6 +1788,13 @@ export default function AdminPanel() {
           componentes: comboComps
         }];
       }
+      nuevosItems.sort((a, b) => {
+        const aEsCombo = !!a.combo_id;
+        const bEsCombo = !!b.combo_id;
+        if (aEsCombo && !bEsCombo) return -1;
+        if (!aEsCombo && bEsCombo) return 1;
+        return (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' });
+      });
       setItemsEditando(nuevosItems);
       recalcularTotal(nuevosItems);
       setMuebleSeleccionado('');
@@ -1776,6 +1819,13 @@ export default function AdminPanel() {
           subtotal: parseFloat(mueble.precio_dia || 0) * cantidadAgregar
         }];
       }
+      nuevosItems.sort((a, b) => {
+        const aEsCombo = !!a.combo_id;
+        const bEsCombo = !!b.combo_id;
+        if (aEsCombo && !bEsCombo) return -1;
+        if (!aEsCombo && bEsCombo) return 1;
+        return (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' });
+      });
       setItemsEditando(nuevosItems);
       recalcularTotal(nuevosItems);
       setMuebleSeleccionado('');
@@ -1929,7 +1979,13 @@ export default function AdminPanel() {
     if (itemsEditando.length === 0) return toast.error('La reserva debe tener al menos un artículo');
     setLoadingEdit(true);
     try {
-      const formattedItems = itemsEditando.map(i => ({ 
+      const formattedItems = [...itemsEditando].sort((a, b) => {
+        const aEsCombo = !!a.combo_id;
+        const bEsCombo = !!b.combo_id;
+        if (aEsCombo && !bEsCombo) return -1;
+        if (!aEsCombo && bEsCombo) return 1;
+        return (a.nombre || a.mueble || '').localeCompare(b.nombre || b.mueble || '', 'es', { sensitivity: 'base' });
+      }).map(i => ({ 
         mueble_id: i.mueble_id || null, 
         combo_id: i.combo_id || null, 
         cantidad: parseInt(i.cantidad) || 1,

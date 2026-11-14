@@ -136,6 +136,14 @@ export default function ContratoPublico() {
   };
 
   const mobiliarioItems = items.filter(i => !esServicio(i.nombre || i.mueble));
+  // Prioridad: COMBOS primero, luego mobiliario individual por debajo
+  mobiliarioItems.sort((a, b) => {
+    const aEsCombo = !!a.combo_id;
+    const bEsCombo = !!b.combo_id;
+    if (aEsCombo && !bEsCombo) return -1;
+    if (!aEsCombo && bEsCombo) return 1;
+    return (a.nombre || a.mueble || '').localeCompare(b.nombre || b.mueble || '', 'es', { sensitivity: 'base' });
+  });
   const servicioItems = items.filter(i => esServicio(i.nombre || i.mueble));
 
   const subtotalMobiliario = mobiliarioItems.reduce((s, i) => s + parseFloat(i.subtotal || 0), 0);
