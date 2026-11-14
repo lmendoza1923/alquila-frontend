@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { useConfig, DEFAULT_CONFIG, normalizarMetodosPago, formatearMetodosPagoTexto } from '../context/ConfigContext';
+import { useConfig, DEFAULT_CONFIG, DEFAULT_WHATSAPP_CONTRATO, normalizarMetodosPago, formatearMetodosPagoTexto } from '../context/ConfigContext';
 import ClientesAdmin from './ClientesAdmin';
 import SucursalesAdmin from './SucursalesAdmin';
 import EntregasAdmin from './EntregasAdmin';
@@ -1194,6 +1194,8 @@ export default function AdminPanel() {
 
   // Estados contrato PDF
   const [modalContrato, setModalContrato] = useState(null);
+  const [mensajeWAPersonalizado, setMensajeWAPersonalizado] = useState('');
+  const [mostrarEditorWA, setMostrarEditorWA] = useState(false);
   const [contratoAbono, setContratoAbono] = useState('');
   const [pagosParaContrato, setPagosParaContrato] = useState([]);
   const [terminos, setTerminos] = useState('');
@@ -5356,6 +5358,143 @@ export default function AdminPanel() {
                       >
                         Botón Secundario
                       </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección: Mensaje de WhatsApp para Envío de Contrato */}
+              <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      💬 Mensaje de WhatsApp para Envío de Contrato
+                    </h3>
+                    <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: 13 }}>
+                      Aquí puedes modificar el texto que se abre automáticamente en WhatsApp al enviar el contrato de alquiler para confirmación.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfigForm(prev => ({ ...prev, mensaje_whatsapp_contrato: DEFAULT_WHATSAPP_CONTRATO }));
+                      toast.success('Plantilla restaurada al valor predeterminado');
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 6,
+                      border: '1px solid #cbd5e1',
+                      background: '#f8fafc',
+                      color: '#475569',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ↺ Restaurar plantilla por defecto
+                  </button>
+                </div>
+
+                {/* Etiquetas de variables dinámicas */}
+                <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#0369a1', marginBottom: 6 }}>
+                    Variables dinámicas disponibles (haz clic en cualquiera para insertarla en el mensaje):
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {[
+                      { tag: '{cliente}', desc: 'Nombre del cliente' },
+                      { tag: '{empresa}', desc: 'Nombre de tu negocio' },
+                      { tag: '{reserva}', desc: 'Código de reserva (#0021FA18)' },
+                      { tag: '{enlace}', desc: 'Link del contrato para confirmar' },
+                    ].map(v => (
+                      <button
+                        key={v.tag}
+                        type="button"
+                        onClick={() => {
+                          const actual = configForm.mensaje_whatsapp_contrato !== undefined ? configForm.mensaje_whatsapp_contrato : DEFAULT_WHATSAPP_CONTRATO;
+                          setConfigForm({ ...configForm, mensaje_whatsapp_contrato: `${actual} ${v.tag}` });
+                          toast.success(`Variable ${v.tag} añadida al mensaje`);
+                        }}
+                        style={{
+                          background: '#fff',
+                          border: '1px solid #7dd3fc',
+                          borderRadius: 6,
+                          padding: '4px 9px',
+                          fontSize: 11.5,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}
+                      >
+                        <code style={{ color: '#0284c7', fontWeight: 800 }}>{v.tag}</code>
+                        <span style={{ color: '#64748b', fontSize: 10.5 }}>({v.desc})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Editor y Vista Previa */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                      Editar Mensaje Predeterminado:
+                    </label>
+                    <textarea
+                      rows={9}
+                      value={configForm.mensaje_whatsapp_contrato !== undefined ? configForm.mensaje_whatsapp_contrato : DEFAULT_WHATSAPP_CONTRATO}
+                      onChange={e => setConfigForm({ ...configForm, mensaje_whatsapp_contrato: e.target.value })}
+                      placeholder="Escribe el mensaje..."
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: 8,
+                        fontSize: 13,
+                        lineHeight: 1.5,
+                        fontFamily: 'inherit',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                      💡 Nota: La variable <code>{'{enlace}'}</code> se convertirá en el enlace único de cada contrato para que el cliente presione "Confirmado".
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#334155', marginBottom: 6 }}>
+                      Vista previa de cómo se verá en WhatsApp:
+                    </label>
+                    <div style={{
+                      background: '#efeae2',
+                      backgroundImage: 'radial-gradient(#d1d7db 1px, transparent 1px)',
+                      backgroundSize: '16px 16px',
+                      borderRadius: 10,
+                      padding: '14px',
+                      border: '1px solid #d1d7db',
+                      minHeight: 200,
+                      boxSizing: 'border-box'
+                    }}>
+                      <div style={{
+                        background: '#ffffff',
+                        borderRadius: '8px 8px 8px 2px',
+                        padding: '10px 12px',
+                        fontSize: 12.5,
+                        lineHeight: 1.45,
+                        color: '#111b21',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word'
+                      }}>
+                        {construirMensajeWhatsAppContrato(
+                          { id: '0021fa18-fe09-4a71-9914-02ec5d66697e', nombre_cliente: 'Astrid Asyn' },
+                          configForm.mensaje_whatsapp_contrato !== undefined ? configForm.mensaje_whatsapp_contrato : DEFAULT_WHATSAPP_CONTRATO
+                        )}
+                        <div style={{ textAlign: 'right', fontSize: 10, color: '#667781', marginTop: 6, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 3 }}>
+                          <span>8:51 p.m.</span>
+                          <span style={{ color: '#53bdeb' }}>✓✓</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

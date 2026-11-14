@@ -46,6 +46,13 @@ export const formatearMetodosPagoTexto = (metodos) => {
   }).join(' · ');
 };
 
+export const DEFAULT_WHATSAPP_CONTRATO = `Hola *{cliente}* 👋, te saludamos de *{empresa}*.
+
+Aquí tienes el enlace a tu *Contrato de Alquiler* (Reserva #{reserva}):
+👉 {enlace}
+
+Por favor revísalo y al final del documento presiona el botón *"Confirmado"* para dejar confirmada tu reserva. ¡Muchas gracias!`;
+
 export const DEFAULT_CONFIG = {
   nombre_empresa: 'Alquila tu Party',
   logo_url: '🎉',
@@ -59,6 +66,7 @@ export const DEFAULT_CONFIG = {
   metodos_pago: [],
   sitio_web: '',
   moneda_simbolo: '$',
+  mensaje_whatsapp_contrato: DEFAULT_WHATSAPP_CONTRATO
 };
 
 const ConfigContext = createContext();
