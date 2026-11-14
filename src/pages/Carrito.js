@@ -23,7 +23,7 @@ export default function Carrito() {
   const [searchParams] = useSearchParams();
   const { items, fechas, actualizar, quitar, calcularTotal, diasSeleccionados, vaciar } = useCart();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ alias: '', nombre: '', cedula: '', telefono: '', direccion: '', notas: '' });
+  const [form, setForm] = useState({ alias: '', nombre: '', cedula: '', telefono: '', provincia: 'Panamá', direccion: '', notas: '' });
   const [clientes, setClientes] = useState([]);
   const [busquedaCliente, setBusquedaCliente] = useState('');
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
@@ -53,7 +53,7 @@ export default function Carrito() {
   const limpiarCliente = () => {
     setClienteSeleccionado(null);
     setBusquedaCliente('');
-    setForm({ alias: '', nombre: '', cedula: '', telefono: '', direccion: '', notas: '' });
+    setForm({ alias: '', nombre: '', cedula: '', telefono: '', provincia: 'Panamá', direccion: '', notas: '' });
   };
 
   useEffect(() => {
@@ -166,6 +166,7 @@ export default function Carrito() {
         cedula_cliente: form.cedula ? form.cedula.trim() : null,
         email_cliente: clienteSeleccionado?.email || null,
         telefono_cliente: form.telefono || null,
+        provincia: form.provincia || 'Panamá',
         direccion_entrega: form.direccion || null,
         notas: form.notas,
         cliente_id: clienteSeleccionado?.id || null,
@@ -476,6 +477,15 @@ export default function Carrito() {
             <input style={s.input} value={form.cedula} onChange={e => set('cedula', e.target.value)} placeholder="Ej: 8-888-8888" />
             <label style={s.label}>Teléfono / WhatsApp</label>
             <input style={s.input} value={form.telefono} onChange={e => set('telefono', e.target.value)} placeholder="6000-0000" />
+            <label style={s.label}>Provincia del Evento *</label>
+            <select
+              style={{ ...s.input, backgroundColor: '#fff', cursor: 'pointer', fontWeight: 600 }}
+              value={form.provincia || 'Panamá'}
+              onChange={e => set('provincia', e.target.value)}
+            >
+              <option value="Panamá">Panamá</option>
+              <option value="Panamá Oeste">Panamá Oeste</option>
+            </select>
             <label style={s.label}>Dirección del Evento</label>
             <input style={s.input} value={form.direccion} onChange={e => set('direccion', e.target.value)} placeholder="Calle, edificio, ciudad" />
             <label style={s.label}>Notas adicionales</label>

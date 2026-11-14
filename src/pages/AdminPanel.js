@@ -1144,6 +1144,7 @@ export default function AdminPanel() {
   const [editCedula, setEditCedula] = useState('');
   const [editAlias, setEditAlias] = useState('');
   const [editTelefono, setEditTelefono] = useState('');
+  const [editProvincia, setEditProvincia] = useState('Panamá');
   const [editDireccion, setEditDireccion] = useState('');
   const [editNotas, setEditNotas] = useState('');
   const [editFechaInicio, setEditFechaInicio] = useState('');
@@ -1565,6 +1566,7 @@ export default function AdminPanel() {
     setEditNombre(r.nombre_cliente || '');
     setEditCedula(r.cedula_cliente || '');
     setEditTelefono(r.telefono_cliente || '');
+    setEditProvincia(r.provincia || 'Panamá');
     setEditDireccion(r.direccion_entrega || '');
     setEditNotas(r.notes || r.notas || '');
     setEditFechaInicio(r.fecha_inicio ? r.fecha_inicio.substring(0, 10) : '');
@@ -1964,6 +1966,7 @@ export default function AdminPanel() {
         cedula_cliente: editCedula.trim() || null,
         email_cliente: null,
         telefono_cliente: editTelefono.trim(),
+        provincia: editProvincia || 'Panamá',
         direccion_entrega: editDireccion.trim(),
         notes: editNotas.trim(),
         notas: editNotas.trim(),
@@ -3217,9 +3220,9 @@ export default function AdminPanel() {
                                   🗓️ {formatShortDate(r.fecha_inicio)} {r.fecha_fin && r.fecha_fin !== r.fecha_inicio ? `- ${formatShortDate(r.fecha_fin)}` : ''}
                                 </span>
                               </div>
-                              {r.direccion_entrega && (
-                                <div style={{ color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.direccion_entrega}>
-                                  📍 {r.direccion_entrega}
+                              {(r.direccion_entrega || r.provincia) && (
+                                <div style={{ color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={`${r.provincia || 'Panamá'} - ${r.direccion_entrega || ''}`}>
+                                  📍 <span style={{ fontSize: 10, background: (r.provincia === 'Panamá Oeste' ? '#f3e8ff' : '#e0f2fe'), color: (r.provincia === 'Panamá Oeste' ? '#6b21a8' : '#0369a1'), padding: '1px 5px', borderRadius: 4, fontWeight: 700, marginRight: 4 }}>{r.provincia || 'Panamá'}</span>{r.direccion_entrega}
                                 </div>
                               )}
                               {r.notas && (
@@ -3749,9 +3752,11 @@ export default function AdminPanel() {
                                 <span style={{ fontWeight: 700, color: '#4a6cf7' }}>Total: ${parseFloat(r.total || 0).toFixed(2)}</span>
                               </div>
 
-                              {r.direccion_entrega && (
-                                <div style={{ fontSize: '11px', color: '#777' }}>
-                                  📍 {r.direccion_entrega}
+                              {(r.direccion_entrega || r.provincia) && (
+                                <div style={{ fontSize: '11px', color: '#777', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <span>📍</span>
+                                  <span style={{ fontSize: 10, background: (r.provincia === 'Panamá Oeste' ? '#f3e8ff' : '#e0f2fe'), color: (r.provincia === 'Panamá Oeste' ? '#6b21a8' : '#0369a1'), padding: '1px 5px', borderRadius: 4, fontWeight: 700 }}>{r.provincia || 'Panamá'}</span>
+                                  <span>{r.direccion_entrega}</span>
                                 </div>
                               )}
 
@@ -5696,9 +5701,22 @@ export default function AdminPanel() {
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Teléfono</label>
                   <input type="text" value={editTelefono} onChange={e => setEditTelefono(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} /></div>
               </div>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Dirección del Evento</label>
-                <input type="text" value={editDireccion} onChange={e => setEditDireccion(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Provincia *</label>
+                  <select
+                    value={editProvincia}
+                    onChange={e => setEditProvincia(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, background: '#fff', fontWeight: 600, boxSizing: 'border-box', cursor: 'pointer' }}
+                  >
+                    <option value="Panamá">Panamá</option>
+                    <option value="Panamá Oeste">Panamá Oeste</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Dirección del Evento</label>
+                  <input type="text" value={editDireccion} onChange={e => setEditDireccion(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div><label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#444' }}>Fecha Inicio *</label>

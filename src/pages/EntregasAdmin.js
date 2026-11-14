@@ -40,6 +40,7 @@ export default function EntregasAdmin({
   const [fechaRef, setFechaRef] = useState(new Date());
   const [tipoFiltroFecha, setTipoFiltroFecha] = useState('inicios'); // 'inicios' | 'activas'
   const [vista, setVista] = useState('consolidado'); // 'consolidado' | 'por_reserva'
+  const [filtroProvincia, setFiltroProvincia] = useState('todas'); // 'todas' | 'Panamá' | 'Panamá Oeste'
   const [busqueda, setBusqueda] = useState('');
   const [checklist, setChecklist] = useState({}); // { [itemKey]: boolean }
   const [filtroTipoItem, setFiltroTipoItem] = useState('todos'); // 'todos' | 'mobiliario' | 'servicios'
@@ -57,7 +58,7 @@ export default function EntregasAdmin({
     });
   };
 
-  // 1. Filtrar reservas según la fecha y criterio
+  // 1. Filtrar reservas según la fecha, provincia y criterio
   const reservasDelDia = useMemo(() => {
     return reservas.filter(r => {
       if (r.estado === 'cancelada') return false;
@@ -72,20 +73,27 @@ export default function EntregasAdmin({
 
       if (!coincideFecha) return false;
 
+      if (filtroProvincia !== 'todas') {
+        const provReserva = (r.provincia || 'Panamá').trim().toLowerCase();
+        const provFiltro = filtroProvincia.trim().toLowerCase();
+        if (provReserva !== provFiltro) return false;
+      }
+
       if (busqueda.trim()) {
         const q = busqueda.toLowerCase().trim();
         const cliente = (r.nombre_cliente || '').toLowerCase();
         const alias = (r.alias_cliente || '').toLowerCase();
         const dir = (r.direccion_entrega || '').toLowerCase();
+        const prov = (r.provincia || '').toLowerCase();
         const tel = (r.telefono_cliente || '').toLowerCase();
         const id = (r.id || '').toLowerCase();
         const tieneItem = (r.items || []).some(it => (it.nombre || it.mueble || '').toLowerCase().includes(q));
-        return cliente.includes(q) || alias.includes(q) || dir.includes(q) || tel.includes(q) || id.includes(q) || tieneItem;
+        return cliente.includes(q) || alias.includes(q) || dir.includes(q) || prov.includes(q) || tel.includes(q) || id.includes(q) || tieneItem;
       }
 
       return true;
     });
-  }, [reservas, tipoFiltroFecha, diaStr, busqueda]);
+  }, [reservas, tipoFiltroFecha, diaStr, busqueda, filtroProvincia]);
 
   // 2. Algoritmo de Consolidación de Mobiliario y Desglose de Combos
   const { itemsConsolidados, resumenKPIs } = useMemo(() => {
@@ -272,13 +280,14 @@ export default function EntregasAdmin({
   // Función para imprimir Hoja de Carga Consolidada (Picking List)
   const imprimirHojaCargaConsolidada = () => {
     if (!itemsConsolidados.length) {
-      toast.error('No hay artículos para imprimir en esta fecha');
+      toast.error('No hay artículos para imprimir en esta fecha' + (filtroProvincia !== 'todas' ? ` para la provincia ${filtroProvincia}` : ''));
       return;
     }
 
     const empNombre = config?.nombre_empresa || 'Alquila tu Party';
     const empLogo = config?.logo_url || '🎉';
     const fechaTexto = `${dayNamesSpanish[fechaRef.getDay()]}, ${fechaRef.getDate()} de ${monthNamesSpanish[fechaRef.getMonth()]} de ${fechaRef.getFullYear()}`;
+    const provTexto = filtroProvincia === 'todas' ? 'Todas las Provincias' : filtroProvincia;
 
     const logoHtml = (empLogo.startsWith('http') || empLogo.startsWith('data:'))
       ? `<img src="${empLogo}" alt="Logo" style="max-height:36px;max-width:140px;object-fit:contain;" />`
@@ -326,6 +335,7 @@ export default function EntregasAdmin({
             <div style="font-size:9.5px;color:#64748b;font-weight:normal;">${r.nombre_cliente} • Tel: ${cleanPhone}</div>
           </td>
           <td style="padding:6px;color:#334155;">
+            ${r.provincia ? `<span style="font-size:9px;background:#e0f2fe;color:#0369a1;padding:1px 5px;border-radius:3px;font-weight:700;margin-right:4px;">${r.provincia}</span>` : ''}
             ${r.direccion_entrega || '<i style="color:#94a3b8;">Sin dirección registrada</i>'}
           </td>
           <td style="padding:6px;text-align:right;font-weight:700;color:${saldo > 0 ? '#b91c1c' : '#15803d'};">
@@ -342,14 +352,14 @@ export default function EntregasAdmin({
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Hoja de Carga - ${diaStr} - ${empNombre}</title>
+        <title>Hoja de Carga - ${diaStr} (${provTexto}) - ${empNombre}</title>
         <style>
           @page { size: portrait; margin: 10mm; }
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 0; padding: 12px; color: #1e293b; background: #fff; }
           .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2563eb; padding-bottom: 8px; margin-bottom: 12px; }
           .title { font-size: 16px; font-weight: 800; color: #1e3a8a; margin: 0; text-transform: uppercase; letter-spacing: 0.05em; }
           .subtitle { font-size: 11px; color: #64748b; margin-top: 2px; }
-          .kpi-bar { display: flex; gap: 15px; background: #f1f5f9; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; font-size: 11px; }
+          .kpi-bar { display: flex; gap: 15px; background: #f1f5f9; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; font-size: 11px; flex-wrap: wrap; }
           .kpi-item { display: flex; gap: 5px; align-items: center; }
           .kpi-item strong { color: #0f172a; font-size: 12px; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
@@ -368,8 +378,8 @@ export default function EntregasAdmin({
           <div style="display:flex; align-items:center; gap:8px;">
             ${logoHtml}
             <div>
-              <div class="title">Hoja de Carga y Despacho General (Picking)</div>
-              <div class="subtitle">${empNombre} • <b>${fechaTexto}</b></div>
+              <div class="title">Hoja de Carga y Despacho General (Picking) ${filtroProvincia !== 'todas' ? `- ${provTexto.toUpperCase()}` : ''}</div>
+              <div class="subtitle">${empNombre} • <b>${fechaTexto}</b> • Provincia: <b style="color:#1d4ed8;">${provTexto}</b></div>
             </div>
           </div>
           <div style="text-align:right; font-size:10px; color:#64748b;">
@@ -379,6 +389,7 @@ export default function EntregasAdmin({
         </div>
 
         <div class="kpi-bar">
+          <div class="kpi-item"><span>📍 Provincia:</span> <strong style="color:#1d4ed8;">${provTexto}</strong></div>
           <div class="kpi-item"><span>📦 Total Mobiliario a Cargar:</span> <strong>${resumenKPIs.totalPiezasMobiliario} piezas</strong></div>
           <div class="kpi-item"><span>📋 Artículos Diferentes:</span> <strong>${resumenKPIs.totalArticulosDistintos}</strong></div>
           <div class="kpi-item"><span>🚚 Total Reservas:</span> <strong>${resumenKPIs.totalReservas}</strong></div>
@@ -655,6 +666,65 @@ export default function EntregasAdmin({
           </button>
         </div>
 
+        {/* Selector de Provincia: Todas vs Panamá vs Panamá Oeste */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f1f5f9', padding: 3, borderRadius: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', padding: '0 6px', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span>📍</span>
+            <span>Provincia:</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setFiltroProvincia('todas')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: 6,
+              border: 'none',
+              background: filtroProvincia === 'todas' ? '#0f172a' : 'transparent',
+              color: filtroProvincia === 'todas' ? '#fff' : '#64748b',
+              fontWeight: filtroProvincia === 'todas' ? 700 : 500,
+              fontSize: 11,
+              cursor: 'pointer',
+              boxShadow: filtroProvincia === 'todas' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+            }}
+          >
+            Todas
+          </button>
+          <button
+            type="button"
+            onClick={() => setFiltroProvincia('Panamá')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: 6,
+              border: 'none',
+              background: filtroProvincia === 'Panamá' ? '#2563eb' : 'transparent',
+              color: filtroProvincia === 'Panamá' ? '#fff' : '#64748b',
+              fontWeight: filtroProvincia === 'Panamá' ? 700 : 500,
+              fontSize: 11,
+              cursor: 'pointer',
+              boxShadow: filtroProvincia === 'Panamá' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+            }}
+          >
+            Panamá
+          </button>
+          <button
+            type="button"
+            onClick={() => setFiltroProvincia('Panamá Oeste')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: 6,
+              border: 'none',
+              background: filtroProvincia === 'Panamá Oeste' ? '#7c3aed' : 'transparent',
+              color: filtroProvincia === 'Panamá Oeste' ? '#fff' : '#64748b',
+              fontWeight: filtroProvincia === 'Panamá Oeste' ? 700 : 500,
+              fontSize: 11,
+              cursor: 'pointer',
+              boxShadow: filtroProvincia === 'Panamá Oeste' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+            }}
+          >
+            Panamá Oeste
+          </button>
+        </div>
+
         {/* Selector de Vista: Consolidado General vs Detalle por Reserva */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f1f5f9', padding: 3, borderRadius: 8 }}>
           <button
@@ -802,10 +872,23 @@ export default function EntregasAdmin({
             gap: '8px',
             padding: '0 4px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>
                 Artículos a Despachar ({itemsConsolidados.length}):
               </span>
+              {filtroProvincia !== 'todas' && (
+                <span style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  background: filtroProvincia === 'Panamá Oeste' ? '#f3e8ff' : '#e0f2fe',
+                  color: filtroProvincia === 'Panamá Oeste' ? '#6b21a8' : '#0369a1',
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                  border: `1px solid ${filtroProvincia === 'Panamá Oeste' ? '#d8b4fe' : '#bae6fd'}`
+                }}>
+                  📍 {filtroProvincia}
+                </span>
+              )}
               <div style={{ display: 'flex', gap: 4, background: '#e2e8f0', padding: 2, borderRadius: 6 }}>
                 <button
                   type="button"
@@ -1124,17 +1207,30 @@ export default function EntregasAdmin({
                           Cliente: <b>{r.nombre_cliente}</b>
                         </div>
                       </div>
-                      <span style={{
-                        padding: '3px 8px',
-                        borderRadius: 6,
-                        fontSize: 10,
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                        background: r.estado === 'activa' ? '#dcfce7' : r.estado === 'confirmada' ? '#dbeafe' : '#fef3c7',
-                        color: r.estado === 'activa' ? '#15803d' : r.estado === 'confirmada' ? '#1e40af' : '#b45309'
-                      }}>
-                        {r.estado}
-                      </span>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          background: (r.provincia === 'Panamá Oeste' ? '#f3e8ff' : '#e0f2fe'),
+                          color: (r.provincia === 'Panamá Oeste' ? '#6b21a8' : '#0369a1'),
+                          border: `1px solid ${r.provincia === 'Panamá Oeste' ? '#d8b4fe' : '#bae6fd'}`
+                        }}>
+                          📍 {r.provincia || 'Panamá'}
+                        </span>
+                        <span style={{
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          fontSize: 10,
+                          fontWeight: 800,
+                          textTransform: 'uppercase',
+                          background: r.estado === 'activa' ? '#dcfce7' : r.estado === 'confirmada' ? '#dbeafe' : '#fef3c7',
+                          color: r.estado === 'activa' ? '#15803d' : r.estado === 'confirmada' ? '#1e40af' : '#b45309'
+                        }}>
+                          {r.estado}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Dirección de Entrega y Enlace de Maps */}
