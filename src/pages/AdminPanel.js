@@ -2151,17 +2151,39 @@ export default function AdminPanel() {
   };
 
   // ── Contrato PDF y Enlace de Confirmación ────────────────────────────────────
+  const obtenerUrlContratoPublico = (reservaId) => {
+    return `${window.location.origin}/contrato/${reservaId}`;
+  };
+
+  const construirMensajeWhatsAppContrato = (reserva, plantilla) => {
+    if (!reserva) return '';
+    const rawTemplate = plantilla !== undefined ? plantilla : (config?.mensaje_whatsapp_contrato || DEFAULT_WHATSAPP_CONTRATO);
+    const url = obtenerUrlContratoPublico(reserva.id || 'reserva-id');
+    const nombreEmpresa = config?.nombre_empresa || 'Alquila tu Party';
+    const nombreCliente = reserva.nombre_cliente || 'Cliente';
+    const codigoReserva = (reserva.id || '').replace(/-/g, '').slice(0, 8).toUpperCase() || '0021FA18';
+
+    let msg = rawTemplate || DEFAULT_WHATSAPP_CONTRATO;
+    msg = msg.replace(/\{cliente\}/gi, nombreCliente);
+    msg = msg.replace(/\{empresa\}/gi, nombreEmpresa);
+    msg = msg.replace(/\{reserva\}/gi, codigoReserva);
+    msg = msg.replace(/\{enlace\}|\{link\}/gi, url);
+
+    if (!msg.includes(url)) {
+      msg += `\n\n👉 Enlace al contrato:\n${url}`;
+    }
+    return msg;
+  };
+
   const abrirContrato = async (r) => {
     setModalContrato(r);
     setContratoAbono(r.contrato_abono_extra > 0 ? String(r.contrato_abono_extra) : '');
+    setMensajeWAPersonalizado(construirMensajeWhatsAppContrato(r));
+    setMostrarEditorWA(false);
     try {
       const res = await api.get(`/pagos/reserva/${r.id}`);
       setPagosParaContrato(res.data.pagos);
     } catch { setPagosParaContrato([]); }
-  };
-
-  const obtenerUrlContratoPublico = (reservaId) => {
-    return `${window.location.origin}/contrato/${reservaId}`;
   };
 
   const guardarAbonoExtraContrato = async (reserva) => {
@@ -2188,12 +2210,13 @@ export default function AdminPanel() {
     }
   };
 
-  const enviarContratoPorWhatsApp = async (reserva) => {
+  const enviarContratoPorWhatsApp = async (reserva, textoPersonalizado = null) => {
     await guardarAbonoExtraContrato(reserva);
-    const url = obtenerUrlContratoPublico(reserva.id);
-    const nombreEmpresa = config?.nombre_empresa || 'Alquila Tu Party';
-    const nombreCliente = reserva.nombre_cliente || 'Cliente';
-    const msg = `Hola *${nombreCliente}* 👋, te saludamos de *${nombreEmpresa}*.\n\nAquí tienes el enlace a tu *Contrato de Alquiler* (Reserva #${reserva.id.slice(0, 8).toUpperCase()}):\n👉 ${url}\n\nPor favor revísalo y al final del documento presiona el botón *"Confirmado"* para dejar confirmada tu reserva. ¡Muchas gracias!`;
+    const msg = (typeof textoPersonalizado === 'string' && textoPersonalizado.trim().length > 0)
+      ? textoPersonalizado
+      : (mensajeWAPersonalizado && mensajeWAPersonalizado.trim().length > 0
+          ? mensajeWAPersonalizado
+          : construirMensajeWhatsAppContrato(reserva));
     const encoded = encodeURIComponent(msg);
     const cleanPhone = (reserva.telefono_cliente || '').replace(/\D/g, '');
     const waUrl = cleanPhone
@@ -6465,9 +6488,63 @@ export default function AdminPanel() {
 
             {/* Sección de Envío del Contrato Digital con Botón "Confirmado" */}
             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 12, padding: '12px', marginBottom: '1.1rem' }}>
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: '#0369a1', marginBottom: 6 }}>
-                📲 Enviar Contrato Digital al Cliente (con botón "Confirmado" al final)
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 800, color: '#0369a1' }}>
+                  📲 Enviar Contrato Digital al Cliente (con botón "Confirmado" al final)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMostrarEditorWA(!mostrarEditorWA)}
+                  style={{
+                    border: '1px solid #7dd3fc',
+                    background: mostrarEditorWA ? '#0284c7' : '#fff',
+                    color: mostrarEditorWA ? '#fff' : '#0369a1',
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {mostrarEditorWA ? 'Ocultar editor 💬' : '✏️ Personalizar mensaje'}
+                </button>
               </div>
+
+              {mostrarEditorWA && (
+                <div style={{ marginBottom: 10, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 8, padding: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>
+                      Mensaje de WhatsApp para esta reserva:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setMensajeWAPersonalizado(construirMensajeWhatsAppContrato(modalContrato))}
+                      style={{ border: 'none', background: 'transparent', color: '#0284c7', fontSize: 11, cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      Restablecer predeterminado
+                    </button>
+                  </div>
+                  <textarea
+                    rows={5}
+                    value={mensajeWAPersonalizado}
+                    onChange={e => setMensajeWAPersonalizado(e.target.value)}
+                    style={{
+                      width: '100%',
+                      fontFamily: 'inherit',
+                      fontSize: 12,
+                      padding: 8,
+                      borderRadius: 6,
+                      border: '1px solid #cbd5e1',
+                      boxSizing: 'border-box',
+                      resize: 'vertical'
+                    }}
+                  />
+                  <div style={{ fontSize: 10.5, color: '#64748b', marginTop: 3 }}>
+                    💡 Puedes editar el texto puntual para este cliente o cambiar la plantilla general en la pestaña <strong>Configuración</strong>.
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                 <input
                   type="text"
@@ -6487,7 +6564,7 @@ export default function AdminPanel() {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  onClick={() => enviarContratoPorWhatsApp(modalContrato)}
+                  onClick={() => enviarContratoPorWhatsApp(modalContrato, mensajeWAPersonalizado)}
                   style={{ flex: 2, padding: '10px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
                   💬 Enviar Contrato por WhatsApp
